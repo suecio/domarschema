@@ -339,6 +339,12 @@ export default function App() {
     return 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
+  const getAssignmentStatusStyles = (count) => {
+    if (count === 0) return 'bg-red-100 text-red-700 border-red-200';
+    if (count === 1) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-green-100 text-green-700 border-green-200';
+  };
+
   const generateICS = (gamesToExport) => {
     if (gamesToExport.length === 0) return;
     const events = gamesToExport.map(game => {
@@ -503,7 +509,6 @@ export default function App() {
             home: columns[4].trim(),
             location: (columns[5] || 'Unknown').trim(),
           };
-          // FIX: Include time in gameId to support double headers (same teams, same day, different time)
           const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
           batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
         }
@@ -763,9 +768,12 @@ export default function App() {
                   return (
                     <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                       <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>
+                            {game.league}
+                          </span>
                           <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length)}`}>
                             {gameAssignments.length} / 4 {t.assignedTo}
                           </span>
                         </div>
