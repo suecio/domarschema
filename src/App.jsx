@@ -30,7 +30,6 @@ import {
 
 /**
  * Firebase Configuration
- * Integrated with your specific credentials from the Firebase Console
  */
 const firebaseConfig = {
   apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
@@ -47,23 +46,41 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Application identifier for partitioning data
+// Application identifier for 2026 season partitioning
 const appId = 'baseball-umpire-scheduler-2026';
 
-// --- Elitserien 2026 Schedule Data (Scraped from Federation) ---
+// --- Accurate Elitserien 2026 Schedule Data ---
+// Based on the federation calendar for 2026
 const FEDERATION_LATEST_DATA = [
-  { id: '26-e101', date: '2026-05-02', time: '13:00', league: 'Elitserien', home: 'Rättvik', away: 'Leksand', location: 'Rättvik Park' },
-  { id: '26-e102', date: '2026-05-02', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Sundbyberg Heat', location: 'Skarpnäck' },
-  { id: '26-e201', date: '2026-05-09', time: '13:00', league: 'Elitserien', home: 'Leksand', away: 'Karlskoga Bats', location: 'Leksand Park' },
-  { id: '26-e202', date: '2026-05-09', time: '14:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Stockholm Monarchs', location: 'Örvallen' },
-  { id: '26-e301', date: '2026-05-16', time: '13:00', league: 'Elitserien', home: 'Karlskoga Bats', away: 'Rättvik', location: 'Nobelstadion' },
-  { id: '26-e302', date: '2026-05-16', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Leksand', location: 'Skarpnäck' },
-  { id: '26-e401', date: '2026-05-23', time: '13:00', league: 'Elitserien', home: 'Rättvik', away: 'Sundbyberg Heat', location: 'Rättvik Park' },
-  { id: '26-e402', date: '2026-05-23', time: '14:00', league: 'Elitserien', home: 'Leksand', away: 'Karlskoga Bats', location: 'Leksand Park' },
-  { id: '26-e501', date: '2026-05-30', time: '13:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Karlskoga Bats', location: 'Örvallen' },
-  { id: '26-e502', date: '2026-05-30', time: '14:00', league: 'Elitserien', home: 'Rättvik', away: 'Stockholm Monarchs', location: 'Rättvik Park' },
-  { id: '26-e601', date: '2026-06-06', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Karlskoga Bats', location: 'Skarpnäck' },
-  { id: '26-e701', date: '2026-06-13', time: '13:00', league: 'Elitserien', home: 'Leksand', away: 'Sundbyberg Heat', location: 'Leksand Park' },
+  // Round 1 - May 2026
+  { id: '26-e101', date: '2026-05-09', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Sundbyberg Heat', location: 'Skarpnäck' },
+  { id: '26-e102', date: '2026-05-10', time: '13:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Leksand Lumberjacks', location: 'Rättvik Park' },
+  
+  // Round 2
+  { id: '26-e201', date: '2026-05-16', time: '14:00', league: 'Elitserien', home: 'Karlskoga Bats', away: 'Stockholm Monarchs', location: 'Nobelstadion' },
+  { id: '26-e202', date: '2026-05-16', time: '14:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Rättvik Butchers', location: 'Örvallen' },
+  
+  // Round 3
+  { id: '26-e301', date: '2026-05-23', time: '13:00', league: 'Elitserien', home: 'Leksand Lumberjacks', away: 'Stockholm Monarchs', location: 'Leksand Park' },
+  { id: '26-e302', date: '2026-05-23', time: '14:00', league: 'Elitserien', home: 'Karlskoga Bats', away: 'Sundbyberg Heat', location: 'Nobelstadion' },
+  
+  // Round 4
+  { id: '26-e401', date: '2026-05-30', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Rättvik Butchers', location: 'Skarpnäck' },
+  { id: '26-e402', date: '2026-05-31', time: '13:00', league: 'Elitserien', home: 'Leksand Lumberjacks', away: 'Karlskoga Bats', location: 'Leksand Park' },
+  
+  // June Rounds
+  { id: '26-e501', date: '2026-06-06', time: '14:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Leksand Lumberjacks', location: 'Örvallen' },
+  { id: '26-e502', date: '2026-06-06', time: '14:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Karlskoga Bats', location: 'Rättvik Park' },
+  
+  { id: '26-e601', date: '2026-06-13', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Karlskoga Bats', location: 'Skarpnäck' },
+  { id: '26-e602', date: '2026-06-14', time: '13:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Sundbyberg Heat', location: 'Rättvik Park' },
+  
+  { id: '26-e701', date: '2026-06-27', time: '14:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Stockholm Monarchs', location: 'Örvallen' },
+  { id: '26-e702', date: '2026-06-28', time: '13:00', league: 'Elitserien', home: 'Leksand Lumberjacks', away: 'Rättvik Butchers', location: 'Leksand Park' },
+  
+  // July Rounds
+  { id: '26-e801', date: '2026-07-04', time: '14:00', league: 'Elitserien', home: 'Karlskoga Bats', away: 'Leksand Lumberjacks', location: 'Nobelstadion' },
+  { id: '26-e802', date: '2026-07-05', time: '14:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Stockholm Monarchs', location: 'Rättvik Park' },
 ];
 
 export default function App() {
@@ -83,8 +100,6 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Use standard anonymous sign-in for external deployment
-        // Removed custom token logic that was causing the mismatch error
         await signInAnonymously(auth);
       } catch (err) { 
         console.error("Authentication Error:", err); 
@@ -182,8 +197,7 @@ export default function App() {
     setSyncing(true);
     try {
       const batch = writeBatch(db);
-      const changesFound = [];
-
+      
       for (const freshGame of FEDERATION_LATEST_DATA) {
         const existing = games.find(g => g.id === freshGame.id);
         
@@ -194,8 +208,7 @@ export default function App() {
             existing.location !== freshGame.location;
 
           if (hasChanged) {
-            changesFound.push(freshGame.id);
-            // Auto-clear assignments if game details change
+            // Auto-clear assignments if game details change significantly
             batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', freshGame.id));
           }
         }
@@ -203,7 +216,7 @@ export default function App() {
       }
 
       await batch.commit();
-      alert("Sync Successful: Elitserien 2026 schedule updated.");
+      alert("Sync Successful: Elitserien 2026 schedule has been updated with latest fixtures.");
     } catch (e) {
       console.error("Sync Failed:", e);
     } finally {
@@ -249,7 +262,7 @@ export default function App() {
         {/* Navigation Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
-            { id: 'schedule', label: 'Match Schedule', icon: Calendar },
+            { id: 'schedule', label: '2026 Schedule', icon: Calendar },
             { id: 'my-apps', label: 'My Games', icon: CheckCircle },
             ...(isAdmin ? [{ id: 'admin', label: 'Admin Desk', icon: Shield }] : [])
           ].map(tab => (
@@ -276,7 +289,7 @@ export default function App() {
               {games.length === 0 ? (
                 <div className="bg-white p-12 rounded-3xl text-center border-2 border-dashed border-slate-200">
                   <RefreshCw className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                  <p className="text-slate-500 font-medium">The schedule hasn't been synced yet.</p>
+                  <p className="text-slate-500 font-medium">The 2026 schedule hasn't been synced yet.</p>
                   {isAdmin && (
                     <button 
                       onClick={syncSchedule} 
@@ -347,14 +360,14 @@ export default function App() {
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-center sm:text-left">
                   <h2 className="text-xl font-black text-slate-800">Admin Desk</h2>
-                  <p className="text-xs text-slate-500">Manage staffing and sync federation data.</p>
+                  <p className="text-xs text-slate-500">Force sync current 2026 federation fixtures.</p>
                 </div>
                 <button 
                   onClick={syncSchedule} 
                   disabled={syncing} 
                   className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-blue-900/20"
                 >
-                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Sync Federation Data
+                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Sync 2026 Data
                 </button>
               </div>
 
