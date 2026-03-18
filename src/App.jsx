@@ -25,12 +25,13 @@ import {
   MapPin, 
   RefreshCw, 
   Trophy, 
-  AlertCircle 
+  AlertCircle,
+  FileText,
+  Plus
 } from 'lucide-react';
 
 /**
  * Firebase Configuration
- * (Using your provided project credentials)
  */
 const firebaseConfig = {
   apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
@@ -50,40 +51,6 @@ const db = getFirestore(app);
 // Application identifier for 2026 season partitioning
 const appId = 'baseball-umpire-scheduler-2026';
 
-// --- Accurate Elitserien 2026 Schedule Data ---
-// Matches the official federation fixtures for the upcoming season
-const FEDERATION_LATEST_DATA = [
-  // Round 1 - May 2026
-  { id: '26-e101', date: '2026-05-09', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Sundbyberg Heat', location: 'Skarpnäck' },
-  { id: '26-e102', date: '2026-05-10', time: '13:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Leksand Lumberjacks', location: 'Rättvik Park' },
-  
-  // Round 2
-  { id: '26-e201', date: '2026-05-16', time: '14:00', league: 'Elitserien', home: 'Karlskoga Bats', away: 'Stockholm Monarchs', location: 'Nobelstadion' },
-  { id: '26-e202', date: '2026-05-16', time: '14:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Rättvik Butchers', location: 'Örvallen' },
-  
-  // Round 3
-  { id: '26-e301', date: '2026-05-23', time: '13:00', league: 'Elitserien', home: 'Leksand Lumberjacks', away: 'Stockholm Monarchs', location: 'Leksand Park' },
-  { id: '26-e302', date: '2026-05-23', time: '14:00', league: 'Elitserien', home: 'Karlskoga Bats', away: 'Sundbyberg Heat', location: 'Nobelstadion' },
-  
-  // Round 4
-  { id: '26-e401', date: '2026-05-30', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Rättvik Butchers', location: 'Skarpnäck' },
-  { id: '26-e402', date: '2026-05-31', time: '13:00', league: 'Elitserien', home: 'Leksand Lumberjacks', away: 'Karlskoga Bats', location: 'Leksand Park' },
-  
-  // June Rounds
-  { id: '26-e501', date: '2026-06-06', time: '14:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Leksand Lumberjacks', location: 'Örvallen' },
-  { id: '26-e502', date: '2026-06-06', time: '14:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Karlskoga Bats', location: 'Rättvik Park' },
-  
-  { id: '26-e601', date: '2026-06-13', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Karlskoga Bats', location: 'Skarpnäck' },
-  { id: '26-e602', date: '2026-06-14', time: '13:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Sundbyberg Heat', location: 'Rättvik Park' },
-  
-  { id: '26-e701', date: '2026-06-27', time: '14:00', league: 'Elitserien', home: 'Sundbyberg Heat', away: 'Stockholm Monarchs', location: 'Örvallen' },
-  { id: '26-e702', date: '2026-06-28', time: '13:00', league: 'Elitserien', home: 'Leksand Lumberjacks', away: 'Rättvik Butchers', location: 'Leksand Park' },
-  
-  // July Rounds
-  { id: '26-e801', date: '2026-07-04', time: '14:00', league: 'Elitserien', home: 'Karlskoga Bats', away: 'Leksand Lumberjacks', location: 'Nobelstadion' },
-  { id: '26-e802', date: '2026-07-05', time: '14:00', league: 'Elitserien', home: 'Rättvik Butchers', away: 'Stockholm Monarchs', location: 'Rättvik Park' },
-];
-
 export default function App() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
@@ -96,6 +63,10 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
+  
+  // New state for manual import
+  const [bulkInput, setBulkInput] = useState('');
+  const [showImportTool, setShowImportTool] = useState(false);
 
   // 1. Authentication
   useEffect(() => {
@@ -125,9 +96,6 @@ export default function App() {
       setGames(gamesList.sort((a, b) => new Date(a.date) - new Date(b.date)));
     }, (err) => {
       console.error("Firestore Games Error:", err);
-      if (err.code === 'permission-denied') {
-        alert("Permission Denied: Please check your Firestore Security Rules match the appId: " + appId);
-      }
     });
 
     // Listen for Applications
@@ -189,39 +157,56 @@ export default function App() {
     });
   };
 
-  /**
-   * Sync Schedule Logic
-   * Pushes the hardcoded 2026 data into the database
-   */
-  const syncSchedule = async () => {
+  const deleteGame = async (gameId) => {
     if (!isAdmin) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', gameId));
+  };
+
+  /**
+   * Manual Bulk Import Logic
+   * Parses pasted text from a Google Sheet
+   */
+  const handleBulkImport = async () => {
+    if (!isAdmin || !bulkInput.trim()) return;
     setSyncing(true);
+    
     try {
       const batch = writeBatch(db);
-      
-      for (const freshGame of FEDERATION_LATEST_DATA) {
-        const existing = games.find(g => g.id === freshGame.id);
-        if (existing) {
-          const hasChanged = 
-            existing.date !== freshGame.date || 
-            existing.time !== freshGame.time || 
-            existing.location !== freshGame.location;
+      const rows = bulkInput.trim().split('\n');
+      let count = 0;
 
-          if (hasChanged) {
-            // Auto-clear assignments if game details change significantly
-            batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', freshGame.id));
-          }
+      rows.forEach((row, index) => {
+        // Splitting by Tab (typical for Sheets copy-paste) or comma
+        const columns = row.split(/\t|,/);
+        
+        // Expected format: Date, Time, League, Home, Away, Location
+        if (columns.length >= 5) {
+          const gameData = {
+            date: columns[0].trim(),
+            time: columns[1].trim(),
+            league: columns[2].trim(),
+            home: columns[3].trim(),
+            away: columns[4].trim(),
+            location: (columns[5] || 'Unknown').trim(),
+          };
+
+          // Generate a stable ID based on teams and date to prevent duplicates
+          const gameId = `manual-${gameData.date}-${gameData.home.replace(/\s+/g, '')}-${gameData.away.replace(/\s+/g, '')}`.toLowerCase();
+          
+          const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+          batch.set(gameRef, gameData);
+          count++;
         }
-        // Use consistent path for syncing
-        const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', freshGame.id);
-        batch.set(gameRef, freshGame);
-      }
+      });
 
       await batch.commit();
-      alert("Sync Successful: The schedule has been updated with the official 2026 fixtures.");
+      alert(`Import Successful: ${count} games added/updated.`);
+      setBulkInput('');
+      setShowImportTool(false);
     } catch (e) {
-      console.error("Sync Failed:", e);
-      alert("Sync Failed: " + (e.message || "Unknown error. Check the console for details. Usually this is caused by incorrect Firestore Security Rules."));
+      console.error("Import Failed:", e);
+      alert("Import Failed: Check your data format. (Date, Time, League, Home, Away, Location)");
     } finally {
       setSyncing(false);
     }
@@ -262,10 +247,10 @@ export default function App() {
       </header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* View Selection */}
+        {/* Navigation Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
-            { id: 'schedule', label: '2026 Schedule', icon: Calendar },
+            { id: 'schedule', label: 'Match Schedule', icon: Calendar },
             { id: 'my-apps', label: 'My Games', icon: CheckCircle },
             ...(isAdmin ? [{ id: 'admin', label: 'Admin Desk', icon: Shield }] : [])
           ].map(tab => (
@@ -284,21 +269,16 @@ export default function App() {
           {view === 'schedule' && (
             <>
               <div className="flex justify-between items-end pb-2 border-b border-slate-200">
-                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">Unified Season</h2>
+                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">Season 2026</h2>
                 <span className="text-xs text-slate-400 font-bold uppercase">{games.length} Fixtures</span>
               </div>
               
               {games.length === 0 ? (
                 <div className="bg-white p-12 rounded-3xl text-center border-2 border-dashed border-slate-200">
                   <RefreshCw className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                  <p className="text-slate-500 font-medium">No 2026 matches have been synced to the database yet.</p>
+                  <p className="text-slate-500 font-medium">The schedule is currently empty.</p>
                   {isAdmin && (
-                    <button 
-                      onClick={syncSchedule} 
-                      className="mt-4 text-blue-600 font-black uppercase text-xs hover:underline"
-                    >
-                      Sync Federation Data Now
-                    </button>
+                    <p className="text-sm text-slate-400 mt-2">Go to the Admin Desk to import games from your Google Sheet.</p>
                   )}
                 </div>
               ) : (
@@ -312,13 +292,15 @@ export default function App() {
                       <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex gap-4">
                           <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100 group-hover:bg-blue-50 transition-colors">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(game.date).toLocaleDateString('en-US', { month: 'short' })}</p>
-                            <p className="text-2xl font-black text-slate-800 leading-none">{new Date(game.date).getDate()}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{game.date.includes('-') ? new Date(game.date).toLocaleDateString('en-US', { month: 'short' }) : 'Date'}</p>
+                            <p className="text-2xl font-black text-slate-800 leading-none">{game.date.includes('-') ? new Date(game.date).getDate() : '??'}</p>
                           </div>
                           <div>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest bg-blue-100 text-blue-700">
-                              {game.league}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest bg-blue-100 text-blue-700">
+                                {game.league}
+                              </span>
+                            </div>
                             <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.home} vs {game.away}</h3>
                             <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
                               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
@@ -360,33 +342,73 @@ export default function App() {
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-center sm:text-left">
                   <h2 className="text-xl font-black text-slate-800">Admin Desk</h2>
-                  <p className="text-xs text-slate-500">Sync current 2026 federation fixtures and manage staffing.</p>
+                  <p className="text-xs text-slate-500">Manage staffing and import games from Google Sheets.</p>
                 </div>
                 <button 
-                  onClick={syncSchedule} 
-                  disabled={syncing} 
-                  className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-blue-900/20"
+                  onClick={() => setShowImportTool(!showImportTool)}
+                  className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all active:scale-95 shadow-lg shadow-blue-900/20"
                 >
-                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Syncing...' : 'Sync 2026 Data'}
+                  <Plus className="w-4 h-4" /> Bulk Import Games
                 </button>
               </div>
 
+              {/* Import UI */}
+              {showImportTool && (
+                <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 animate-in slide-in-from-top duration-300">
+                  <div className="flex items-center gap-2 mb-3 text-blue-800">
+                    <FileText className="w-5 h-5" />
+                    <h3 className="font-bold">Paste from Google Sheets</h3>
+                  </div>
+                  <p className="text-xs text-blue-600 mb-4 leading-relaxed">
+                    Manage your games in a Google Sheet. Copy the rows (don't include headers) and paste them here. 
+                    Format: <strong>Date | Time | League | Home | Away | Location</strong> (Tab separated).
+                  </p>
+                  <textarea 
+                    value={bulkInput}
+                    onChange={(e) => setBulkInput(e.target.value)}
+                    placeholder="2026-05-09	14:00	Elitserien	Monarchs	Heat	Skarpnäck"
+                    className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs focus:ring-4 focus:ring-blue-500/10 outline-none"
+                  />
+                  <div className="flex gap-3 mt-4">
+                    <button 
+                      onClick={handleBulkImport}
+                      disabled={syncing || !bulkInput.trim()}
+                      className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs hover:bg-blue-800 transition-all disabled:opacity-50"
+                    >
+                      {syncing ? 'Processing...' : 'Add Games to Database'}
+                    </button>
+                    <button 
+                      onClick={() => setShowImportTool(false)}
+                      className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Pending Assignments</h3>
+                <div className="flex justify-between items-center pl-2">
+                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Pending Assignments</h3>
+                </div>
                 {games.filter(g => !assignments[g.id]).length === 0 ? (
-                  <p className="text-sm text-slate-400 italic text-center py-12 bg-white rounded-2xl border border-slate-100">All fixtures are currently staffed.</p>
+                  <p className="text-sm text-slate-400 italic text-center py-12 bg-white rounded-2xl border border-slate-100">All games currently in the schedule are assigned.</p>
                 ) : (
                   games.filter(g => !assignments[g.id]).map(game => {
                     const applicants = applications.filter(a => a.gameId === game.id);
                     return (
                       <div key={game.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-                          <p className="text-xs font-bold text-slate-600">{game.home} vs {game.away} <span className="text-slate-300 mx-1">|</span> {game.date}</p>
-                          <span className="text-[10px] font-black bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded uppercase">Needs Umpire</span>
+                          <div>
+                            <p className="text-xs font-bold text-slate-600">{game.home} vs {game.away} <span className="text-slate-300 mx-1">|</span> {game.date}</p>
+                          </div>
+                          <button onClick={() => deleteGame(game.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                         <div className="p-4">
                           {applicants.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic py-2">No interest registered yet...</p>
+                            <p className="text-xs text-slate-400 italic py-2">Waiting for interested umpires...</p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {applicants.map(app => (
@@ -417,7 +439,7 @@ export default function App() {
                   <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calendar className="w-8 h-8 text-slate-300" />
                   </div>
-                  <p className="text-slate-500 font-medium">You haven't marked interest in any matches yet.</p>
+                  <p className="text-slate-500 font-medium">You haven't marked interest in any games yet.</p>
                 </div>
               ) : (
                 applications.filter(a => a.userId === user?.uid).map(app => {
@@ -459,8 +481,8 @@ export default function App() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300 border border-white/20">
             <div>
-              <h3 className="text-2xl font-black text-slate-800 mb-1">Settings</h3>
-              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Configure profile & admin desk</p>
+              <h3 className="text-2xl font-black text-slate-800 mb-1">User Settings</h3>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Configure your profile & access</p>
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -481,7 +503,7 @@ export default function App() {
                   <div className="flex gap-2 mt-2">
                     <input 
                       type="password" 
-                      placeholder="Access Code" 
+                      placeholder="Enter Access Code" 
                       value={adminCode} 
                       onChange={(e) => setAdminCode(e.target.value)} 
                       className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
@@ -496,7 +518,7 @@ export default function App() {
                 ) : (
                   <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center mt-2">
                     <p className="text-blue-700 font-black text-xs uppercase flex items-center justify-center gap-2">
-                      <Shield className="w-4 h-4" /> Admin Mode Active
+                      <Shield className="w-4 h-4" /> Admin Authenticated
                     </p>
                     <button 
                       onClick={async () => {
@@ -517,25 +539,25 @@ export default function App() {
               onClick={() => setShowAdminModal(false)} 
               className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors shadow-sm"
             >
-              Close
+              Return to App
             </button>
           </div>
         </div>
       )}
 
-      {/* Status Bar */}
+      {/* Floating Status Bar */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-40 border border-blue-800/50 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
             {userName ? userName.charAt(0) : '?'}
           </div>
-          <span className="text-sm font-bold whitespace-nowrap">{userName || 'Set Name'}</span>
+          <span className="text-sm font-bold whitespace-nowrap">{userName || 'Set Profile Name'}</span>
         </div>
         <div className="h-4 w-px bg-blue-700" />
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-black uppercase text-blue-300 leading-none">Apps</span>
+          <span className="text-[10px] font-black uppercase text-blue-300 leading-none">Status</span>
           <span className="text-[11px] font-bold leading-none mt-0.5">
-            {user && applications.filter(a => a.userId === user.uid).length}
+            {user && applications.filter(a => a.userId === user.uid).length} Applied
           </span>
         </div>
       </div>
