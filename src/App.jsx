@@ -126,7 +126,7 @@ const translations = {
     status: "Status",
     setProfile: "Välj din profil",
     pasteSheet: "Klistra in från Google Sheets",
-    pasteFormat: "Format: ÅYYY-MM-DD | Tid | Serie | Hemma | Borta | Plats (Tabb-separerat)",
+    pasteFormat: "Format: ÅYYY-MM-DD | Tid | Serie | Borta | Hemma | Plats (Tabb-separerat)",
     addGames: "Lägg till matcher",
     importSuccess: "Import lyckades",
     importFail: "Import misslyckades",
@@ -204,7 +204,7 @@ const translations = {
     status: "Status",
     setProfile: "Select Your Profile",
     pasteSheet: "Paste from Google Sheets",
-    pasteFormat: "Format: YYYY-MM-DD | Time | League | Home | Away | Location (Tab separated)",
+    pasteFormat: "Format: YYYY-MM-DD | Time | League | Away | Home | Location (Tab separated)",
     addGames: "Add Games",
     importSuccess: "Import Successful",
     importFail: "Import Failed",
@@ -233,7 +233,7 @@ const translations = {
 export default function App() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
-  const [umpireId, setUmpireId] = useState(''); // NEW: Track the consistent profile ID
+  const [umpireId, setUmpireId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState('schedule');
   const [selectedYear, setSelectedYear] = useState('2026');
@@ -315,7 +315,7 @@ export default function App() {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setUserName(data.name || '');
-        setUmpireId(data.umpireId || ''); // Load the persistent ID
+        setUmpireId(data.umpireId || '');
         setIsAdmin(data.isAdmin || false);
       }
     });
@@ -354,7 +354,7 @@ export default function App() {
         `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
         `DTSTART:${startTime}`,
         `DTEND:${endTime}`,
-        `SUMMARY:${game.home} vs ${game.away} (${game.league})`,
+        `SUMMARY:${game.away} @ ${game.home} (${game.league})`,
         `DESCRIPTION:League: ${game.league}\\nLocation: ${game.location}`,
         `LOCATION:${game.location}`,
         'END:VEVENT'
@@ -376,7 +376,6 @@ export default function App() {
     generateICS([game]);
   };
 
-  // Grouped assignments using umpireId for consistency
   const groupedAssignments = useMemo(() => {
     const map = {};
     assignments.forEach(asg => {
@@ -407,7 +406,9 @@ export default function App() {
 
   const filteredGames = useMemo(() => {
     return games.filter(game => {
-      const matchesSearch = game.home.toLowerCase().includes(searchQuery.toLowerCase()) || game.away.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = 
+        game.home.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        game.away.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
       const isHistorical = game.date < today;
@@ -418,13 +419,11 @@ export default function App() {
   const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
 
-  // Master List Logic
   const filteredMasterUmpires = useMemo(() => {
     if (!searchQuery && !isAddingNew) return masterUmpires;
     return masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [masterUmpires, searchQuery, isAddingNew]);
 
-  // Actions
   const updateProfile = async (name, id) => {
     if (!user) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id, isAdmin }, { merge: true });
@@ -442,7 +441,6 @@ export default function App() {
     if (!name.trim()) return "";
     const exists = masterUmpires.find(u => u.name.toLowerCase() === name.toLowerCase());
     if (exists) return exists.id;
-    
     const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name });
     return docRef.id;
   };
@@ -501,11 +499,11 @@ export default function App() {
             date: columns[0].trim(),
             time: columns[1].trim(),
             league: columns[2].trim(),
-            home: columns[3].trim(),
-            away: columns[4].trim(),
+            away: columns[3].trim(), // Note: order in import text usually matches display
+            home: columns[4].trim(),
             location: (columns[5] || 'Unknown').trim(),
           };
-          const gameId = `m-${gameData.date}-${gameData.home}-${gameData.away}`.replace(/\s+/g, '').toLowerCase();
+          const gameId = `m-${gameData.date}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').toLowerCase();
           batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
         }
       });
@@ -655,7 +653,7 @@ export default function App() {
                                     <CalendarPlus className="w-4 h-4" />
                                 </button>
                             </div>
-                            <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.home} vs {game.away}</h3>
+                            <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away} @ {game.home}</h3>
                             <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
                               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
                               <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
@@ -713,7 +711,7 @@ export default function App() {
               {showImportTool && (
                 <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 animate-in slide-in-from-top">
                   <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3>
-                  <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder="YYYY-MM-DD	HH:MM	Serie	Hemma	Borta	Plats" className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
+                  <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder="YYYY-MM-DD	HH:MM	Serie	Borta	Hemma	Plats" className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
                   <div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button></div>
                 </div>
               )}
@@ -765,7 +763,7 @@ export default function App() {
                     <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                       <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                          <p className="text-xs font-bold text-slate-600">{game.home} vs {game.away} | {game.date}</p>
+                          <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>
                             {gameAssignments.length} / 4 {t.assignedTo}
                           </span>
@@ -873,7 +871,7 @@ export default function App() {
                              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{game.date} @ {game.time}</p>
                           </div>
-                          <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.home} vs {game.away}</p>
+                          <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.away} @ {game.home}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -916,7 +914,7 @@ export default function App() {
                                         <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
                                         <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{game.date} @ {game.time}</p>
                                     </div>
-                                    <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.home} vs {game.away}</p>
+                                    <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.away} @ {game.home}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1055,7 +1053,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Floating Profile Bar (Active) */}
+      {/* Floating Profile Bar */}
       <button 
         onClick={() => setShowNamePrompt(true)}
         className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-40 border border-blue-800/50 backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
