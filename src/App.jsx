@@ -35,7 +35,9 @@ import {
   BarChart3,
   History,
   Info,
-  Languages
+  Users,
+  UserPlus,
+  UserMinus
 } from 'lucide-react';
 
 /**
@@ -56,8 +58,7 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 
 // --- LOGO CONFIGURATION ---
-// Once you have your logo URL, paste it here:
-const LOGO_URL = ""; // e.g., "https://your-domain.com/logo.png"
+const LOGO_URL = ""; 
 
 // --- Translation Dictionary ---
 const translations = {
@@ -78,18 +79,19 @@ const translations = {
     noGames: "Inga matcher hittades för urvalet.",
     noGamesSync: "Inga matcher har synkroniserats till databasen än.",
     syncNow: "Synka förbundsdata nu",
-    applied: "Anmäld",
+    applied: "Anmälda",
     interested: "Intresserad",
     withdraw: "Dra tillbaka",
-    assignedTo: "Tillsatt till",
+    assignedTo: "Tillsatta",
     staffed: "Bemannad",
+    partiallyStaffed: "Delvis bemannad",
     needsUmpire: "Behöver domare",
     bulkImport: "Massimport",
     pendingAssignments: "Väntande tillsättningar",
     staffingControl: "Bemanningskontroll",
-    hideStaffed: "Dölj bemannade",
+    hideStaffed: "Dölj helt bemannade",
     showAll: "Visa alla matcher",
-    removeAssignment: "Ta bort tillsättning",
+    removeAssignment: "Ta bort",
     deleteGame: "Ta bort match",
     deleteConfirm: "Är du säker på att du vill ta bort matchen? Detta tar även bort tillsättningar.",
     umpire: "Domare",
@@ -120,7 +122,8 @@ const translations = {
     syncSuccess: "Synkronisering lyckades",
     processing: "Bearbetar...",
     cancel: "Avbryt",
-    date: "Datum"
+    date: "Datum",
+    crew: "Domarteam"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -139,18 +142,19 @@ const translations = {
     noGames: "No games found for the current selection.",
     noGamesSync: "No matches have been synced to the database yet.",
     syncNow: "Sync Federation Data Now",
-    applied: "Applied",
+    applied: "Interested",
     interested: "Interested",
     withdraw: "Withdraw",
-    assignedTo: "Assigned to",
-    staffed: "Staffed",
+    assignedTo: "Crew",
+    staffed: "Fully Staffed",
+    partiallyStaffed: "Partially Staffed",
     needsUmpire: "Needs Umpire",
     bulkImport: "Bulk Import",
-    pendingAssignments: "Pending Assignments",
+    pendingAssignments: "Staffing Desk",
     staffingControl: "Staffing Control",
-    hideStaffed: "Hide Staffed",
+    hideStaffed: "Hide Fully Staffed",
     showAll: "Show All Games",
-    removeAssignment: "Remove Assignment",
+    removeAssignment: "Remove",
     deleteGame: "Delete Game",
     deleteConfirm: "Are you sure you want to delete this game? This will also remove any assignments.",
     umpire: "Umpire",
@@ -181,7 +185,8 @@ const translations = {
     syncSuccess: "Sync Successful",
     processing: "Processing...",
     cancel: "Cancel",
-    date: "Date"
+    date: "Date",
+    crew: "Umpire Crew"
   }
 };
 
@@ -192,7 +197,6 @@ export default function App() {
   const [view, setView] = useState('schedule');
   const [selectedYear, setSelectedYear] = useState('2026');
   
-  // Detection Logic: Start with Swedish if browser is Swedish, else English
   const defaultLang = typeof navigator !== 'undefined' && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
   const t = translations[lang];
@@ -200,7 +204,7 @@ export default function App() {
   // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
-  const [assignments, setAssignments] = useState({});
+  const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   
@@ -252,9 +256,7 @@ export default function App() {
 
     const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments');
     const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => {
-      const assignObj = {};
-      snapshot.docs.forEach(doc => assignObj[doc.id] = doc.data());
-      setAssignments(assignObj);
+      setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
@@ -274,10 +276,20 @@ export default function App() {
     };
   }, [user, selectedYear]);
 
+  // Grouped assignments for easy access: { gameId: [asg, asg...] }
+  const groupedAssignments = useMemo(() => {
+    const map = {};
+    assignments.forEach(asg => {
+      if (!map[asg.gameId]) map[asg.gameId] = [];
+      map[asg.gameId].push(asg);
+    });
+    return map;
+  }, [assignments]);
+
   // Derived Statistics
   const statistics = useMemo(() => {
     const stats = {};
-    Object.values(assignments).forEach(asg => {
+    assignments.forEach(asg => {
       if (!asg.userId) return;
       if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName, games: 0, interest: 0 };
       stats[asg.userId].games += 1;
@@ -326,13 +338,16 @@ export default function App() {
 
   const assignUmpire = async (gameId, userId, name) => {
     if (!isAdmin) return;
-    if (!name) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', gameId));
-      return;
-    }
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', gameId), {
-      userId, userName: name, assignedAt: Date.now()
+    const asgId = `${gameId}_${userId}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
+      gameId, userId, userName: name, assignedAt: Date.now()
     });
+  };
+
+  const removeAssignment = async (gameId, userId) => {
+    if (!isAdmin) return;
+    const asgId = `${gameId}_${userId}`;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
   };
 
   const handleBulkImport = async () => {
@@ -389,11 +404,10 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight leading-none">{t.appTitle}</h1>
-              <p className="text-[10px] font-black uppercase text-blue-300 tracking-widest mt-1">Season {selectedYear}</p>
+              <p className="text-[10px] font-black uppercase text-blue-300 tracking-widest mt-1">{t.season} {selectedYear}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Language Selector */}
             <div className="flex bg-blue-800 rounded-lg p-0.5 mr-2">
               <button onClick={() => setLang('sv')} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'sv' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇸🇪</button>
               <button onClick={() => setLang('en')} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
@@ -445,19 +459,11 @@ export default function App() {
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 />
               </div>
-              <select 
-                value={filterLeague} 
-                onChange={(e) => setFilterLeague(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none font-medium"
-              >
+              <select value={filterLeague} onChange={(e) => setFilterLeague(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none font-medium">
                 <option value="">{t.allSeries}</option>
                 {leagues.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
-              <select 
-                value={filterLocation} 
-                onChange={(e) => setFilterLocation(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none font-medium"
-              >
+              <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none font-medium">
                 <option value="">{t.allLocations}</option>
                 {locations.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
@@ -472,10 +478,7 @@ export default function App() {
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">
                   {showHistory ? t.archived : t.activeSchedule}
                 </h2>
-                <button 
-                  onClick={() => setShowHistory(!showHistory)}
-                  className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                >
+                <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
                   <History className="w-3.5 h-3.5" />
                   {showHistory ? t.upcoming : t.history}
                 </button>
@@ -488,9 +491,10 @@ export default function App() {
                 </div>
               ) : (
                 filteredGames.map(game => {
-                  const assigned = assignments[game.id];
+                  const gameAssignments = groupedAssignments[game.id] || [];
                   const appsCount = applications.filter(a => a.gameId === game.id).length;
                   const isApplied = user && applications.some(a => a.gameId === game.id && a.userId === user.uid);
+                  const isAssignedToThisGame = user && gameAssignments.some(asg => asg.userId === user.uid);
                   
                   return (
                     <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
@@ -507,20 +511,29 @@ export default function App() {
                               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
                               <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
                             </div>
+                            
+                            {/* Assigned Crew List */}
+                            {gameAssignments.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-3">
+                                {gameAssignments.map(asg => (
+                                  <div key={asg.id} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3" /> {asg.userName}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                          {assigned?.userName ? (
-                            <div className="bg-green-50 px-4 py-2 rounded-full flex items-center gap-2 border border-green-100">
-                              <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center text-[10px] font-black text-white uppercase">{assigned.userName.charAt(0)}</div>
-                              <span className="text-xs font-bold text-green-700">{assigned.userName}</span>
-                            </div>
-                          ) : !showHistory && (
+                          {!showHistory && (
                             <>
-                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</div>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</span>
+                                {gameAssignments.length > 0 && <span className="text-[10px] font-black text-green-600 uppercase tracking-widest mt-0.5">{gameAssignments.length}/4 {t.staffed}</span>}
+                              </div>
                               <button 
                                 onClick={() => toggleApplication(game.id)} 
-                                disabled={!userName} 
+                                disabled={!userName || isAssignedToThisGame} 
                                 className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}
                               >
                                 {isApplied ? t.withdraw : t.interested}
@@ -543,28 +556,14 @@ export default function App() {
                   <h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2>
                   <p className="text-xs text-slate-500">{selectedYear} Season</p>
                 </div>
-                <button 
-                  onClick={() => setShowImportTool(!showImportTool)}
-                  className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"
-                >
-                  <Plus className="w-4 h-4" /> {t.bulkImport}
-                </button>
+                <button onClick={() => setShowImportTool(!showImportTool)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
               </div>
 
               {showImportTool && (
                 <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 animate-in slide-in-from-top">
                   <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3>
-                  <p className="text-[10px] text-blue-600 mb-4 font-medium">{t.pasteFormat}</p>
-                  <textarea 
-                    value={bulkInput}
-                    onChange={(e) => setBulkInput(e.target.value)}
-                    placeholder="2026-05-09	14:00	Serie	Hemma	Borta	Plats"
-                    className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none"
-                  />
-                  <div className="flex gap-3">
-                    <button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button>
-                    <button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button>
-                  </div>
+                  <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder="YYYY-MM-DD	HH:MM	Serie	Hemma	Borta	Plats" className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
+                  <div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button></div>
                 </div>
               )}
 
@@ -575,33 +574,63 @@ export default function App() {
                      {showStaffed ? t.hideStaffed : t.showAll}
                    </button>
                 </div>
-                {filteredGames.filter(g => showStaffed ? true : !assignments[g.id]?.userName).map(game => {
+                {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < 4).map(game => {
                   const applicants = applications.filter(a => a.gameId === game.id);
-                  const assigned = assignments[game.id];
+                  const gameAssignments = groupedAssignments[game.id] || [];
+                  const isFullyStaffed = gameAssignments.length >= 4;
+                  
                   return (
-                    <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${assigned?.userName ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
+                    <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                       <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-                        <p className="text-xs font-bold text-slate-600">{game.home} vs {game.away} | {game.date}</p>
+                        <div className="flex items-center gap-3">
+                          <p className="text-xs font-bold text-slate-600">{game.home} vs {game.away} | {game.date}</p>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${isFullyStaffed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {gameAssignments.length} / 4 {t.assignedTo}
+                          </span>
+                        </div>
                         <button onClick={() => { if(window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} className="text-red-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
-                      <div className="p-4">
-                        {assigned?.userName ? (
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-green-700 flex items-center gap-2"><CheckCircle className="w-4 h-4" /> {t.assignedTo} {assigned.userName}</span>
-                            <button onClick={() => assignUmpire(game.id, '', '')} className="text-[10px] font-black text-red-500 uppercase">{t.removeAssignment}</button>
-                          </div>
-                        ) : applicants.length === 0 ? (
-                          <p className="text-xs text-slate-400 italic">{t.noInterest}</p>
-                        ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {applicants.map(app => (
-                              <div key={app.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-white">
-                                <span className="text-xs font-bold">{app.userName}</span>
-                                <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="bg-blue-600 text-white text-[10px] font-black uppercase px-4 py-2 rounded-lg">Assign</button>
-                              </div>
-                            ))}
+                      <div className="p-4 space-y-4">
+                        {/* Current Crew */}
+                        {gameAssignments.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {gameAssignments.map(asg => (
+                                <div key={asg.id} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                                  <div className="flex items-center gap-2">
+                                    <Users className="w-3 h-3 text-green-600" />
+                                    <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
+                                  </div>
+                                  <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
+
+                        {/* Applicants to Assign */}
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
+                          {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">{t.noInterest}</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => (
+                                <div key={app.id} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                  <span className="text-xs font-bold">{app.userName}</span>
+                                  <button 
+                                    disabled={isFullyStaffed}
+                                    onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
+                                    className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <UserPlus className="w-3 h-3" /> Assign
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -613,36 +642,18 @@ export default function App() {
           {view === 'stats' && (
             <div className="space-y-6">
               <div className="bg-blue-900 text-white p-8 rounded-3xl shadow-xl flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-black tracking-tighter">{t.analytics}</h2>
-                  <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">{selectedYear} Season Engagement</p>
-                </div>
+                <div><h2 className="text-2xl font-black tracking-tighter">{t.analytics}</h2><p className="text-blue-200 text-xs font-bold uppercase tracking-widest">{selectedYear} Season Engagement</p></div>
                 <BarChart3 className="w-12 h-12 opacity-20" />
               </div>
               <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                 <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100">
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.umpire}</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.interests}</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.gamesAssigned}</th>
-                    </tr>
-                  </thead>
+                  <thead><tr className="bg-slate-50 border-b border-slate-100"><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.umpire}</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.interests}</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.gamesAssigned}</th></tr></thead>
                   <tbody className="divide-y divide-slate-50">
                     {statistics.map(stat => (
                       <tr key={stat.name} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div>
-                            <span className="font-bold text-slate-700">{stat.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black text-slate-500">{stat.interest}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="bg-blue-100 px-3 py-1 rounded-full text-xs font-black text-blue-700">{stat.games}</span>
-                        </td>
+                        <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div><span className="font-bold text-slate-700">{stat.name}</span></div></td>
+                        <td className="px-6 py-4 text-center"><span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black text-slate-500">{stat.interest}</span></td>
+                        <td className="px-6 py-4 text-center"><span className="bg-blue-100 px-3 py-1 rounded-full text-xs font-black text-blue-700">{stat.games}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -664,7 +675,8 @@ export default function App() {
                 applications.filter(a => a.userId === user?.uid).map(app => {
                   const game = games.find(g => g.id === app.gameId);
                   if (!game) return null;
-                  const isAssigned = assignments[game.id]?.userId === user?.uid;
+                  const gameAssignments = groupedAssignments[game.id] || [];
+                  const isAssigned = user && gameAssignments.some(asg => asg.userId === user.uid);
                   return (
                     <div key={app.id} className={`bg-white p-4 rounded-2xl shadow-sm border transition-all flex items-center justify-between ${isAssigned ? 'border-green-200 bg-green-50/50' : 'border-slate-200'}`}>
                       <div className="flex items-center gap-4">
