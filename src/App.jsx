@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 
 // --- Firebase Configuration ---
-const firebaseConfig = JSON.parse(
+const firebaseConfig = JSON.parse({ 
   apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
   authDomain: "baseball-umpire-portal.firebaseapp.com",
   projectId: "baseball-umpire-portal",
@@ -38,6 +38,7 @@ const firebaseConfig = JSON.parse(
   messagingSenderId: "163069788280",
   appId: "1:163069788280:web:0d236c7ff9710a306c2d8d",
   measurementId: "G-VSWDNDQKE5"
+}
 );
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
