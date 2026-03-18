@@ -33,11 +33,14 @@ import {
   Search,
   Filter,
   BarChart3,
-  History,
+  History as HistoryIcon,
   Info,
   Users,
   UserPlus,
-  UserMinus
+  UserMinus,
+  Download,
+  CalendarPlus,
+  ArrowRight
 } from 'lucide-react';
 
 /**
@@ -87,7 +90,7 @@ const translations = {
     partiallyStaffed: "Delvis bemannad",
     needsUmpire: "Behöver domare",
     bulkImport: "Massimport",
-    pendingAssignments: "Väntande tillsättningar",
+    pendingAssignments: "Bemanningsöversikt",
     staffingControl: "Bemanningskontroll",
     hideStaffed: "Dölj helt bemannade",
     showAll: "Visa alla matcher",
@@ -123,7 +126,11 @@ const translations = {
     processing: "Bearbetar...",
     cancel: "Avbryt",
     date: "Datum",
-    crew: "Domarteam"
+    crew: "Domarteam",
+    addToCalendar: "Spara i kalender",
+    downloadFullSchedule: "Ladda ner mitt schema (.ics)",
+    confirmedGames: "Bekräftade uppdrag",
+    interestedGames: "Anmält intresse"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -186,7 +193,11 @@ const translations = {
     processing: "Processing...",
     cancel: "Cancel",
     date: "Date",
-    crew: "Umpire Crew"
+    crew: "Umpire Crew",
+    addToCalendar: "Add to Calendar",
+    downloadFullSchedule: "Download My Schedule (.ics)",
+    confirmedGames: "Confirmed Assignments",
+    interestedGames: "Interested Matches"
   }
 };
 
@@ -276,7 +287,64 @@ export default function App() {
     };
   }, [user, selectedYear]);
 
-  // Grouped assignments for easy access: { gameId: [asg, asg...] }
+  // Helpers
+  const getLeagueStyles = (league) => {
+    const l = league?.toLowerCase() || '';
+    if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
+    if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (l.includes('pre')) return 'bg-red-100 text-red-700 border-red-200';
+    if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  const generateICS = (gamesToExport) => {
+    if (gamesToExport.length === 0) return;
+
+    const events = gamesToExport.map(game => {
+      const cleanDate = game.date.replace(/-/g, '');
+      const cleanTime = game.time.replace(/:/g, '');
+      const startTime = `${cleanDate}T${cleanTime}00`;
+      const [hours, mins] = game.time.split(':');
+      const endHours = (parseInt(hours) + 3).toString().padStart(2, '0');
+      const endTime = `${cleanDate}T${endHours}${mins}00`;
+
+      return [
+        'BEGIN:VEVENT',
+        `UID:${game.id}@domartillsattning.portal`,
+        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+        `DTSTART:${startTime}`,
+        `DTEND:${endTime}`,
+        `SUMMARY:${game.home} vs ${game.away} (${game.league})`,
+        `DESCRIPTION:League: ${game.league}\\nLocation: ${game.location}`,
+        `LOCATION:${game.location}`,
+        'END:VEVENT'
+      ].join('\n');
+    }).join('\n');
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Domartillsättning//Baseball Scheduler//EN',
+      events,
+      'END:VCALENDAR'
+    ].join('\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `schedule-${selectedYear}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCalendarExport = (game) => {
+    if (!game.date || !game.time) return;
+    generateICS([game]);
+  };
+
+  // Grouped assignments
   const groupedAssignments = useMemo(() => {
     const map = {};
     assignments.forEach(asg => {
@@ -285,6 +353,14 @@ export default function App() {
     });
     return map;
   }, [assignments]);
+
+  // User's specifically assigned games
+  const myAssignedGames = useMemo(() => {
+    if (!user) return [];
+    return games.filter(game => 
+      groupedAssignments[game.id]?.some(asg => asg.userId === user.uid)
+    );
+  }, [games, groupedAssignments, user]);
 
   // Derived Statistics
   const statistics = useMemo(() => {
@@ -395,7 +471,7 @@ export default function App() {
       <header className="bg-blue-900 text-white p-4 shadow-lg sticky top-0 z-20">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="bg-white rounded-lg overflow-hidden flex items-center justify-center h-10 w-10 border border-white/20">
+            <div className="bg-white rounded-lg overflow-hidden flex items-center justify-center h-10 w-10 border border-white/20 shadow-inner">
               {LOGO_URL ? (
                 <img src={LOGO_URL} alt="Logo" className="h-full w-full object-contain p-1" />
               ) : (
@@ -479,7 +555,7 @@ export default function App() {
                   {showHistory ? t.archived : t.activeSchedule}
                 </h2>
                 <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                  <History className="w-3.5 h-3.5" />
+                  <HistoryIcon className="w-3.5 h-3.5" />
                   {showHistory ? t.upcoming : t.history}
                 </button>
               </div>
@@ -505,7 +581,18 @@ export default function App() {
                             <p className="text-2xl font-black text-slate-800 leading-none">{new Date(game.date).getDate()}</p>
                           </div>
                           <div>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest bg-blue-100 text-blue-700">{game.league}</span>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>
+                                {game.league}
+                                </span>
+                                <button 
+                                    onClick={() => handleCalendarExport(game)}
+                                    className="text-slate-400 hover:text-blue-600 transition-colors"
+                                    title={t.addToCalendar}
+                                >
+                                    <CalendarPlus className="w-4 h-4" />
+                                </button>
+                            </div>
                             <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.home} vs {game.away}</h3>
                             <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
                               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
@@ -514,7 +601,7 @@ export default function App() {
                             
                             {/* Assigned Crew List */}
                             {gameAssignments.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-3">
+                              <div className="flex flex-wrap gap-1 mt-3 items-center">
                                 {gameAssignments.map(asg => (
                                   <div key={asg.id} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
                                     <CheckCircle className="w-3 h-3" /> {asg.userName}
@@ -584,7 +671,7 @@ export default function App() {
                       <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                           <p className="text-xs font-bold text-slate-600">{game.home} vs {game.away} | {game.date}</p>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${isFullyStaffed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>
                             {gameAssignments.length} / 4 {t.assignedTo}
                           </span>
                         </div>
@@ -665,35 +752,93 @@ export default function App() {
 
           {view === 'my-apps' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">{t.mySchedule}</h2>
-              {applications.filter(a => a.userId === user?.uid).length === 0 ? (
-                <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
-                  <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Calendar className="w-8 h-8 text-slate-300" /></div>
-                  <p className="text-slate-500 font-medium">{t.noInterest}</p>
-                </div>
-              ) : (
-                applications.filter(a => a.userId === user?.uid).map(app => {
-                  const game = games.find(g => g.id === app.gameId);
-                  if (!game) return null;
-                  const gameAssignments = groupedAssignments[game.id] || [];
-                  const isAssigned = user && gameAssignments.some(asg => asg.userId === user.uid);
-                  return (
-                    <div key={app.id} className={`bg-white p-4 rounded-2xl shadow-sm border transition-all flex items-center justify-between ${isAssigned ? 'border-green-200 bg-green-50/50' : 'border-slate-200'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">{t.mySchedule}</h2>
+                {myAssignedGames.length > 0 && (
+                  <button 
+                    onClick={() => generateICS(myAssignedGames)}
+                    className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+                  >
+                    <Download className="w-4 h-4" />
+                    {t.downloadFullSchedule}
+                  </button>
+                )}
+              </div>
+
+              {/* Confirmed List */}
+              {myAssignedGames.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.confirmedGames}</h3>
+                  {myAssignedGames.map(game => (
+                    <div key={game.id} className="bg-white p-4 rounded-2xl shadow-sm border border-green-200 bg-green-50/30 transition-all flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${isAssigned ? 'bg-green-100' : 'bg-slate-100'}`}><Calendar className={`w-5 h-5 ${isAssigned ? 'text-green-600' : 'text-slate-400'}`} /></div>
+                        <div className="p-3 rounded-xl bg-green-100"><Calendar className="w-5 h-5 text-green-600" /></div>
                         <div>
-                          <p className="font-bold text-slate-900 leading-tight text-base">{game.home} vs {game.away}</p>
-                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">{game.date} @ {game.time}</p>
+                          <div className="flex items-center gap-2">
+                             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{game.date} @ {game.time}</p>
+                          </div>
+                          <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.home} vs {game.away}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {isAssigned && <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" /> {t.confirmed}</div>}
-                        <button onClick={() => toggleApplication(game.id)} className="text-slate-300 hover:text-red-500 p-2.5 transition-colors"><Trash2 className="w-5 h-5" /></button>
+                      <div className="flex items-center gap-2">
+                         <button 
+                            onClick={() => handleCalendarExport(game)}
+                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                            title={t.addToCalendar}
+                          >
+                            <CalendarPlus className="w-5 h-5" />
+                          </button>
+                          <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm flex items-center gap-1.5">
+                            <CheckCircle className="w-3.5 h-3.5" /> {t.confirmed}
+                          </div>
                       </div>
                     </div>
-                  );
-                })
+                  ))}
+                </div>
               )}
+
+              {/* Interested List */}
+              <div className="space-y-3">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mt-4">{t.interestedGames}</h3>
+                {applications.filter(a => a.userId === user?.uid && !myAssignedGames.some(g => g.id === a.gameId)).length === 0 ? (
+                  myAssignedGames.length === 0 && (
+                    <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
+                        <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Calendar className="w-8 h-8 text-slate-300" /></div>
+                        <p className="text-slate-500 font-medium">{t.noInterest}</p>
+                    </div>
+                  )
+                ) : (
+                  applications.filter(a => a.userId === user?.uid && !myAssignedGames.some(g => g.id === a.gameId)).map(app => {
+                    const game = games.find(g => g.id === app.gameId);
+                    if (!game) return null;
+                    return (
+                        <div key={app.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-xl bg-slate-100"><Calendar className="w-5 h-5 text-slate-400" /></div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{game.date} @ {game.time}</p>
+                                    </div>
+                                    <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.home} vs {game.away}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleCalendarExport(game)}
+                                    className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                                    title={t.addToCalendar}
+                                >
+                                    <CalendarPlus className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => toggleApplication(game.id)} className="text-slate-300 hover:text-red-500 p-2.5 transition-colors"><Trash2 className="w-5 h-5" /></button>
+                            </div>
+                        </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           )}
         </section>
