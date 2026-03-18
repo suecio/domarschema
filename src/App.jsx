@@ -104,6 +104,9 @@ const translations = {
     removeAssignment: "Ta bort",
     deleteGame: "Ta bort match",
     deleteConfirm: "Är du säker på att du vill ta bort matchen? Detta tar även bort tillsättningar.",
+    deleteAllGames: "Rensa hela säsongen",
+    deleteAllConfirm: "ÄR DU HELT SÄKER? Detta kommer radera ALLA matcher, intresseanmälningar och tillsättningar för det valda året. Detta går inte att ångra.",
+    deleteAllSuccess: "Säsongen har rensats.",
     umpire: "Domare",
     interests: "Intresseanmälningar",
     gamesAssigned: "Dömda matcher",
@@ -182,6 +185,9 @@ const translations = {
     removeAssignment: "Remove",
     deleteGame: "Delete Game",
     deleteConfirm: "Are you sure you want to delete this game? This will also remove any assignments.",
+    deleteAllGames: "Clear Entire Season",
+    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL games, interests, and assignments for the selected year. This cannot be undone.",
+    deleteAllSuccess: "Season cleared successfully.",
     umpire: "Umpire",
     interests: "Interests",
     gamesAssigned: "Games Assigned",
@@ -521,6 +527,40 @@ export default function App() {
     finally { setSyncing(false); }
   };
 
+  const deleteAllGames = async () => {
+    if (!isAdmin) return;
+    const confirmed = window.confirm(t.deleteAllConfirm);
+    if (!confirmed) return;
+
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      
+      // Delete all current season games
+      games.forEach(game => {
+        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id));
+      });
+
+      // Delete all current season assignments
+      assignments.forEach(asg => {
+        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`));
+      });
+
+      // Delete all current season applications
+      applications.forEach(app => {
+        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`));
+      });
+
+      await batch.commit();
+      alert(t.deleteAllSuccess);
+    } catch (e) {
+      console.error("Delete all failed:", e);
+      alert("Error deleting games.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleAdminAuth = async () => {
     if (adminCode === 'admin123' && user) {
       setIsAdmin(true);
@@ -710,6 +750,12 @@ export default function App() {
                   <p className="text-xs text-slate-500">{selectedYear} Season</p>
                 </div>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={deleteAllGames} 
+                    className="bg-red-50 text-red-600 border border-red-100 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-red-100 transition-all active:scale-95"
+                  >
+                    {t.deleteAllGames}
+                  </button>
                   <button onClick={() => setShowImportTool(!showImportTool)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
                 </div>
               </div>
