@@ -508,7 +508,9 @@ export default function App() {
       </div>
     </div>
   );
-}  apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
+} 
+{
+  apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
   authDomain: "baseball-umpire-portal.firebaseapp.com",
   projectId: "baseball-umpire-portal",
   storageBucket: "baseball-umpire-portal.firebasestorage.app",
