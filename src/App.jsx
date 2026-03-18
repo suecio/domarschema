@@ -499,11 +499,12 @@ export default function App() {
             date: columns[0].trim(),
             time: columns[1].trim(),
             league: columns[2].trim(),
-            away: columns[3].trim(), // Note: order in import text usually matches display
+            away: columns[3].trim(), 
             home: columns[4].trim(),
             location: (columns[5] || 'Unknown').trim(),
           };
-          const gameId = `m-${gameData.date}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').toLowerCase();
+          // FIX: Include time in gameId to support double headers (same teams, same day, different time)
+          const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
           batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
         }
       });
