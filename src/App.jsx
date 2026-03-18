@@ -18,7 +18,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { 
-  Calendar, 
+  Calendar as CalendarIcon, 
   User, 
   Shield, 
   CheckCircle, 
@@ -49,7 +49,9 @@ import {
   Check,
   LogOut,
   ChevronRight,
-  X
+  X,
+  List,
+  ChevronLeft
 } from 'lucide-react';
 
 /**
@@ -160,7 +162,11 @@ const translations = {
     time: "Tid",
     location: "Plats",
     league: "Serie",
-    saveChanges: "Spara ändringar"
+    saveChanges: "Spara ändringar",
+    listView: "Lista",
+    calendarView: "Kalender",
+    days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
+    months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"]
   },
   en: {
     appTitle: "Domartillsättning",
@@ -248,7 +254,11 @@ const translations = {
     time: "Time",
     location: "Location",
     league: "League",
-    saveChanges: "Save Changes"
+    saveChanges: "Save Changes",
+    listView: "List",
+    calendarView: "Calendar",
+    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
   }
 };
 
@@ -258,11 +268,15 @@ export default function App() {
   const [umpireId, setUmpireId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState('schedule');
+  const [scheduleViewMode, setScheduleViewMode] = useState('list'); // 'list' or 'calendar'
   const [selectedYear, setSelectedYear] = useState('2026');
   
   const defaultLang = typeof navigator !== 'undefined' && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
   const t = translations[lang];
+
+  // Calendar State
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   // Data State
   const [games, setGames] = useState([]);
@@ -359,7 +373,6 @@ export default function App() {
     const l = league?.toLowerCase() || '';
     if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
     if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
-    // Format "offseason" the same as "preseason" (red)
     if (l.includes('pre') || l.includes('off')) return 'bg-red-100 text-red-700 border-red-200';
     if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200';
     return 'bg-slate-100 text-slate-700 border-slate-200';
@@ -456,6 +469,7 @@ export default function App() {
     return masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [masterUmpires, searchQuery, isAddingNew]);
 
+  // Actions
   const updateProfile = async (name, id) => {
     if (!user) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id, isAdmin }, { merge: true });
@@ -547,7 +561,6 @@ export default function App() {
     finally { setSyncing(false); }
   };
 
-  // --- NEW: Edit Existing Game Logic ---
   const saveEditedGame = async () => {
     if (!isAdmin || !editingGameData) return;
     try {
@@ -571,27 +584,16 @@ export default function App() {
     if (!isAdmin) return;
     const confirmed = window.confirm(t.deleteAllConfirm);
     if (!confirmed) return;
-
     setSyncing(true);
     try {
       const batch = writeBatch(db);
-      games.forEach(game => {
-        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id));
-      });
-      assignments.forEach(asg => {
-        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`));
-      });
-      applications.forEach(app => {
-        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`));
-      });
+      games.forEach(game => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)));
+      assignments.forEach(asg => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`)));
+      applications.forEach(app => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`)));
       await batch.commit();
       alert(t.deleteAllSuccess);
-    } catch (e) {
-      console.error("Delete all failed:", e);
-      alert("Error deleting games.");
-    } finally {
-      setSyncing(false);
-    }
+    } catch (e) { alert("Error deleting games."); }
+    finally { setSyncing(false); }
   };
 
   const handleAdminAuth = async () => {
@@ -601,6 +603,27 @@ export default function App() {
       await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { isAdmin: true }, { merge: true });
     }
   };
+
+  // --- CALENDAR GENERATION HELPERS ---
+  const generateCalendarDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun, 1=Mon...
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Shift days to start on Monday (European standard)
+    const shiftedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+    
+    const days = [];
+    // Padding for start of month
+    for (let i = 0; i < shiftedFirstDay; i++) days.push(null);
+    // Real days
+    for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+    
+    return days;
+  };
+
+  const calendarDays = useMemo(generateCalendarDays, [currentDate]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen bg-slate-50 text-blue-600"><RefreshCw className="animate-spin" /></div>;
 
@@ -645,7 +668,7 @@ export default function App() {
         {/* Navigation */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
-            { id: 'schedule', label: t.schedule, icon: Calendar },
+            { id: 'schedule', label: t.schedule, icon: CalendarIcon },
             { id: 'my-apps', label: t.myGames, icon: CheckCircle },
             ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : [])
           ].map(tab => (
@@ -689,88 +712,147 @@ export default function App() {
         <section className="space-y-4">
           {view === 'schedule' && (
             <>
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+              {/* Schedule View Toggle and Nav */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">
                   {showHistory ? t.archived : t.activeSchedule}
                 </h2>
-                <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                  <HistoryIcon className="w-3.5 h-3.5" />
-                  {showHistory ? t.upcoming : t.history}
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                     <button onClick={() => setScheduleViewMode('list')} className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>
+                        <List className="w-4 h-4" />
+                     </button>
+                     <button onClick={() => setScheduleViewMode('calendar')} className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>
+                        <CalendarIcon className="w-4 h-4" />
+                     </button>
+                  </div>
+                  <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                    <HistoryIcon className="w-3.5 h-3.5" />
+                    {showHistory ? t.upcoming : t.history}
+                  </button>
+                </div>
               </div>
 
-              {filteredGames.length === 0 ? (
-                <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
-                  <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                  <p className="text-slate-500 font-medium">{t.noGames}</p>
-                </div>
-              ) : (
-                filteredGames.map(game => {
-                  const gameAssignments = groupedAssignments[game.id] || [];
-                  const appsCount = applications.filter(a => a.gameId === game.id).length;
-                  const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
-                  const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
-                  
-                  return (
-                    <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
-                      <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex gap-4">
-                          <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(game.date).toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' })}</p>
-                            <p className="text-2xl font-black text-slate-800 leading-none">{new Date(game.date).getDate()}</p>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>
-                                {game.league}
-                                </span>
-                                <button 
-                                    onClick={() => handleCalendarExport(game)}
-                                    className="text-slate-400 hover:text-blue-600 transition-colors"
-                                    title={t.addToCalendar}
-                                >
-                                    <CalendarPlus className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away} @ {game.home}</h3>
-                            <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
-                              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
-                              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
-                            </div>
-                            
-                            {/* Assigned Crew List */}
-                            {gameAssignments.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-3 items-center">
-                                {gameAssignments.map(asg => (
-                                  <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
-                                    <CheckCircle className="w-3 h-3" /> {asg.userName}
-                                  </div>
+              {scheduleViewMode === 'calendar' ? (
+                /* CALENDAR VIEW */
+                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in duration-300">
+                  <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                     <h3 className="font-black text-slate-800 uppercase tracking-tight">
+                        {t.months[currentDate.getMonth()]} {currentDate.getFullYear()}
+                     </h3>
+                     <div className="flex gap-2">
+                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronLeft className="w-4 h-4"/></button>
+                        <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">IDAG</button>
+                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronRight className="w-4 h-4"/></button>
+                     </div>
+                  </div>
+                  <div className="grid grid-cols-7 border-b border-slate-100">
+                    {/* Shifted to Mon-Sun */}
+                    {[1, 2, 3, 4, 5, 6, 0].map(d => (
+                      <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{t.days[d]}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7">
+                    {calendarDays.map((day, idx) => {
+                      const dateStr = day ? day.toISOString().split('T')[0] : null;
+                      const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
+                      const isToday = dateStr === today;
+                      
+                      return (
+                        <div key={idx} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
+                          {day && (
+                            <>
+                              <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
+                                {day.getDate()}
+                              </span>
+                              <div className="mt-2 space-y-1">
+                                {matches.map(g => (
+                                  <button 
+                                    key={g.id} 
+                                    onClick={() => {
+                                        setSearchQuery(g.home); // Jump to game focus
+                                        setScheduleViewMode('list');
+                                    }}
+                                    className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
+                                  >
+                                    <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
+                                    <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
+                                  </button>
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                          {!showHistory && (
-                            <>
-                              <div className="flex flex-col items-end">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</span>
-                                {gameAssignments.length > 0 && <span className="text-[10px] font-black text-green-600 uppercase tracking-widest mt-0.5">{gameAssignments.length}/4 {t.staffed}</span>}
-                              </div>
-                              <button 
-                                onClick={() => toggleApplication(game.id)} 
-                                disabled={isAssignedToThisGame} 
-                                className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}
-                              >
-                                {isApplied ? t.withdraw : t.interested}
-                              </button>
                             </>
                           )}
                         </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* LIST VIEW */
+                filteredGames.length === 0 ? (
+                  <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
+                    <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-500 font-medium">{t.noGames}</p>
+                  </div>
+                ) : (
+                  filteredGames.map(game => {
+                    const gameAssignments = groupedAssignments[game.id] || [];
+                    const appsCount = applications.filter(a => a.gameId === game.id).length;
+                    const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
+                    const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
+                    
+                    const gameDateObj = new Date(game.date);
+                    const dayOfWeek = t.days[gameDateObj.getDay()];
+
+                    return (
+                      <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
+                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex gap-4">
+                            <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{dayOfWeek}</p>
+                              <p className="text-2xl font-black text-slate-800 leading-none">{gameDateObj.getDate()}</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{gameDateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' })}</p>
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>
+                                  {game.league}
+                                  </span>
+                                  <button onClick={() => handleCalendarExport(game)} className="text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}><CalendarPlus className="w-4 h-4" /></button>
+                              </div>
+                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away} @ {game.home}</h3>
+                              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
+                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
+                                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
+                              </div>
+                              
+                              {gameAssignments.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-3 items-center">
+                                  {gameAssignments.map(asg => (
+                                    <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
+                                      <CheckCircle className="w-3 h-3" /> {asg.userName}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                            {!showHistory && (
+                              <>
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</span>
+                                  {gameAssignments.length > 0 && <span className="text-[10px] font-black text-green-600 uppercase tracking-widest mt-0.5">{gameAssignments.length}/4 {t.staffed}</span>}
+                                </div>
+                                <button onClick={() => toggleApplication(game.id)} disabled={isAssignedToThisGame} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}>{isApplied ? t.withdraw : t.interested}</button>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })
+                )
               )}
             </>
           )}
@@ -783,12 +865,7 @@ export default function App() {
                   <p className="text-xs text-slate-500">{selectedYear} Season</p>
                 </div>
                 <div className="flex gap-2">
-                  <button 
-                    onClick={deleteAllGames} 
-                    className="bg-red-50 text-red-600 border border-red-100 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-red-100 transition-all active:scale-95"
-                  >
-                    {t.deleteAllGames}
-                  </button>
+                  <button onClick={deleteAllGames} className="bg-red-50 text-red-600 border border-red-100 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-red-100 transition-all active:scale-95">{t.deleteAllGames}</button>
                   <button onClick={() => setShowImportTool(!showImportTool)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
                 </div>
               </div>
@@ -801,7 +878,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Master Umpire List Manager */}
+              {/* Master List Manager */}
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Users className="w-4 h-4" /> {t.masterList}</h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
@@ -809,22 +886,14 @@ export default function App() {
                     <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                       {editingUmpireId === u.id ? (
                         <div className="flex flex-1 gap-2">
-                          <input 
-                            type="text" 
-                            value={tempEditName} 
-                            onChange={(e) => setTempEditName(e.target.value)}
-                            className="flex-1 bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none"
-                          />
+                          <input type="text" value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} className="flex-1 bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none" />
                           <button onClick={async () => { await updateMasterUmpire(u.id, tempEditName); setEditingUmpireId(null); }} className="bg-green-600 text-white p-1.5 rounded-lg"><Check className="w-4 h-4" /></button>
                           <button onClick={() => setEditingUmpireId(null)} className="bg-slate-200 text-slate-600 p-1.5 rounded-lg"><UserMinus className="w-4 h-4" /></button>
                         </div>
                       ) : (
                         <>
                           <span className="text-sm font-bold text-slate-700">{u.name}</span>
-                          <div className="flex gap-1">
-                            <button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => deleteMasterUmpire(u.id)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                          </div>
+                          <div className="flex gap-1"><button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button><button onClick={() => deleteMasterUmpire(u.id)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></div>
                         </>
                       )}
                     </div>
@@ -835,9 +904,7 @@ export default function App() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center px-2">
                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t.pendingAssignments}</h3>
-                   <button onClick={() => setShowStaffed(!showStaffed)} className="text-[10px] font-black text-blue-600 uppercase hover:underline">
-                     {showStaffed ? t.hideStaffed : t.showAll}
-                   </button>
+                   <button onClick={() => setShowStaffed(!showStaffed)} className="text-[10px] font-black text-blue-600 uppercase hover:underline">{showStaffed ? t.hideStaffed : t.showAll}</button>
                 </div>
                 {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < 4).map(game => {
                   const applicants = applications.filter(a => a.gameId === game.id);
@@ -849,93 +916,45 @@ export default function App() {
                     <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                       <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                         <div className="flex items-center gap-3 flex-wrap">
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>
-                            {game.league}
-                          </span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
                           <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length)}`}>
-                            {gameAssignments.length} / 4 {t.assignedTo}
-                          </span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length)}`}>{gameAssignments.length} / 4 {t.assignedTo}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => setEditingGameData(isEditingThisGame ? null : { ...game })} className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}>
-                            <Edit2 className="w-4 h-4" />
-                          </button>
+                          <button onClick={() => setEditingGameData(isEditingThisGame ? null : { ...game })} className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}><Edit2 className="w-4 h-4" /></button>
                           <button onClick={() => { if(window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
-
                       {isEditingThisGame ? (
-                        <div className="p-6 bg-blue-50/30 space-y-4 animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 bg-blue-50/30 space-y-4">
                           <div className="grid grid-cols-2 gap-3">
-                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
-                                <input type="date" value={editingGameData.date} onChange={(e) => setEditingGameData({ ...editingGameData, date: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                             </div>
-                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.time}</label>
-                                <input type="text" value={editingGameData.time} onChange={(e) => setEditingGameData({ ...editingGameData, time: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                             </div>
-                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.away}</label>
-                                <input type="text" value={editingGameData.away} onChange={(e) => setEditingGameData({ ...editingGameData, away: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                             </div>
-                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label>
-                                <input type="text" value={editingGameData.home} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                             </div>
-                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label>
-                                <input type="text" value={editingGameData.league} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                             </div>
-                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label>
-                                <input type="text" value={editingGameData.location} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                             </div>
+                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label><input type="date" value={editingGameData.date} onChange={(e) => setEditingGameData({ ...editingGameData, date: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.time}</label><input type="text" value={editingGameData.time} onChange={(e) => setEditingGameData({ ...editingGameData, time: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.away}</label><input type="text" value={editingGameData.away} onChange={(e) => setEditingGameData({ ...editingGameData, away: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label><input type="text" value={editingGameData.home} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label><input type="text" value={editingGameData.league} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label><input type="text" value={editingGameData.location} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
                           </div>
-                          <div className="flex gap-2">
-                             <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-green-100">{t.saveChanges}</button>
-                             <button onClick={() => setEditingGameData(null)} className="px-6 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest">{t.cancel}</button>
-                          </div>
+                          <div className="flex gap-2"><button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">{t.saveChanges}</button><button onClick={() => setEditingGameData(null)} className="px-6 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest">{t.cancel}</button></div>
                         </div>
                       ) : (
                         <div className="p-4 space-y-4">
-                          {/* Current Crew */}
                           {gameAssignments.length > 0 && (
                             <div className="space-y-1">
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {gameAssignments.map(asg => (
-                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
-                                    <div className="flex items-center gap-2">
-                                      <Users className="w-3 h-3 text-green-600" />
-                                      <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
-                                    </div>
-                                    <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button>
-                                  </div>
+                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30"><div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div><button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button></div>
                                 ))}
                               </div>
                             </div>
                           )}
-
-                          {/* Applicants to Assign */}
                           <div className="space-y-1">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? (
-                              <p className="text-xs text-slate-400 italic">{t.noInterest}</p>
-                            ) : (
+                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => (
-                                  <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
-                                    <span className="text-xs font-bold">{app.userName}</span>
-                                    <button 
-                                      disabled={isFullyStaffed}
-                                      onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
-                                      className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
-                                    >
-                                      <UserPlus className="w-3 h-3" /> Assign
-                                    </button>
-                                  </div>
+                                  <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all"><span className="text-xs font-bold">{app.userName}</span><button disabled={isFullyStaffed} onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"><UserPlus className="w-3 h-3" /> Assign</button></div>
                                 ))}
                               </div>
                             )}
@@ -977,86 +996,29 @@ export default function App() {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
                 <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">{t.mySchedule}</h2>
-                {myAssignedGames.length > 0 && (
-                  <button 
-                    onClick={() => generateICS(myAssignedGames)}
-                    className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg hover:bg-blue-700 transition-all active:scale-95"
-                  >
-                    <Download className="w-4 h-4" />
-                    {t.downloadFullSchedule}
-                  </button>
-                )}
+                {myAssignedGames.length > 0 && <button onClick={() => generateICS(myAssignedGames)} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg hover:bg-blue-700 transition-all active:scale-95"><Download className="w-4 h-4" />{t.downloadFullSchedule}</button>}
               </div>
-
-              {/* Confirmed List */}
               {myAssignedGames.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.confirmedGames}</h3>
                   {myAssignedGames.map(game => (
                     <div key={game.id} className="bg-white p-4 rounded-2xl shadow-sm border border-green-200 bg-green-50/30 transition-all flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-green-100"><Calendar className="w-5 h-5 text-green-600" /></div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{game.date} @ {game.time}</p>
-                          </div>
-                          <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.away} @ {game.home}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                         <button 
-                            onClick={() => handleCalendarExport(game)}
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                            title={t.addToCalendar}
-                          >
-                            <CalendarPlus className="w-5 h-5" />
-                          </button>
-                          <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm flex items-center gap-1.5">
-                            <CheckCircle className="w-3.5 h-3.5" /> {t.confirmed}
-                          </div>
-                      </div>
+                      <div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-green-100"><CalendarIcon className="w-5 h-5 text-green-600" /></div><div><div className="flex items-center gap-2"><span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{new Date(game.date).toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', {weekday: 'short', day: 'numeric', month: 'short'})} @ {game.time}</p></div><p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.away} @ {game.home}</p></div></div>
+                      <div className="flex items-center gap-2"><button onClick={() => handleCalendarExport(game)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title={t.addToCalendar}><CalendarPlus className="w-5 h-5" /></button><div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" /> {t.confirmed}</div></div>
                     </div>
                   ))}
                 </div>
               )}
-
-              {/* Interested List */}
               <div className="space-y-3">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mt-4">{t.interestedGames}</h3>
-                {applications.filter(a => a.userId === umpireId && !myAssignedGames.some(g => g.id === a.gameId)).length === 0 ? (
-                  myAssignedGames.length === 0 && (
-                    <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
-                        <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Calendar className="w-8 h-8 text-slate-300" /></div>
-                        <p className="text-slate-500 font-medium">{t.noInterest}</p>
-                    </div>
-                  )
-                ) : (
+                {applications.filter(a => a.userId === umpireId && !myAssignedGames.some(g => g.id === a.gameId)).length === 0 ? (myAssignedGames.length === 0 && <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200"><div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><CalendarIcon className="w-8 h-8 text-slate-300" /></div><p className="text-slate-500 font-medium">{t.noInterest}</p></div>) : (
                   applications.filter(a => a.userId === umpireId && !myAssignedGames.some(g => g.id === a.gameId)).map(app => {
                     const game = games.find(g => g.id === app.gameId);
                     if (!game) return null;
                     return (
                         <div key={app.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-slate-100"><Calendar className="w-5 h-5 text-slate-400" /></div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{game.date} @ {game.time}</p>
-                                    </div>
-                                    <p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.away} @ {game.home}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={() => handleCalendarExport(game)}
-                                    className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                                    title={t.addToCalendar}
-                                >
-                                    <CalendarPlus className="w-5 h-5" />
-                                </button>
-                                <button onClick={() => toggleApplication(game.id)} className="text-slate-300 hover:text-red-500 p-2.5 transition-colors"><Trash2 className="w-5 h-5" /></button>
-                            </div>
+                            <div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-slate-100"><CalendarIcon className="w-5 h-5 text-slate-400" /></div><div><div className="flex items-center gap-2"><span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{new Date(game.date).toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', {weekday: 'short', day: 'numeric', month: 'short'})} @ {game.time}</p></div><p className="font-bold text-slate-900 leading-tight text-base mt-1">{game.away} @ {game.home}</p></div></div>
+                            <div className="flex items-center gap-2"><button onClick={() => handleCalendarExport(game)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}><CalendarPlus className="w-5 h-5" /></button><button onClick={() => toggleApplication(game.id)} className="text-slate-300 hover:text-red-500 p-2.5 transition-colors"><Trash2 className="w-5 h-5" /></button></div>
                         </div>
                     );
                   })
@@ -1072,13 +1034,10 @@ export default function App() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in border border-white/20">
             <div className="text-center space-y-2">
-              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <UserCheck className="w-8 h-8 text-blue-600" />
-              </div>
+              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><UserCheck className="w-8 h-8 text-blue-600" /></div>
               <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.nameRequiredTitle}</h3>
               <p className="text-xs text-slate-400 font-medium leading-relaxed">{t.nameRequiredDesc}</p>
             </div>
-            
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.masterList}</label>
@@ -1087,16 +1046,12 @@ export default function App() {
                   <input type="text" value={searchQuery} placeholder={t.namePlaceholder} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm" />
                 </div>
                 <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
-                  {filteredMasterUmpires.length > 0 ? (
-                    filteredMasterUmpires.map(u => (
+                  {filteredMasterUmpires.length > 0 ? filteredMasterUmpires.map(u => (
                       <button key={u.id} onClick={async () => { setUserName(u.name); setUmpireId(u.id); await updateProfile(u.name, u.id); setShowNamePrompt(false); setSearchQuery(''); }} className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group">
                         <span className="text-sm font-bold text-slate-700">{u.name}</span>
                         <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                       </button>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center"><p className="text-xs text-slate-400 font-medium italic">{t.noGames}</p></div>
-                  )}
+                  )) : <div className="p-4 text-center"><p className="text-xs text-slate-400 font-medium italic">{t.noGames}</p></div>}
                 </div>
               </div>
               <div className="pt-4 border-t border-slate-100 space-y-3">
@@ -1145,26 +1100,13 @@ export default function App() {
       )}
 
       {/* Floating Profile Bar */}
-      <button 
-        onClick={() => setShowNamePrompt(true)}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-40 border border-blue-800/50 backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
-      >
+      <button onClick={() => setShowNamePrompt(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-40 border border-blue-800/50 backdrop-blur-md hover:scale-105 active:scale-95 transition-all">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner overflow-hidden">
-            {userName ? userName.charAt(0) : '?'}
-          </div>
-          <div className="text-left">
-            <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
-            <span className="text-sm font-bold whitespace-nowrap leading-none">{userName || t.selectFromList}</span>
-          </div>
+          <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner overflow-hidden">{userName ? userName.charAt(0) : '?'}</div>
+          <div className="text-left"><p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p><span className="text-sm font-bold whitespace-nowrap leading-none">{userName || t.selectFromList}</span></div>
         </div>
         <div className="h-4 w-px bg-blue-700" />
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] font-black uppercase text-blue-300 leading-none">{t.applied}</span>
-          <span className="text-[11px] font-bold leading-none mt-0.5">
-            {umpireId && applications.filter(a => a.userId === umpireId).length}
-          </span>
-        </div>
+        <div className="flex flex-col items-center"><span className="text-[10px] font-black uppercase text-blue-300 leading-none">{t.applied}</span><span className="text-[11px] font-bold leading-none mt-0.5">{umpireId && applications.filter(a => a.userId === umpireId).length}</span></div>
       </button>
     </div>
   );
