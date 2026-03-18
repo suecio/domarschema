@@ -13,7 +13,8 @@ import {
 import { 
   getAuth,
   signInAnonymously,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from 'firebase/auth';
 import { 
   Calendar, 
@@ -44,7 +45,9 @@ import {
   ArrowRight,
   UserCheck,
   Edit2,
-  Check
+  Check,
+  LogOut,
+  ChevronRight
 } from 'lucide-react';
 
 /**
@@ -118,9 +121,10 @@ const translations = {
     verify: "Verifiera",
     adminActive: "Admin aktiv",
     logoutAdmin: "Logga ut admin",
+    logout: "Logga ut",
     close: "Stäng",
     status: "Status",
-    setProfile: "Ange profilnamn",
+    setProfile: "Välj din profil",
     pasteSheet: "Klistra in från Google Sheets",
     pasteFormat: "Format: ÅYYY-MM-DD | Tid | Serie | Hemma | Borta | Plats (Tabb-separerat)",
     addGames: "Lägg till matcher",
@@ -135,14 +139,16 @@ const translations = {
     downloadFullSchedule: "Ladda ner mitt schema (.ics)",
     confirmedGames: "Bekräftade uppdrag",
     interestedGames: "Anmält intresse",
-    nameRequiredTitle: "Välj din profil",
-    nameRequiredDesc: "Välj ditt namn från listan eller lägg till ett nytt för att anmäla intresse.",
-    saveName: "Spara profil",
-    addNewName: "Lägg till som ny domare",
+    nameRequiredTitle: "Vem är du?",
+    nameRequiredDesc: "Välj ditt namn från listan nedan för att fortsätta.",
+    saveName: "Välj profil",
+    addNewName: "Hittar du inte ditt namn?",
+    createUmpire: "Skapa ny profil",
     masterList: "Domarlista",
     editName: "Ändra namn",
     save: "Spara",
-    selectFromList: "Välj från listan"
+    selectFromList: "Välj från listan",
+    changeUser: "Byt användare"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -193,9 +199,10 @@ const translations = {
     verify: "Verify",
     adminActive: "Admin Active",
     logoutAdmin: "Logout Admin",
+    logout: "Logout",
     close: "Close",
     status: "Status",
-    setProfile: "Set Profile Name",
+    setProfile: "Select Your Profile",
     pasteSheet: "Paste from Google Sheets",
     pasteFormat: "Format: YYYY-MM-DD | Time | League | Home | Away | Location (Tab separated)",
     addGames: "Add Games",
@@ -210,14 +217,16 @@ const translations = {
     downloadFullSchedule: "Download My Schedule (.ics)",
     confirmedGames: "Confirmed Assignments",
     interestedGames: "Interested Matches",
-    nameRequiredTitle: "Select Your Profile",
-    nameRequiredDesc: "Choose your name from the list or add a new one to start applying.",
-    saveName: "Save Profile",
-    addNewName: "Add as new umpire",
+    nameRequiredTitle: "Who are you?",
+    nameRequiredDesc: "Select your name from the list below to continue.",
+    saveName: "Select Profile",
+    addNewName: "Can't find your name?",
+    createUmpire: "Create new profile",
     masterList: "Umpire Master List",
     editName: "Edit Name",
     save: "Save",
-    selectFromList: "Select from list"
+    selectFromList: "Select from list",
+    changeUser: "Change User"
   }
 };
 
@@ -250,6 +259,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [editingUmpireId, setEditingUmpireId] = useState(null);
   const [tempEditName, setTempEditName] = useState('');
+  const [isAddingNew, setIsAddingNew] = useState(false);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -408,13 +418,21 @@ export default function App() {
 
   // Master List Logic
   const filteredMasterUmpires = useMemo(() => {
-    return masterUmpires.filter(u => u.name.toLowerCase().includes(userName.toLowerCase()));
-  }, [masterUmpires, userName]);
+    if (!searchQuery && !isAddingNew) return masterUmpires;
+    return masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [masterUmpires, searchQuery, isAddingNew]);
 
   // Actions
   const updateProfile = async (name) => {
     if (!user) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, isAdmin }, { merge: true });
+  };
+
+  const logoutUmpire = async () => {
+    if (!user) return;
+    setUserName('');
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', isAdmin: false }, { merge: true });
+    setShowNamePrompt(true);
   };
 
   const addMasterUmpire = async (name) => {
@@ -917,7 +935,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* Name Prompt Modal (Integrated with Master List) */}
+      {/* Profile Name/Selection Modal */}
       {showNamePrompt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in border border-white/20">
@@ -929,55 +947,88 @@ export default function App() {
               <p className="text-xs text-slate-400 font-medium leading-relaxed">{t.nameRequiredDesc}</p>
             </div>
             
-            <div className="space-y-1.5 relative">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.displayName}</label>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input 
-                  type="text" 
-                  autoFocus
-                  value={userName} 
-                  placeholder={t.namePlaceholder} 
-                  onChange={(e) => setUserName(e.target.value)} 
-                  className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all" 
-                />
-              </div>
+            <div className="space-y-4">
+              {/* Dropdown/Selection List */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.masterList}</label>
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                  <input 
+                    type="text" 
+                    value={searchQuery} 
+                    placeholder={t.namePlaceholder} 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                    className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm" 
+                  />
+                </div>
 
-              {/* Selection List */}
-              {userName.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-10 max-h-48 overflow-y-auto overflow-x-hidden">
-                  {filteredMasterUmpires.map(u => (
-                    <button 
-                      key={u.id}
-                      onClick={async () => {
-                        setUserName(u.name);
-                        await updateProfile(u.name);
-                        setShowNamePrompt(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-blue-50 text-sm font-bold text-slate-700 border-b border-slate-50 last:border-0"
-                    >
-                      {u.name}
-                    </button>
-                  ))}
-                  {filteredMasterUmpires.length === 0 && (
-                    <button 
-                      onClick={async () => {
-                        await addMasterUmpire(userName);
-                        await updateProfile(userName);
-                        setShowNamePrompt(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-green-50 text-sm font-black text-green-600"
-                    >
-                      <Plus className="inline w-3 h-3 mr-1" /> {t.addNewName} "{userName}"
-                    </button>
+                <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
+                  {filteredMasterUmpires.length > 0 ? (
+                    filteredMasterUmpires.map(u => (
+                      <button 
+                        key={u.id}
+                        onClick={async () => {
+                          setUserName(u.name);
+                          await updateProfile(u.name);
+                          setShowNamePrompt(false);
+                          setSearchQuery('');
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group"
+                      >
+                        <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                        <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center">
+                       <p className="text-xs text-slate-400 font-medium italic">{t.noGames}</p>
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
+
+              {/* Add New Option */}
+              <div className="pt-4 border-t border-slate-100 space-y-3">
+                <button 
+                  onClick={() => setIsAddingNew(!isAddingNew)}
+                  className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase hover:underline"
+                >
+                  <Plus className="w-3 h-3" /> {t.addNewName}
+                </button>
+
+                {isAddingNew && (
+                   <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                      <input 
+                        type="text" 
+                        autoFocus
+                        value={tempEditName}
+                        onChange={(e) => setTempEditName(e.target.value)}
+                        placeholder="För- och efternamn"
+                        className="w-full p-3 bg-white border border-blue-200 rounded-xl font-bold text-sm outline-none"
+                      />
+                      <button 
+                        onClick={async () => {
+                          if (tempEditName.trim()) {
+                            await addMasterUmpire(tempEditName);
+                            setUserName(tempEditName);
+                            await updateProfile(tempEditName);
+                            setTempEditName('');
+                            setIsAddingNew(false);
+                            setShowNamePrompt(false);
+                          }
+                        }}
+                        className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-blue-200"
+                      >
+                        {t.createUmpire}
+                      </button>
+                   </div>
+                )}
+              </div>
             </div>
             
             <button 
               onClick={() => setShowNamePrompt(false)}
-              className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-all"
+              className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
             >
               {t.cancel}
             </button>
@@ -989,29 +1040,26 @@ export default function App() {
       {showAdminModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
-            <div><h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3><p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p></div>
+            <div>
+               <h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3>
+               <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p>
+            </div>
+            
             <div className="space-y-4">
-              <div className="space-y-1.5 relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.displayName}</label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    value={userName} 
-                    placeholder={t.namePlaceholder} 
-                    onChange={(e) => setUserName(e.target.value)} 
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10" 
-                  />
-                  <button 
-                    onClick={async () => {
-                      await updateProfile(userName);
-                      await addMasterUmpire(userName);
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-900 text-white p-2 rounded-xl"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
+              {/* Profile Management */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.displayName}</p>
+                  <p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p>
                 </div>
+                <button 
+                  onClick={logoutUmpire}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1 font-black text-[10px] uppercase"
+                >
+                  <LogOut className="w-4 h-4" /> {t.logout}
+                </button>
               </div>
+
               <div className="pt-6 border-t border-slate-100">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.adminVerify}</label>
                 {!isAdmin ? (
@@ -1027,13 +1075,16 @@ export default function App() {
                 )}
               </div>
             </div>
-            <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors shadow-sm">{t.close}</button>
+            <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">{t.close}</button>
           </div>
         </div>
       )}
 
-      {/* Floating Profile Bar */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-40 border border-blue-800/50 backdrop-blur-md">
+      {/* Floating Profile Bar (Active) */}
+      <button 
+        onClick={() => setShowNamePrompt(true)}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-40 border border-blue-800/50 backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
+      >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner overflow-hidden">
             {LOGO_URL && userName === '' ? (
@@ -1042,16 +1093,19 @@ export default function App() {
               <span>{userName ? userName.charAt(0) : '?'}</span>
             )}
           </div>
-          <span className="text-sm font-bold whitespace-nowrap">{userName || t.setProfile}</span>
+          <div className="text-left">
+            <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
+            <span className="text-sm font-bold whitespace-nowrap leading-none">{userName || t.selectFromList}</span>
+          </div>
         </div>
         <div className="h-4 w-px bg-blue-700" />
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-black uppercase text-blue-300 leading-none">{t.status}</span>
+          <span className="text-[10px] font-black uppercase text-blue-300 leading-none">{t.applied}</span>
           <span className="text-[11px] font-bold leading-none mt-0.5">
-            {user && applications.filter(a => a.userId === user.uid).length} {t.applied}
+            {user && applications.filter(a => a.userId === user.uid).length}
           </span>
         </div>
-      </div>
+      </button>
     </div>
   );
 }
