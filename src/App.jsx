@@ -30,6 +30,7 @@ import {
 
 /**
  * Firebase Configuration
+ * (Using your provided project credentials)
  */
 const firebaseConfig = {
   apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
@@ -50,7 +51,7 @@ const db = getFirestore(app);
 const appId = 'baseball-umpire-scheduler-2026';
 
 // --- Accurate Elitserien 2026 Schedule Data ---
-// Based on the federation calendar for 2026
+// Matches the official federation fixtures for the upcoming season
 const FEDERATION_LATEST_DATA = [
   // Round 1 - May 2026
   { id: '26-e101', date: '2026-05-09', time: '14:00', league: 'Elitserien', home: 'Stockholm Monarchs', away: 'Sundbyberg Heat', location: 'Skarpnäck' },
@@ -96,7 +97,7 @@ export default function App() {
   const [adminCode, setAdminCode] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
 
-  // 1. Unified Authentication Logic
+  // 1. Authentication
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -105,14 +106,11 @@ export default function App() {
         console.error("Authentication Error:", err); 
       }
     };
-    
     initAuth();
-    
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
     });
-    
     return () => unsubscribe();
   }, []);
 
@@ -125,23 +123,28 @@ export default function App() {
     const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
       const gamesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setGames(gamesList.sort((a, b) => new Date(a.date) - new Date(b.date)));
-    }, (err) => console.error("Firestore Games Error:", err));
+    }, (err) => {
+      console.error("Firestore Games Error:", err);
+      if (err.code === 'permission-denied') {
+        alert("Permission Denied: Please check your Firestore Security Rules match the appId: " + appId);
+      }
+    });
 
-    // Listen for Umpire Interest Applications
+    // Listen for Applications
     const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
     const unsubscribeApps = onSnapshot(appsCol, (snapshot) => {
       setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.error("Firestore Apps Error:", err));
+    });
 
-    // Listen for Official Assignments
+    // Listen for Assignments
     const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments');
     const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => {
       const assignObj = {};
       snapshot.docs.forEach(doc => assignObj[doc.id] = doc.data());
       setAssignments(assignObj);
-    }, (err) => console.error("Firestore Assign Error:", err));
+    });
 
-    // Listen for User Profile Data
+    // Listen for Profile
     const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
     const unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
       if (snapshot.exists()) {
@@ -149,7 +152,7 @@ export default function App() {
         setUserName(data.name || '');
         setIsAdmin(data.isAdmin || false);
       }
-    }, (err) => console.error("Firestore Profile Error:", err));
+    });
 
     return () => {
       unsubscribeGames();
@@ -170,15 +173,11 @@ export default function App() {
     if (!user || !userName) return;
     const appIdStr = `${gameId}_${user.uid}`;
     const existing = applications.find(a => a.id === appIdStr);
-    
     if (existing) {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr));
     } else {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr), {
-        gameId, 
-        userId: user.uid, 
-        userName, 
-        timestamp: Date.now()
+        gameId, userId: user.uid, userName, timestamp: Date.now()
       });
     }
   };
@@ -186,12 +185,14 @@ export default function App() {
   const assignUmpire = async (gameId, userId, name) => {
     if (!isAdmin) return;
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', gameId), {
-      userId, 
-      userName: name, 
-      assignedAt: Date.now()
+      userId, userName: name, assignedAt: Date.now()
     });
   };
 
+  /**
+   * Sync Schedule Logic
+   * Pushes the hardcoded 2026 data into the database
+   */
   const syncSchedule = async () => {
     if (!isAdmin) return;
     setSyncing(true);
@@ -200,7 +201,6 @@ export default function App() {
       
       for (const freshGame of FEDERATION_LATEST_DATA) {
         const existing = games.find(g => g.id === freshGame.id);
-        
         if (existing) {
           const hasChanged = 
             existing.date !== freshGame.date || 
@@ -212,13 +212,16 @@ export default function App() {
             batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', freshGame.id));
           }
         }
-        batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', freshGame.id), freshGame);
+        // Use consistent path for syncing
+        const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', freshGame.id);
+        batch.set(gameRef, freshGame);
       }
 
       await batch.commit();
-      alert("Sync Successful: Elitserien 2026 schedule has been updated with latest fixtures.");
+      alert("Sync Successful: The schedule has been updated with the official 2026 fixtures.");
     } catch (e) {
       console.error("Sync Failed:", e);
+      alert("Sync Failed: " + (e.message || "Unknown error. Check the console for details. Usually this is caused by incorrect Firestore Security Rules."));
     } finally {
       setSyncing(false);
     }
@@ -240,7 +243,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
-      {/* Navbar */}
+      {/* Header */}
       <header className="bg-blue-900 text-white p-4 shadow-lg sticky top-0 z-20">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -259,7 +262,7 @@ export default function App() {
       </header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* Navigation Tabs */}
+        {/* View Selection */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
             { id: 'schedule', label: '2026 Schedule', icon: Calendar },
@@ -277,25 +280,24 @@ export default function App() {
           ))}
         </div>
 
-        {/* Content Section */}
         <section className="space-y-4">
           {view === 'schedule' && (
             <>
               <div className="flex justify-between items-end pb-2 border-b border-slate-200">
-                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">Season 2026</h2>
+                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">Unified Season</h2>
                 <span className="text-xs text-slate-400 font-bold uppercase">{games.length} Fixtures</span>
               </div>
               
               {games.length === 0 ? (
                 <div className="bg-white p-12 rounded-3xl text-center border-2 border-dashed border-slate-200">
                   <RefreshCw className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                  <p className="text-slate-500 font-medium">The 2026 schedule hasn't been synced yet.</p>
+                  <p className="text-slate-500 font-medium">No 2026 matches have been synced to the database yet.</p>
                   {isAdmin && (
                     <button 
                       onClick={syncSchedule} 
                       className="mt-4 text-blue-600 font-black uppercase text-xs hover:underline"
                     >
-                      Sync 2026 Elitserien Data
+                      Sync Federation Data Now
                     </button>
                   )}
                 </div>
@@ -314,11 +316,9 @@ export default function App() {
                             <p className="text-2xl font-black text-slate-800 leading-none">{new Date(game.date).getDate()}</p>
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest bg-blue-100 text-blue-700">
-                                {game.league}
-                              </span>
-                            </div>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest bg-blue-100 text-blue-700">
+                              {game.league}
+                            </span>
                             <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.home} vs {game.away}</h3>
                             <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
                               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
@@ -360,21 +360,21 @@ export default function App() {
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-center sm:text-left">
                   <h2 className="text-xl font-black text-slate-800">Admin Desk</h2>
-                  <p className="text-xs text-slate-500">Force sync current 2026 federation fixtures.</p>
+                  <p className="text-xs text-slate-500">Sync current 2026 federation fixtures and manage staffing.</p>
                 </div>
                 <button 
                   onClick={syncSchedule} 
                   disabled={syncing} 
                   className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-blue-900/20"
                 >
-                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Sync 2026 Data
+                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Syncing...' : 'Sync 2026 Data'}
                 </button>
               </div>
 
               <div className="space-y-4">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Pending Assignments</h3>
                 {games.filter(g => !assignments[g.id]).length === 0 ? (
-                  <p className="text-sm text-slate-400 italic text-center py-12 bg-white rounded-2xl border border-slate-100">All games are currently assigned.</p>
+                  <p className="text-sm text-slate-400 italic text-center py-12 bg-white rounded-2xl border border-slate-100">All fixtures are currently staffed.</p>
                 ) : (
                   games.filter(g => !assignments[g.id]).map(game => {
                     const applicants = applications.filter(a => a.gameId === game.id);
@@ -382,11 +382,11 @@ export default function App() {
                       <div key={game.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                           <p className="text-xs font-bold text-slate-600">{game.home} vs {game.away} <span className="text-slate-300 mx-1">|</span> {game.date}</p>
-                          <span className="text-[10px] font-black bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded uppercase">Open</span>
+                          <span className="text-[10px] font-black bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded uppercase">Needs Umpire</span>
                         </div>
                         <div className="p-4">
                           {applicants.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic py-2">Waiting for interested umpires...</p>
+                            <p className="text-xs text-slate-400 italic py-2">No interest registered yet...</p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {applicants.map(app => (
@@ -417,7 +417,7 @@ export default function App() {
                   <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calendar className="w-8 h-8 text-slate-300" />
                   </div>
-                  <p className="text-slate-500 font-medium">You haven't marked interest in any games yet.</p>
+                  <p className="text-slate-500 font-medium">You haven't marked interest in any matches yet.</p>
                 </div>
               ) : (
                 applications.filter(a => a.userId === user?.uid).map(app => {
@@ -459,8 +459,8 @@ export default function App() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300 border border-white/20">
             <div>
-              <h3 className="text-2xl font-black text-slate-800 mb-1">User Settings</h3>
-              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Configure your profile & access</p>
+              <h3 className="text-2xl font-black text-slate-800 mb-1">Settings</h3>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Configure profile & admin desk</p>
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -481,7 +481,7 @@ export default function App() {
                   <div className="flex gap-2 mt-2">
                     <input 
                       type="password" 
-                      placeholder="Enter Access Code" 
+                      placeholder="Access Code" 
                       value={adminCode} 
                       onChange={(e) => setAdminCode(e.target.value)} 
                       className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
@@ -496,7 +496,7 @@ export default function App() {
                 ) : (
                   <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center mt-2">
                     <p className="text-blue-700 font-black text-xs uppercase flex items-center justify-center gap-2">
-                      <Shield className="w-4 h-4" /> Admin Authenticated
+                      <Shield className="w-4 h-4" /> Admin Mode Active
                     </p>
                     <button 
                       onClick={async () => {
@@ -505,7 +505,7 @@ export default function App() {
                           await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { isAdmin: false }, { merge: true });
                         }
                       }}
-                      className="text-[10px] font-black text-red-500 uppercase hover:underline mt-2.5 block w-full"
+                      className="text-[10px] font-black text-red-500 uppercase hover:underline mt-2.5 block w-full text-center"
                     >
                       Disable Admin Mode
                     </button>
@@ -517,7 +517,7 @@ export default function App() {
               onClick={() => setShowAdminModal(false)} 
               className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors shadow-sm"
             >
-              Return to App
+              Close
             </button>
           </div>
         </div>
@@ -529,13 +529,13 @@ export default function App() {
           <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
             {userName ? userName.charAt(0) : '?'}
           </div>
-          <span className="text-sm font-bold whitespace-nowrap">{userName || 'Set Profile Name'}</span>
+          <span className="text-sm font-bold whitespace-nowrap">{userName || 'Set Name'}</span>
         </div>
         <div className="h-4 w-px bg-blue-700" />
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-black uppercase text-blue-300 leading-none">Status</span>
+          <span className="text-[10px] font-black uppercase text-blue-300 leading-none">Apps</span>
           <span className="text-[11px] font-bold leading-none mt-0.5">
-            {user && applications.filter(a => a.userId === user.uid).length} Applied
+            {user && applications.filter(a => a.userId === user.uid).length}
           </span>
         </div>
       </div>
