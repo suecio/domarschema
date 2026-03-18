@@ -8,7 +8,8 @@ import {
   onSnapshot, 
   deleteDoc,
   writeBatch,
-  addDoc
+  addDoc,
+  updateDoc
 } from 'firebase/firestore';
 import { 
   getAuth,
@@ -47,7 +48,8 @@ import {
   Edit2,
   Check,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 
 /**
@@ -151,7 +153,14 @@ const translations = {
     editName: "Ändra namn",
     save: "Spara",
     selectFromList: "Välj från listan",
-    changeUser: "Byt användare"
+    changeUser: "Byt användare",
+    editMatch: "Ändra matchdata",
+    home: "Hemma",
+    away: "Borta",
+    time: "Tid",
+    location: "Plats",
+    league: "Serie",
+    saveChanges: "Spara ändringar"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -232,7 +241,14 @@ const translations = {
     editName: "Edit Name",
     save: "Save",
     selectFromList: "Select from list",
-    changeUser: "Change User"
+    changeUser: "Change User",
+    editMatch: "Edit Match Details",
+    home: "Home",
+    away: "Away",
+    time: "Time",
+    location: "Location",
+    league: "League",
+    saveChanges: "Save Changes"
   }
 };
 
@@ -267,6 +283,9 @@ export default function App() {
   const [editingUmpireId, setEditingUmpireId] = useState(null);
   const [tempEditName, setTempEditName] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  // New State for Game Rescheduling/Editing
+  const [editingGameData, setEditingGameData] = useState(null);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -333,14 +352,15 @@ export default function App() {
       unsubscribeUmpires();
       unsubscribeProfile();
     };
-  }, [user, selectedYear]);
+  }, [user, selectedYear, isAdmin]);
 
   // Helpers
   const getLeagueStyles = (league) => {
     const l = league?.toLowerCase() || '';
     if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
     if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
-    if (l.includes('pre')) return 'bg-red-100 text-red-700 border-red-200';
+    // Format "offseason" the same as "preseason" (red)
+    if (l.includes('pre') || l.includes('off')) return 'bg-red-100 text-red-700 border-red-200';
     if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200';
     return 'bg-slate-100 text-slate-700 border-slate-200';
   };
@@ -527,6 +547,26 @@ export default function App() {
     finally { setSyncing(false); }
   };
 
+  // --- NEW: Edit Existing Game Logic ---
+  const saveEditedGame = async () => {
+    if (!isAdmin || !editingGameData) return;
+    try {
+      const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id);
+      await updateDoc(gameRef, {
+        date: editingGameData.date,
+        time: editingGameData.time,
+        league: editingGameData.league,
+        home: editingGameData.home,
+        away: editingGameData.away,
+        location: editingGameData.location
+      });
+      setEditingGameData(null);
+    } catch (e) {
+      console.error("Update failed", e);
+      alert("Error updating match.");
+    }
+  };
+
   const deleteAllGames = async () => {
     if (!isAdmin) return;
     const confirmed = window.confirm(t.deleteAllConfirm);
@@ -535,22 +575,15 @@ export default function App() {
     setSyncing(true);
     try {
       const batch = writeBatch(db);
-      
-      // Delete all current season games
       games.forEach(game => {
         batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id));
       });
-
-      // Delete all current season assignments
       assignments.forEach(asg => {
         batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`));
       });
-
-      // Delete all current season applications
       applications.forEach(app => {
         batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`));
       });
-
       await batch.commit();
       alert(t.deleteAllSuccess);
     } catch (e) {
@@ -810,9 +843,10 @@ export default function App() {
                   const applicants = applications.filter(a => a.gameId === game.id);
                   const gameAssignments = groupedAssignments[game.id] || [];
                   const isFullyStaffed = gameAssignments.length >= 4;
+                  const isEditingThisGame = editingGameData?.id === game.id;
                   
                   return (
-                    <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
+                    <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                       <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>
@@ -823,50 +857,91 @@ export default function App() {
                             {gameAssignments.length} / 4 {t.assignedTo}
                           </span>
                         </div>
-                        <button onClick={() => { if(window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} className="text-red-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                      <div className="p-4 space-y-4">
-                        {/* Current Crew */}
-                        {gameAssignments.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {gameAssignments.map(asg => (
-                                <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
-                                  <div className="flex items-center gap-2">
-                                    <Users className="w-3 h-3 text-green-600" />
-                                    <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
-                                  </div>
-                                  <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Applicants to Assign */}
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                          {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">{t.noInterest}</p>
-                          ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => (
-                                <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
-                                  <span className="text-xs font-bold">{app.userName}</span>
-                                  <button 
-                                    disabled={isFullyStaffed}
-                                    onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
-                                    className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
-                                  >
-                                    <UserPlus className="w-3 h-3" /> Assign
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setEditingGameData(isEditingThisGame ? null : { ...game })} className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}>
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => { if(window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
+
+                      {isEditingThisGame ? (
+                        <div className="p-6 bg-blue-50/30 space-y-4 animate-in fade-in zoom-in duration-200">
+                          <div className="grid grid-cols-2 gap-3">
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
+                                <input type="date" value={editingGameData.date} onChange={(e) => setEditingGameData({ ...editingGameData, date: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.time}</label>
+                                <input type="text" value={editingGameData.time} onChange={(e) => setEditingGameData({ ...editingGameData, time: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.away}</label>
+                                <input type="text" value={editingGameData.away} onChange={(e) => setEditingGameData({ ...editingGameData, away: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label>
+                                <input type="text" value={editingGameData.home} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label>
+                                <input type="text" value={editingGameData.league} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label>
+                                <input type="text" value={editingGameData.location} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                             </div>
+                          </div>
+                          <div className="flex gap-2">
+                             <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-green-100">{t.saveChanges}</button>
+                             <button onClick={() => setEditingGameData(null)} className="px-6 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest">{t.cancel}</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 space-y-4">
+                          {/* Current Crew */}
+                          {gameAssignments.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {gameAssignments.map(asg => (
+                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                                    <div className="flex items-center gap-2">
+                                      <Users className="w-3 h-3 text-green-600" />
+                                      <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
+                                    </div>
+                                    <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Applicants to Assign */}
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
+                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? (
+                              <p className="text-xs text-slate-400 italic">{t.noInterest}</p>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => (
+                                  <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                    <span className="text-xs font-bold">{app.userName}</span>
+                                    <button 
+                                      disabled={isFullyStaffed}
+                                      onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
+                                      className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                                    >
+                                      <UserPlus className="w-3 h-3" /> Assign
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -992,7 +1067,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* Profile Name/Selection Modal */}
+      {/* Profile Selection Modal */}
       {showNamePrompt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in border border-white/20">
@@ -1009,67 +1084,31 @@ export default function App() {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.masterList}</label>
                 <div className="relative group">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                  <input 
-                    type="text" 
-                    value={searchQuery} 
-                    placeholder={t.namePlaceholder} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                    className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm" 
-                  />
+                  <input type="text" value={searchQuery} placeholder={t.namePlaceholder} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm" />
                 </div>
-
                 <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
                   {filteredMasterUmpires.length > 0 ? (
                     filteredMasterUmpires.map(u => (
-                      <button 
-                        key={u.id}
-                        onClick={async () => {
-                          setUserName(u.name);
-                          setUmpireId(u.id);
-                          await updateProfile(u.name, u.id);
-                          setShowNamePrompt(false);
-                          setSearchQuery('');
-                        }}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group"
-                      >
+                      <button key={u.id} onClick={async () => { setUserName(u.name); setUmpireId(u.id); await updateProfile(u.name, u.id); setShowNamePrompt(false); setSearchQuery(''); }} className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group">
                         <span className="text-sm font-bold text-slate-700">{u.name}</span>
                         <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                       </button>
                     ))
                   ) : (
-                    <div className="p-4 text-center">
-                       <p className="text-xs text-slate-400 font-medium italic">{t.noGames}</p>
-                    </div>
+                    <div className="p-4 text-center"><p className="text-xs text-slate-400 font-medium italic">{t.noGames}</p></div>
                   )}
                 </div>
               </div>
-
               <div className="pt-4 border-t border-slate-100 space-y-3">
                 <button onClick={() => setIsAddingNew(!isAddingNew)} className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase hover:underline"><Plus className="w-3 h-3" /> {t.addNewName}</button>
                 {isAddingNew && (
                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
                       <input type="text" autoFocus value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} placeholder="För- och efternamn" className="w-full p-3 bg-white border border-blue-200 rounded-xl font-bold text-sm outline-none" />
-                      <button 
-                        onClick={async () => {
-                          if (tempEditName.trim()) {
-                            const newId = await addMasterUmpire(tempEditName);
-                            setUserName(tempEditName);
-                            setUmpireId(newId);
-                            await updateProfile(tempEditName, newId);
-                            setTempEditName('');
-                            setIsAddingNew(false);
-                            setShowNamePrompt(false);
-                          }
-                        }}
-                        className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-blue-200"
-                      >
-                        {t.createUmpire}
-                      </button>
+                      <button onClick={async () => { if (tempEditName.trim()) { const newId = await addMasterUmpire(tempEditName); setUserName(tempEditName); setUmpireId(newId); await updateProfile(tempEditName, newId); setTempEditName(''); setIsAddingNew(false); setShowNamePrompt(false); } }} className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-blue-200">{t.createUmpire}</button>
                    </div>
                 )}
               </div>
             </div>
-            
             <button onClick={() => setShowNamePrompt(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">{t.cancel}</button>
           </div>
         </div>
@@ -1082,10 +1121,7 @@ export default function App() {
             <div><h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3><p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p></div>
             <div className="space-y-4">
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.displayName}</p>
-                  <p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p>
-                </div>
+                <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.displayName}</p><p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p></div>
                 <button onClick={logoutUmpire} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1 font-black text-[10px] uppercase"><LogOut className="w-4 h-4" /> {t.logout}</button>
               </div>
               <div className="pt-6 border-t border-slate-100">
@@ -1115,11 +1151,7 @@ export default function App() {
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner overflow-hidden">
-            {LOGO_URL && userName === '' ? (
-               <img src={LOGO_URL} alt="Logo" className="h-full w-full object-contain p-1" />
-            ) : (
-              <span>{userName ? userName.charAt(0) : '?'}</span>
-            )}
+            {userName ? userName.charAt(0) : '?'}
           </div>
           <div className="text-left">
             <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
