@@ -7,7 +7,8 @@ import {
   setDoc, 
   onSnapshot, 
   deleteDoc,
-  writeBatch
+  writeBatch,
+  addDoc
 } from 'firebase/firestore';
 import { 
   getAuth,
@@ -41,7 +42,9 @@ import {
   Download,
   CalendarPlus,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Edit2,
+  Check
 } from 'lucide-react';
 
 /**
@@ -109,7 +112,7 @@ const translations = {
     userSettings: "Användarinställningar",
     profileAccess: "Konfigurera profil & åtkomst",
     displayName: "Visningsnamn",
-    namePlaceholder: "t.ex. Johan Andersson",
+    namePlaceholder: "Sök eller skriv ditt namn...",
     adminVerify: "Admin-verifiering",
     accessCode: "Åtkomstkod",
     verify: "Verifiera",
@@ -132,9 +135,14 @@ const translations = {
     downloadFullSchedule: "Ladda ner mitt schema (.ics)",
     confirmedGames: "Bekräftade uppdrag",
     interestedGames: "Anmält intresse",
-    nameRequiredTitle: "Vad heter du?",
-    nameRequiredDesc: "Du måste ange ditt för- och efternamn innan du kan anmäla intresse för matcher.",
-    saveName: "Spara och fortsätt"
+    nameRequiredTitle: "Välj din profil",
+    nameRequiredDesc: "Välj ditt namn från listan eller lägg till ett nytt för att anmäla intresse.",
+    saveName: "Spara profil",
+    addNewName: "Lägg till som ny domare",
+    masterList: "Domarlista",
+    editName: "Ändra namn",
+    save: "Spara",
+    selectFromList: "Välj från listan"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -179,7 +187,7 @@ const translations = {
     userSettings: "User Settings",
     profileAccess: "Configure profile & access",
     displayName: "Display Name",
-    namePlaceholder: "e.g. John Smith",
+    namePlaceholder: "Search or type name...",
     adminVerify: "Admin Verification",
     accessCode: "Access Code",
     verify: "Verify",
@@ -202,9 +210,14 @@ const translations = {
     downloadFullSchedule: "Download My Schedule (.ics)",
     confirmedGames: "Confirmed Assignments",
     interestedGames: "Interested Matches",
-    nameRequiredTitle: "What is your name?",
-    nameRequiredDesc: "You need to enter your full name before you can express interest in matches.",
-    saveName: "Save and Continue"
+    nameRequiredTitle: "Select Your Profile",
+    nameRequiredDesc: "Choose your name from the list or add a new one to start applying.",
+    saveName: "Save Profile",
+    addNewName: "Add as new umpire",
+    masterList: "Umpire Master List",
+    editName: "Edit Name",
+    save: "Save",
+    selectFromList: "Select from list"
   }
 };
 
@@ -223,6 +236,7 @@ export default function App() {
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [masterUmpires, setMasterUmpires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   
@@ -234,6 +248,8 @@ export default function App() {
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [editingUmpireId, setEditingUmpireId] = useState(null);
+  const [tempEditName, setTempEditName] = useState('');
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -278,6 +294,11 @@ export default function App() {
       setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires');
+    const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => {
+      setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.name.localeCompare(b.name)));
+    });
+
     const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
     const unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
       if (snapshot.exists()) {
@@ -291,6 +312,7 @@ export default function App() {
       unsubscribeGames();
       unsubscribeApps();
       unsubscribeAssign();
+      unsubscribeUmpires();
       unsubscribeProfile();
     };
   }, [user, selectedYear]);
@@ -307,7 +329,6 @@ export default function App() {
 
   const generateICS = (gamesToExport) => {
     if (gamesToExport.length === 0) return;
-
     const events = gamesToExport.map(game => {
       const cleanDate = game.date.replace(/-/g, '');
       const cleanTime = game.time.replace(/:/g, '');
@@ -315,7 +336,6 @@ export default function App() {
       const [hours, mins] = game.time.split(':');
       const endHours = (parseInt(hours) + 3).toString().padStart(2, '0');
       const endTime = `${cleanDate}T${endHours}${mins}00`;
-
       return [
         'BEGIN:VEVENT',
         `UID:${game.id}@domartillsattning.portal`,
@@ -328,15 +348,7 @@ export default function App() {
         'END:VEVENT'
       ].join('\n');
     }).join('\n');
-
-    const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Domartillsättning//Baseball Scheduler//EN',
-      events,
-      'END:VCALENDAR'
-    ].join('\n');
-
+    const icsContent = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Domartillsättning//Baseball Scheduler//EN', events, 'END:VCALENDAR'].join('\n');
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -362,15 +374,11 @@ export default function App() {
     return map;
   }, [assignments]);
 
-  // User's specifically assigned games
   const myAssignedGames = useMemo(() => {
     if (!user) return [];
-    return games.filter(game => 
-      groupedAssignments[game.id]?.some(asg => asg.userId === user.uid)
-    );
+    return games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === user.uid));
   }, [games, groupedAssignments, user]);
 
-  // Derived Statistics
   const statistics = useMemo(() => {
     const stats = {};
     assignments.forEach(asg => {
@@ -385,12 +393,9 @@ export default function App() {
     return Object.values(stats).sort((a, b) => b.games - a.games);
   }, [assignments, applications]);
 
-  // Filtering Logic
   const filteredGames = useMemo(() => {
     return games.filter(game => {
-      const matchesSearch = 
-        game.home.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        game.away.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = game.home.toLowerCase().includes(searchQuery.toLowerCase()) || game.away.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
       const isHistorical = game.date < today;
@@ -401,10 +406,33 @@ export default function App() {
   const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
 
+  // Master List Logic
+  const filteredMasterUmpires = useMemo(() => {
+    return masterUmpires.filter(u => u.name.toLowerCase().includes(userName.toLowerCase()));
+  }, [masterUmpires, userName]);
+
   // Actions
   const updateProfile = async (name) => {
     if (!user) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, isAdmin }, { merge: true });
+  };
+
+  const addMasterUmpire = async (name) => {
+    if (!name.trim()) return;
+    const exists = masterUmpires.find(u => u.name.toLowerCase() === name.toLowerCase());
+    if (!exists) {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name });
+    }
+  };
+
+  const updateMasterUmpire = async (id, newName) => {
+    if (!isAdmin || !newName.trim()) return;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { name: newName }, { merge: true });
+  };
+
+  const deleteMasterUmpire = async (id) => {
+    if (!isAdmin) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id));
   };
 
   const toggleApplication = async (gameId) => {
@@ -655,7 +683,9 @@ export default function App() {
                   <h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2>
                   <p className="text-xs text-slate-500">{selectedYear} Season</p>
                 </div>
-                <button onClick={() => setShowImportTool(!showImportTool)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowImportTool(!showImportTool)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
+                </div>
               </div>
 
               {showImportTool && (
@@ -665,6 +695,37 @@ export default function App() {
                   <div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button></div>
                 </div>
               )}
+
+              {/* Master Umpire List Manager */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Users className="w-4 h-4" /> {t.masterList}</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  {masterUmpires.map(u => (
+                    <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      {editingUmpireId === u.id ? (
+                        <div className="flex flex-1 gap-2">
+                          <input 
+                            type="text" 
+                            value={tempEditName} 
+                            onChange={(e) => setTempEditName(e.target.value)}
+                            className="flex-1 bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none"
+                          />
+                          <button onClick={async () => { await updateMasterUmpire(u.id, tempEditName); setEditingUmpireId(null); }} className="bg-green-600 text-white p-1.5 rounded-lg"><Check className="w-4 h-4" /></button>
+                          <button onClick={() => setEditingUmpireId(null)} className="bg-slate-200 text-slate-600 p-1.5 rounded-lg"><UserMinus className="w-4 h-4" /></button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                          <div className="flex gap-1">
+                            <button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => deleteMasterUmpire(u.id)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center px-2">
@@ -856,7 +917,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* Name Prompt Modal */}
+      {/* Name Prompt Modal (Integrated with Master List) */}
       {showNamePrompt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in border border-white/20">
@@ -867,28 +928,58 @@ export default function App() {
               <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.nameRequiredTitle}</h3>
               <p className="text-xs text-slate-400 font-medium leading-relaxed">{t.nameRequiredDesc}</p>
             </div>
-            <div className="space-y-1.5">
+            
+            <div className="space-y-1.5 relative">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.displayName}</label>
-              <input 
-                type="text" 
-                autoFocus
-                value={userName} 
-                placeholder={t.namePlaceholder} 
-                onChange={(e) => setUserName(e.target.value)} 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all" 
-              />
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input 
+                  type="text" 
+                  autoFocus
+                  value={userName} 
+                  placeholder={t.namePlaceholder} 
+                  onChange={(e) => setUserName(e.target.value)} 
+                  className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all" 
+                />
+              </div>
+
+              {/* Selection List */}
+              {userName.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-10 max-h-48 overflow-y-auto overflow-x-hidden">
+                  {filteredMasterUmpires.map(u => (
+                    <button 
+                      key={u.id}
+                      onClick={async () => {
+                        setUserName(u.name);
+                        await updateProfile(u.name);
+                        setShowNamePrompt(false);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-blue-50 text-sm font-bold text-slate-700 border-b border-slate-50 last:border-0"
+                    >
+                      {u.name}
+                    </button>
+                  ))}
+                  {filteredMasterUmpires.length === 0 && (
+                    <button 
+                      onClick={async () => {
+                        await addMasterUmpire(userName);
+                        await updateProfile(userName);
+                        setShowNamePrompt(false);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-green-50 text-sm font-black text-green-600"
+                    >
+                      <Plus className="inline w-3 h-3 mr-1" /> {t.addNewName} "{userName}"
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
+            
             <button 
-              onClick={async () => {
-                if (userName.trim()) {
-                  await updateProfile(userName);
-                  setShowNamePrompt(false);
-                }
-              }} 
-              disabled={!userName.trim()}
-              className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg disabled:opacity-50"
+              onClick={() => setShowNamePrompt(false)}
+              className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-all"
             >
-              {t.saveName}
+              {t.cancel}
             </button>
           </div>
         </div>
@@ -897,12 +988,29 @@ export default function App() {
       {/* Settings Modal */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
             <div><h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3><p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p></div>
             <div className="space-y-4">
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.displayName}</label>
-                <input type="text" value={userName} placeholder={t.namePlaceholder} onChange={(e) => setUserName(e.target.value)} onBlur={() => updateProfile(userName)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10" />
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={userName} 
+                    placeholder={t.namePlaceholder} 
+                    onChange={(e) => setUserName(e.target.value)} 
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10" 
+                  />
+                  <button 
+                    onClick={async () => {
+                      await updateProfile(userName);
+                      await addMasterUmpire(userName);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-900 text-white p-2 rounded-xl"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className="pt-6 border-t border-slate-100">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.adminVerify}</label>
