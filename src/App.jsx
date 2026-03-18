@@ -140,7 +140,7 @@ const translations = {
     confirmedGames: "Bekräftade uppdrag",
     interestedGames: "Anmält intresse",
     nameRequiredTitle: "Vem är du?",
-    nameRequiredDesc: "Välj ditt namn från listan nedan för att fortsätta.",
+    nameRequiredDesc: "Välj ditt namn från listan nedan för att se ditt schema på alla enheter.",
     saveName: "Välj profil",
     addNewName: "Hittar du inte ditt namn?",
     createUmpire: "Skapa ny profil",
@@ -218,7 +218,7 @@ const translations = {
     confirmedGames: "Confirmed Assignments",
     interestedGames: "Interested Matches",
     nameRequiredTitle: "Who are you?",
-    nameRequiredDesc: "Select your name from the list below to continue.",
+    nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.",
     saveName: "Select Profile",
     addNewName: "Can't find your name?",
     createUmpire: "Create new profile",
@@ -233,6 +233,7 @@ const translations = {
 export default function App() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
+  const [umpireId, setUmpireId] = useState(''); // NEW: Track the consistent profile ID
   const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState('schedule');
   const [selectedYear, setSelectedYear] = useState('2026');
@@ -314,6 +315,7 @@ export default function App() {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setUserName(data.name || '');
+        setUmpireId(data.umpireId || ''); // Load the persistent ID
         setIsAdmin(data.isAdmin || false);
       }
     });
@@ -374,7 +376,7 @@ export default function App() {
     generateICS([game]);
   };
 
-  // Grouped assignments
+  // Grouped assignments using umpireId for consistency
   const groupedAssignments = useMemo(() => {
     const map = {};
     assignments.forEach(asg => {
@@ -385,9 +387,9 @@ export default function App() {
   }, [assignments]);
 
   const myAssignedGames = useMemo(() => {
-    if (!user) return [];
-    return games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === user.uid));
-  }, [games, groupedAssignments, user]);
+    if (!umpireId) return [];
+    return games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId));
+  }, [games, groupedAssignments, umpireId]);
 
   const statistics = useMemo(() => {
     const stats = {};
@@ -423,24 +425,26 @@ export default function App() {
   }, [masterUmpires, searchQuery, isAddingNew]);
 
   // Actions
-  const updateProfile = async (name) => {
+  const updateProfile = async (name, id) => {
     if (!user) return;
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, isAdmin }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id, isAdmin }, { merge: true });
   };
 
   const logoutUmpire = async () => {
     if (!user) return;
     setUserName('');
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', isAdmin: false }, { merge: true });
+    setUmpireId('');
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', umpireId: '', isAdmin: false }, { merge: true });
     setShowNamePrompt(true);
   };
 
   const addMasterUmpire = async (name) => {
-    if (!name.trim()) return;
+    if (!name.trim()) return "";
     const exists = masterUmpires.find(u => u.name.toLowerCase() === name.toLowerCase());
-    if (!exists) {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name });
-    }
+    if (exists) return exists.id;
+    
+    const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name });
+    return docRef.id;
   };
 
   const updateMasterUmpire = async (id, newName) => {
@@ -455,32 +459,32 @@ export default function App() {
 
   const toggleApplication = async (gameId) => {
     if (!user) return;
-    if (!userName.trim()) {
+    if (!umpireId) {
       setShowNamePrompt(true);
       return;
     }
-    const appIdStr = `${gameId}_${user.uid}`;
+    const appIdStr = `${gameId}_${umpireId}`;
     const existing = applications.find(a => a.id === appIdStr);
     if (existing) {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr));
     } else {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr), {
-        gameId, userId: user.uid, userName, timestamp: Date.now()
+        gameId, userId: umpireId, userName, timestamp: Date.now()
       });
     }
   };
 
-  const assignUmpire = async (gameId, userId, name) => {
+  const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
-    const asgId = `${gameId}_${userId}`;
+    const asgId = `${gameId}_${uId}`;
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
-      gameId, userId, userName: name, assignedAt: Date.now()
+      gameId, userId: uId, userName: name, assignedAt: Date.now()
     });
   };
 
-  const removeAssignment = async (gameId, userId) => {
+  const removeAssignment = async (gameId, uId) => {
     if (!isAdmin) return;
-    const asgId = `${gameId}_${userId}`;
+    const asgId = `${gameId}_${uId}`;
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
   };
 
@@ -627,8 +631,8 @@ export default function App() {
                 filteredGames.map(game => {
                   const gameAssignments = groupedAssignments[game.id] || [];
                   const appsCount = applications.filter(a => a.gameId === game.id).length;
-                  const isApplied = user && applications.some(a => a.gameId === game.id && a.userId === user.uid);
-                  const isAssignedToThisGame = user && gameAssignments.some(asg => asg.userId === user.uid);
+                  const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
+                  const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
                   
                   return (
                     <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
@@ -661,7 +665,7 @@ export default function App() {
                             {gameAssignments.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-3 items-center">
                                 {gameAssignments.map(asg => (
-                                  <div key={asg.id} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
+                                  <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
                                     <CheckCircle className="w-3 h-3" /> {asg.userName}
                                   </div>
                                 ))}
@@ -775,7 +779,7 @@ export default function App() {
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {gameAssignments.map(asg => (
-                                <div key={asg.id} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                                <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
                                   <div className="flex items-center gap-2">
                                     <Users className="w-3 h-3 text-green-600" />
                                     <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
@@ -795,7 +799,7 @@ export default function App() {
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => (
-                                <div key={app.id} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
                                   <span className="text-xs font-bold">{app.userName}</span>
                                   <button 
                                     disabled={isFullyStaffed}
@@ -892,7 +896,7 @@ export default function App() {
               {/* Interested List */}
               <div className="space-y-3">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mt-4">{t.interestedGames}</h3>
-                {applications.filter(a => a.userId === user?.uid && !myAssignedGames.some(g => g.id === a.gameId)).length === 0 ? (
+                {applications.filter(a => a.userId === umpireId && !myAssignedGames.some(g => g.id === a.gameId)).length === 0 ? (
                   myAssignedGames.length === 0 && (
                     <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
                         <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Calendar className="w-8 h-8 text-slate-300" /></div>
@@ -900,7 +904,7 @@ export default function App() {
                     </div>
                   )
                 ) : (
-                  applications.filter(a => a.userId === user?.uid && !myAssignedGames.some(g => g.id === a.gameId)).map(app => {
+                  applications.filter(a => a.userId === umpireId && !myAssignedGames.some(g => g.id === a.gameId)).map(app => {
                     const game = games.find(g => g.id === app.gameId);
                     if (!game) return null;
                     return (
@@ -948,7 +952,6 @@ export default function App() {
             </div>
             
             <div className="space-y-4">
-              {/* Dropdown/Selection List */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.masterList}</label>
                 <div className="relative group">
@@ -969,7 +972,8 @@ export default function App() {
                         key={u.id}
                         onClick={async () => {
                           setUserName(u.name);
-                          await updateProfile(u.name);
+                          setUmpireId(u.id);
+                          await updateProfile(u.name, u.id);
                           setShowNamePrompt(false);
                           setSearchQuery('');
                         }}
@@ -987,31 +991,18 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Add New Option */}
               <div className="pt-4 border-t border-slate-100 space-y-3">
-                <button 
-                  onClick={() => setIsAddingNew(!isAddingNew)}
-                  className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase hover:underline"
-                >
-                  <Plus className="w-3 h-3" /> {t.addNewName}
-                </button>
-
+                <button onClick={() => setIsAddingNew(!isAddingNew)} className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase hover:underline"><Plus className="w-3 h-3" /> {t.addNewName}</button>
                 {isAddingNew && (
                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                      <input 
-                        type="text" 
-                        autoFocus
-                        value={tempEditName}
-                        onChange={(e) => setTempEditName(e.target.value)}
-                        placeholder="För- och efternamn"
-                        className="w-full p-3 bg-white border border-blue-200 rounded-xl font-bold text-sm outline-none"
-                      />
+                      <input type="text" autoFocus value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} placeholder="För- och efternamn" className="w-full p-3 bg-white border border-blue-200 rounded-xl font-bold text-sm outline-none" />
                       <button 
                         onClick={async () => {
                           if (tempEditName.trim()) {
-                            await addMasterUmpire(tempEditName);
+                            const newId = await addMasterUmpire(tempEditName);
                             setUserName(tempEditName);
-                            await updateProfile(tempEditName);
+                            setUmpireId(newId);
+                            await updateProfile(tempEditName, newId);
                             setTempEditName('');
                             setIsAddingNew(false);
                             setShowNamePrompt(false);
@@ -1026,12 +1017,7 @@ export default function App() {
               </div>
             </div>
             
-            <button 
-              onClick={() => setShowNamePrompt(false)}
-              className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
-            >
-              {t.cancel}
-            </button>
+            <button onClick={() => setShowNamePrompt(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">{t.cancel}</button>
           </div>
         </div>
       )}
@@ -1040,26 +1026,15 @@ export default function App() {
       {showAdminModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
-            <div>
-               <h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3>
-               <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p>
-            </div>
-            
+            <div><h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3><p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p></div>
             <div className="space-y-4">
-              {/* Profile Management */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.displayName}</p>
                   <p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p>
                 </div>
-                <button 
-                  onClick={logoutUmpire}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1 font-black text-[10px] uppercase"
-                >
-                  <LogOut className="w-4 h-4" /> {t.logout}
-                </button>
+                <button onClick={logoutUmpire} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1 font-black text-[10px] uppercase"><LogOut className="w-4 h-4" /> {t.logout}</button>
               </div>
-
               <div className="pt-6 border-t border-slate-100">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.adminVerify}</label>
                 {!isAdmin ? (
@@ -1102,7 +1077,7 @@ export default function App() {
         <div className="flex flex-col items-center">
           <span className="text-[10px] font-black uppercase text-blue-300 leading-none">{t.applied}</span>
           <span className="text-[11px] font-bold leading-none mt-0.5">
-            {user && applications.filter(a => a.userId === user.uid).length}
+            {umpireId && applications.filter(a => a.userId === umpireId).length}
           </span>
         </div>
       </button>
