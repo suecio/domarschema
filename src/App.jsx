@@ -40,7 +40,8 @@ import {
   UserMinus,
   Download,
   CalendarPlus,
-  ArrowRight
+  ArrowRight,
+  UserCheck
 } from 'lucide-react';
 
 /**
@@ -114,7 +115,7 @@ const translations = {
     verify: "Verifiera",
     adminActive: "Admin aktiv",
     logoutAdmin: "Logga ut admin",
-    close: "Stäng inställningar",
+    close: "Stäng",
     status: "Status",
     setProfile: "Ange profilnamn",
     pasteSheet: "Klistra in från Google Sheets",
@@ -130,7 +131,10 @@ const translations = {
     addToCalendar: "Spara i kalender",
     downloadFullSchedule: "Ladda ner mitt schema (.ics)",
     confirmedGames: "Bekräftade uppdrag",
-    interestedGames: "Anmält intresse"
+    interestedGames: "Anmält intresse",
+    nameRequiredTitle: "Vad heter du?",
+    nameRequiredDesc: "Du måste ange ditt för- och efternamn innan du kan anmäla intresse för matcher.",
+    saveName: "Spara och fortsätt"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -181,7 +185,7 @@ const translations = {
     verify: "Verify",
     adminActive: "Admin Active",
     logoutAdmin: "Logout Admin",
-    close: "Close Settings",
+    close: "Close",
     status: "Status",
     setProfile: "Set Profile Name",
     pasteSheet: "Paste from Google Sheets",
@@ -197,7 +201,10 @@ const translations = {
     addToCalendar: "Add to Calendar",
     downloadFullSchedule: "Download My Schedule (.ics)",
     confirmedGames: "Confirmed Assignments",
-    interestedGames: "Interested Matches"
+    interestedGames: "Interested Matches",
+    nameRequiredTitle: "What is your name?",
+    nameRequiredDesc: "You need to enter your full name before you can express interest in matches.",
+    saveName: "Save and Continue"
   }
 };
 
@@ -222,6 +229,7 @@ export default function App() {
   // UI State
   const [adminCode, setAdminCode] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
@@ -400,7 +408,11 @@ export default function App() {
   };
 
   const toggleApplication = async (gameId) => {
-    if (!user || !userName) return;
+    if (!user) return;
+    if (!userName.trim()) {
+      setShowNamePrompt(true);
+      return;
+    }
     const appIdStr = `${gameId}_${user.uid}`;
     const existing = applications.find(a => a.id === appIdStr);
     if (existing) {
@@ -620,7 +632,7 @@ export default function App() {
                               </div>
                               <button 
                                 onClick={() => toggleApplication(game.id)} 
-                                disabled={!userName || isAssignedToThisGame} 
+                                disabled={isAssignedToThisGame} 
                                 className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}
                               >
                                 {isApplied ? t.withdraw : t.interested}
@@ -843,6 +855,44 @@ export default function App() {
           )}
         </section>
       </main>
+
+      {/* Name Prompt Modal */}
+      {showNamePrompt && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in border border-white/20">
+            <div className="text-center space-y-2">
+              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <UserCheck className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.nameRequiredTitle}</h3>
+              <p className="text-xs text-slate-400 font-medium leading-relaxed">{t.nameRequiredDesc}</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.displayName}</label>
+              <input 
+                type="text" 
+                autoFocus
+                value={userName} 
+                placeholder={t.namePlaceholder} 
+                onChange={(e) => setUserName(e.target.value)} 
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all" 
+              />
+            </div>
+            <button 
+              onClick={async () => {
+                if (userName.trim()) {
+                  await updateProfile(userName);
+                  setShowNamePrompt(false);
+                }
+              }} 
+              disabled={!userName.trim()}
+              className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg disabled:opacity-50"
+            >
+              {t.saveName}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Settings Modal */}
       {showAdminModal && (
