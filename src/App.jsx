@@ -18,6 +18,10 @@ import {
   signOut
 } from 'firebase/auth';
 import { 
+  getAnalytics, 
+  logEvent 
+} from 'firebase/analytics';
+import { 
   Calendar as CalendarIcon, 
   User, 
   Shield, 
@@ -71,6 +75,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
 
 // --- LOGO CONFIGURATION ---
 const LOGO_URL = ""; 
@@ -375,6 +380,17 @@ export default function App() {
     };
   }, [user, selectedYear, isAdmin]);
 
+  // 3. Analytics Tracking
+  useEffect(() => {
+    if (analytics) {
+      logEvent(analytics, 'screen_view', {
+        firebase_screen: view,
+        year: selectedYear,
+        lang: lang
+      });
+    }
+  }, [view, selectedYear, lang]);
+
   // Helpers
   const getLeagueStyles = (league) => {
     const l = league?.toLowerCase() || '';
@@ -400,6 +416,9 @@ export default function App() {
 
   const generateICS = (gamesToExport) => {
     if (gamesToExport.length === 0) return;
+    
+    if (analytics) logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
+
     const events = gamesToExport.map(game => {
       const cleanDate = game.date.replace(/-/g, '');
       const cleanTime = game.time.replace(/:/g, '');
@@ -432,6 +451,7 @@ export default function App() {
 
   const handleCalendarExport = (game) => {
     if (!game.date || !game.time) return;
+    if (analytics) logEvent(analytics, 'calendar_single_export', { game_id: game.id });
     generateICS([game]);
   };
 
@@ -459,35 +479,23 @@ export default function App() {
 
   const sortedStatistics = useMemo(() => {
     const stats = {};
-    
-    // Confirmed assignments
     assignments.forEach(asg => {
       if (!asg.userId) return;
       if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName, games: 0, interest: 0 };
       stats[asg.userId].games += 1;
     });
-
-    // Interests
     applications.forEach(app => {
       if (!stats[app.userId]) stats[app.userId] = { name: app.userName, games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
-
     const data = Object.values(stats).map(s => {
       const rate = s.interest > 0 ? Math.round((s.games / s.interest) * 100) : (s.games > 0 ? 100 : 0);
       return { ...s, rate };
     });
-
-    // Apply Sorting
     return data.sort((a, b) => {
       let valA = a[sortConfig.key];
       let valB = b[sortConfig.key];
-      
-      if (typeof valA === 'string') {
-        valA = valA.toLowerCase();
-        valB = valB.toLowerCase();
-      }
-
+      if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
       if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
       if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
@@ -516,11 +524,13 @@ export default function App() {
 
   const updateProfile = async (name, id) => {
     if (!user) return;
+    if (analytics) logEvent(analytics, 'profile_updated', { user_name: name });
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id, isAdmin }, { merge: true });
   };
 
   const logoutUmpire = async () => {
     if (!user) return;
+    if (analytics) logEvent(analytics, 'logout');
     setUserName('');
     setUmpireId('');
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', umpireId: '', isAdmin: false }, { merge: true });
@@ -531,6 +541,7 @@ export default function App() {
     if (!name.trim()) return "";
     const exists = masterUmpires.find(u => u.name.toLowerCase() === name.toLowerCase());
     if (exists) return exists.id;
+    if (analytics) logEvent(analytics, 'umpire_added_to_master', { name });
     const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name });
     return docRef.id;
   };
@@ -554,8 +565,10 @@ export default function App() {
     const appIdStr = `${gameId}_${umpireId}`;
     const existing = applications.find(a => a.id === appIdStr);
     if (existing) {
+      if (analytics) logEvent(analytics, 'withdraw_interest', { game_id: gameId, umpire: userName });
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr));
     } else {
+      if (analytics) logEvent(analytics, 'express_interest', { game_id: gameId, umpire: userName });
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr), {
         gameId, userId: umpireId, userName, timestamp: Date.now()
       });
@@ -564,6 +577,7 @@ export default function App() {
 
   const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
+    if (analytics) logEvent(analytics, 'umpire_assigned', { game_id: gameId, umpire: name });
     const asgId = `${gameId}_${uId}`;
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
       gameId, userId: uId, userName: name, assignedAt: Date.now()
@@ -585,18 +599,12 @@ export default function App() {
       rows.forEach((row) => {
         const columns = row.split(/\t|,/);
         if (columns.length >= 5) {
-          const gameData = {
-            date: columns[0].trim(),
-            time: columns[1].trim(),
-            league: columns[2].trim(),
-            away: columns[3].trim(), 
-            home: columns[4].trim(),
-            location: (columns[5] || 'Unknown').trim(),
-          };
+          const gameData = { date: columns[0].trim(), time: columns[1].trim(), league: columns[2].trim(), away: columns[3].trim(), home: columns[4].trim(), location: (columns[5] || 'Unknown').trim() };
           const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
           batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
         }
       });
+      if (analytics) logEvent(analytics, 'bulk_import', { count: rows.length });
       await batch.commit();
       setBulkInput('');
       setShowImportTool(false);
@@ -609,19 +617,9 @@ export default function App() {
     if (!isAdmin || !editingGameData) return;
     try {
       const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id);
-      await updateDoc(gameRef, {
-        date: editingGameData.date,
-        time: editingGameData.time,
-        league: editingGameData.league,
-        home: editingGameData.home,
-        away: editingGameData.away,
-        location: editingGameData.location
-      });
+      await updateDoc(gameRef, { date: editingGameData.date, time: editingGameData.time, league: editingGameData.league, home: editingGameData.home, away: editingGameData.away, location: editingGameData.location });
       setEditingGameData(null);
-    } catch (e) {
-      console.error("Update failed", e);
-      alert("Error updating match.");
-    }
+    } catch (e) { alert("Error updating match."); }
   };
 
   const deleteAllGames = async () => {
@@ -634,6 +632,7 @@ export default function App() {
       games.forEach(game => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)));
       assignments.forEach(asg => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`)));
       applications.forEach(app => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`)));
+      if (analytics) logEvent(analytics, 'clear_season', { year: selectedYear });
       await batch.commit();
       alert(t.deleteAllSuccess);
     } catch (e) { alert("Error deleting games."); }
@@ -642,6 +641,7 @@ export default function App() {
 
   const handleAdminAuth = async () => {
     if (adminCode === 'admin123' && user) {
+      if (analytics) logEvent(analytics, 'admin_login');
       setIsAdmin(true);
       setShowAdminModal(false);
       await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { isAdmin: true }, { merge: true });
@@ -962,7 +962,7 @@ export default function App() {
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {gameAssignments.map(asg => (
-                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30"><div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div><button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button></div>
+                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30"><div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div><button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button></div>
                                 ))}
                               </div>
                             </div>
