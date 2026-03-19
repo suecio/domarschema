@@ -51,7 +51,8 @@ import {
   ChevronRight,
   X,
   List,
-  ChevronLeft
+  ChevronLeft,
+  ArrowUpDown
 } from 'lucide-react';
 
 /**
@@ -273,7 +274,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState('schedule');
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
-  const [myGamesViewMode, setMyGamesViewMode] = useState('list'); // New: View mode for personal games
+  const [myGamesViewMode, setMyGamesViewMode] = useState('list'); 
   const [selectedYear, setSelectedYear] = useState('2026');
   
   const defaultLang = typeof navigator !== 'undefined' && navigator.language.startsWith('sv') ? 'sv' : 'en';
@@ -303,6 +304,9 @@ export default function App() {
   const [tempEditName, setTempEditName] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
+
+  // Sorting State for Statistics
+  const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -387,6 +391,13 @@ export default function App() {
     return 'bg-green-100 text-green-700 border-green-200';
   };
 
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
   const generateICS = (gamesToExport) => {
     if (gamesToExport.length === 0) return;
     const events = gamesToExport.map(game => {
@@ -446,31 +457,42 @@ export default function App() {
     );
   }, [games, applications, groupedAssignments, umpireId]);
 
-  const statistics = useMemo(() => {
+  const sortedStatistics = useMemo(() => {
     const stats = {};
     
-    // Process confirmed assignments
+    // Confirmed assignments
     assignments.forEach(asg => {
       if (!asg.userId) return;
       if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName, games: 0, interest: 0 };
       stats[asg.userId].games += 1;
     });
 
-    // Process all interests (precursor to assignments)
+    // Interests
     applications.forEach(app => {
       if (!stats[app.userId]) stats[app.userId] = { name: app.userName, games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
 
-    // Calculate rates and sort
-    return Object.values(stats).map(s => {
-      // Interest is usually >= games because you can be interested in many but assigned to few.
-      // However, admins can manually assign. We use the higher number as the potential denominator
-      // or simply follow (Assigned / Interested) * 100 as requested.
+    const data = Object.values(stats).map(s => {
       const rate = s.interest > 0 ? Math.round((s.games / s.interest) * 100) : (s.games > 0 ? 100 : 0);
       return { ...s, rate };
-    }).sort((a, b) => b.games - a.games);
-  }, [assignments, applications]);
+    });
+
+    // Apply Sorting
+    return data.sort((a, b) => {
+      let valA = a[sortConfig.key];
+      let valB = b[sortConfig.key];
+      
+      if (typeof valA === 'string') {
+        valA = valA.toLowerCase();
+        valB = valB.toLowerCase();
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [assignments, applications, sortConfig]);
 
   const filteredGames = useMemo(() => {
     return games.filter(game => {
@@ -972,14 +994,36 @@ export default function App() {
               </div>
               <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
                 <table className="w-full text-left min-w-[600px]">
-                  <thead><tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.umpire}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.interests}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.gamesAssigned}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.assignmentRate}</th>
-                  </tr></thead>
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th onClick={() => handleSort('name')} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors">
+                        <div className="flex items-center gap-1">
+                          {t.umpire}
+                          {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSort('interest')} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:text-blue-600 transition-colors">
+                        <div className="flex items-center justify-center gap-1">
+                          {t.interests}
+                          {sortConfig.key === 'interest' ? (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSort('games')} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:text-blue-600 transition-colors">
+                        <div className="flex items-center justify-center gap-1">
+                          {t.gamesAssigned}
+                          {sortConfig.key === 'games' ? (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                        </div>
+                      </th>
+                      <th onClick={() => handleSort('rate')} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:text-blue-600 transition-colors">
+                        <div className="flex items-center justify-center gap-1">
+                          {t.assignmentRate}
+                          {sortConfig.key === 'rate' ? (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {statistics.map(stat => (
+                    {sortedStatistics.map(stat => (
                       <tr key={stat.name} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div><span className="font-bold text-slate-700">{stat.name}</span></div></td>
                         <td className="px-6 py-4 text-center"><span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black text-slate-500">{stat.interest}</span></td>
@@ -996,7 +1040,7 @@ export default function App() {
                     ))}
                   </tbody>
                 </table>
-                {statistics.length === 0 && <p className="p-12 text-center text-slate-400 italic text-sm">{t.noStats}</p>}
+                {sortedStatistics.length === 0 && <p className="p-12 text-center text-slate-400 italic text-sm">{t.noStats}</p>}
               </div>
             </div>
           )}
