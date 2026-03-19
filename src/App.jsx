@@ -114,6 +114,7 @@ const translations = {
     umpire: "Domare",
     interests: "Intresseanmälningar",
     gamesAssigned: "Dömda matcher",
+    assignmentRate: "Tillsättningsgrad",
     noStats: "Ingen data finns registrerad för säsongen än.",
     mySchedule: "Mitt Schema",
     noInterest: "Du har inga bekräftade matchuppdrag än.",
@@ -207,6 +208,7 @@ const translations = {
     umpire: "Umpire",
     interests: "Interests",
     gamesAssigned: "Games Assigned",
+    assignmentRate: "Assignment Rate",
     noStats: "No engagement data recorded for this season yet.",
     mySchedule: "My Schedule",
     noInterest: "You have no confirmed assignments yet.",
@@ -446,16 +448,28 @@ export default function App() {
 
   const statistics = useMemo(() => {
     const stats = {};
+    
+    // Process confirmed assignments
     assignments.forEach(asg => {
       if (!asg.userId) return;
       if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName, games: 0, interest: 0 };
       stats[asg.userId].games += 1;
     });
+
+    // Process all interests (precursor to assignments)
     applications.forEach(app => {
       if (!stats[app.userId]) stats[app.userId] = { name: app.userName, games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
-    return Object.values(stats).sort((a, b) => b.games - a.games);
+
+    // Calculate rates and sort
+    return Object.values(stats).map(s => {
+      // Interest is usually >= games because you can be interested in many but assigned to few.
+      // However, admins can manually assign. We use the higher number as the potential denominator
+      // or simply follow (Assigned / Interested) * 100 as requested.
+      const rate = s.interest > 0 ? Math.round((s.games / s.interest) * 100) : (s.games > 0 ? 100 : 0);
+      return { ...s, rate };
+    }).sort((a, b) => b.games - a.games);
   }, [assignments, applications]);
 
   const filteredGames = useMemo(() => {
@@ -956,15 +970,28 @@ export default function App() {
                 <div><h2 className="text-2xl font-black tracking-tighter">{t.analytics}</h2><p className="text-blue-200 text-xs font-bold uppercase tracking-widest">{selectedYear} Season Engagement</p></div>
                 <BarChart3 className="w-12 h-12 opacity-20" />
               </div>
-              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                <table className="w-full text-left">
-                  <thead><tr className="bg-slate-50 border-b border-slate-100"><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.umpire}</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.interests}</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.gamesAssigned}</th></tr></thead>
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]">
+                  <thead><tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.umpire}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.interests}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.gamesAssigned}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{t.assignmentRate}</th>
+                  </tr></thead>
                   <tbody className="divide-y divide-slate-50">
                     {statistics.map(stat => (
                       <tr key={stat.name} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div><span className="font-bold text-slate-700">{stat.name}</span></div></td>
                         <td className="px-6 py-4 text-center"><span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black text-slate-500">{stat.interest}</span></td>
                         <td className="px-6 py-4 text-center"><span className="bg-blue-100 px-3 py-1 rounded-full text-xs font-black text-blue-700">{stat.games}</span></td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                             <div className="flex-1 max-w-[64px] bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div className="bg-blue-600 h-full transition-all duration-500" style={{ width: `${stat.rate}%` }} />
+                             </div>
+                             <span className="text-xs font-black text-slate-600 min-w-[32px]">{stat.rate}%</span>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
