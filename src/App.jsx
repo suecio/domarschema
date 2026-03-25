@@ -56,7 +56,8 @@ import {
   X,
   List,
   ChevronLeft,
-  ArrowUpDown
+  ArrowUpDown,
+  Award
 } from 'lucide-react';
 
 /**
@@ -175,7 +176,8 @@ const translations = {
     calendarView: "Kalender",
     days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
     months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"],
-    requiredUmpires: "Antal domare"
+    requiredUmpires: "Antal domare",
+    level: "Nivå"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -270,7 +272,8 @@ const translations = {
     calendarView: "Calendar",
     days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    requiredUmpires: "Crew Size"
+    requiredUmpires: "Crew Size",
+    level: "Level"
   }
 };
 
@@ -309,6 +312,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [editingUmpireId, setEditingUmpireId] = useState(null);
   const [tempEditName, setTempEditName] = useState('');
+  const [tempEditLevel, setTempEditLevel] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
 
@@ -538,18 +542,18 @@ export default function App() {
     setShowNamePrompt(true);
   };
 
-  const addMasterUmpire = async (name) => {
+  const addMasterUmpire = async (name, level = "") => {
     if (!name.trim()) return "";
     const exists = masterUmpires.find(u => u.name.toLowerCase() === name.toLowerCase());
     if (exists) return exists.id;
     if (analytics) logEvent(analytics, 'umpire_added_to_master', { name });
-    const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name });
+    const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name, level });
     return docRef.id;
   };
 
-  const updateMasterUmpire = async (id, newName) => {
+  const updateMasterUmpire = async (id, newName, newLevel) => {
     if (!isAdmin || !newName.trim()) return;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { name: newName }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { name: newName, level: newLevel }, { merge: true });
   };
 
   const deleteMasterUmpire = async (id) => {
@@ -929,15 +933,22 @@ export default function App() {
                   {masterUmpires.map(u => (
                     <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                       {editingUmpireId === u.id ? (
-                        <div className="flex flex-1 gap-2">
-                          <input type="text" value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} className="flex-1 bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none" />
-                          <button onClick={async () => { await updateMasterUmpire(u.id, tempEditName); setEditingUmpireId(null); }} className="bg-green-600 text-white p-1.5 rounded-lg"><Check className="w-4 h-4" /></button>
+                        <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
+                          <input type="text" value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none" />
+                          <input type="text" value={tempEditLevel} placeholder={t.level} onChange={(e) => setTempEditLevel(e.target.value)} className="w-20 bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none" />
+                          <button onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel); setEditingUmpireId(null); }} className="bg-green-600 text-white p-1.5 rounded-lg"><Check className="w-4 h-4" /></button>
                           <button onClick={() => setEditingUmpireId(null)} className="bg-slate-200 text-slate-600 p-1.5 rounded-lg"><UserMinus className="w-4 h-4" /></button>
                         </div>
                       ) : (
                         <>
-                          <span className="text-sm font-bold text-slate-700">{u.name}</span>
-                          <div className="flex gap-1"><button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button><button onClick={() => deleteMasterUmpire(u.id)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></div>
+                          <div className="flex items-center gap-2">
+                             <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                             {u.level && <span className="bg-slate-200 text-slate-500 text-[10px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter">{u.level}</span>}
+                          </div>
+                          <div className="flex gap-1">
+                            <button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name); setTempEditLevel(u.level || ''); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => deleteMasterUmpire(u.id)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                          </div>
                         </>
                       )}
                     </div>
@@ -998,9 +1009,19 @@ export default function App() {
                             <div className="space-y-1">
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {gameAssignments.map(asg => (
-                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30"><div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div><button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button></div>
-                                ))}
+                                {gameAssignments.map(asg => {
+                                  const masterInfo = masterUmpires.find(m => m.id === asg.userId);
+                                  return (
+                                    <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="w-3 h-3 text-green-600" />
+                                            <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
+                                            {masterInfo?.level && <span className="bg-slate-200 text-slate-500 text-[8px] font-black px-1 rounded uppercase tracking-tighter">{masterInfo.level}</span>}
+                                        </div>
+                                        <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -1008,9 +1029,18 @@ export default function App() {
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
                             {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => (
-                                  <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all"><span className="text-xs font-bold">{app.userName}</span><button disabled={isFullyStaffed} onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"><UserPlus className="w-3 h-3" /> Assign</button></div>
-                                ))}
+                                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => {
+                                  const masterInfo = masterUmpires.find(m => m.id === app.userId);
+                                  return (
+                                    <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold">{app.userName}</span>
+                                            {masterInfo?.level && <span className="bg-slate-100 text-slate-400 text-[8px] font-black px-1 rounded uppercase tracking-tighter">{masterInfo.level}</span>}
+                                        </div>
+                                        <button disabled={isFullyStaffed} onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"><UserPlus className="w-3 h-3" /> Assign</button>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -1062,7 +1092,19 @@ export default function App() {
                   <tbody className="divide-y divide-slate-50">
                     {sortedStatistics.map(stat => (
                       <tr key={stat.name} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div><span className="font-bold text-slate-700">{stat.name}</span></div></td>
+                        <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-slate-700">{stat.name}</span>
+                                    {masterUmpires.find(m => m.name === stat.name)?.level && (
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter leading-none mt-0.5">
+                                            {masterUmpires.find(m => m.name === stat.name)?.level}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </td>
                         <td className="px-6 py-4 text-center"><span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black text-slate-500">{stat.interest}</span></td>
                         <td className="px-6 py-4 text-center"><span className="bg-blue-100 px-3 py-1 rounded-full text-xs font-black text-blue-700">{stat.games}</span></td>
                         <td className="px-6 py-4 text-center">
@@ -1234,7 +1276,10 @@ export default function App() {
                 <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
                   {filteredMasterUmpires.length > 0 ? filteredMasterUmpires.map(u => (
                       <button key={u.id} onClick={async () => { setUserName(u.name); setUmpireId(u.id); await updateProfile(u.name, u.id); setShowNamePrompt(false); setSearchQuery(''); }} className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group">
-                        <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                        <div className="flex items-center gap-2">
+                           <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                           {u.level && <span className="bg-slate-200 text-slate-500 text-[10px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter">{u.level}</span>}
+                        </div>
                         <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                       </button>
                   )) : <div className="p-4 text-center"><p className="text-xs text-slate-400 font-medium italic">{t.noGames}</p></div>}
