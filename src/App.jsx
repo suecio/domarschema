@@ -174,7 +174,8 @@ const translations = {
     listView: "Lista",
     calendarView: "Kalender",
     days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
-    months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"]
+    months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"],
+    requiredUmpires: "Antal domare"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -268,7 +269,8 @@ const translations = {
     listView: "List",
     calendarView: "Calendar",
     days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    requiredUmpires: "Crew Size"
   }
 };
 
@@ -401,9 +403,10 @@ export default function App() {
     return 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
-  const getAssignmentStatusStyles = (count) => {
+  const getAssignmentStatusStyles = (count, required) => {
+    const req = required || 2;
     if (count === 0) return 'bg-red-100 text-red-700 border-red-200';
-    if (count === 1) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (count < req) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
     return 'bg-green-100 text-green-700 border-green-200';
   };
 
@@ -416,9 +419,7 @@ export default function App() {
 
   const generateICS = (gamesToExport) => {
     if (gamesToExport.length === 0) return;
-    
     if (analytics) logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
-
     const events = gamesToExport.map(game => {
       const cleanDate = game.date.replace(/-/g, '');
       const cleanTime = game.time.replace(/:/g, '');
@@ -599,7 +600,7 @@ export default function App() {
       rows.forEach((row) => {
         const columns = row.split(/\t|,/);
         if (columns.length >= 5) {
-          const gameData = { date: columns[0].trim(), time: columns[1].trim(), league: columns[2].trim(), away: columns[3].trim(), home: columns[4].trim(), location: (columns[5] || 'Unknown').trim() };
+          const gameData = { date: columns[0].trim(), time: columns[1].trim(), league: columns[2].trim(), away: columns[3].trim(), home: columns[4].trim(), location: (columns[5] || 'Unknown').trim(), requiredUmpires: 2 };
           const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
           batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
         }
@@ -617,7 +618,15 @@ export default function App() {
     if (!isAdmin || !editingGameData) return;
     try {
       const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id);
-      await updateDoc(gameRef, { date: editingGameData.date, time: editingGameData.time, league: editingGameData.league, home: editingGameData.home, away: editingGameData.away, location: editingGameData.location });
+      await updateDoc(gameRef, { 
+        date: editingGameData.date, 
+        time: editingGameData.time, 
+        league: editingGameData.league, 
+        home: editingGameData.home, 
+        away: editingGameData.away, 
+        location: editingGameData.location,
+        requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2
+      });
       setEditingGameData(null);
     } catch (e) { alert("Error updating match."); }
   };
@@ -667,10 +676,17 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
       {/* Header */}
-      <header className="bg-blue-900 text-white p-4 shadow-lg sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
+      <header 
+        onClick={() => { 
+            setView('schedule'); 
+            setScheduleViewMode('list');
+            setSearchQuery('');
+        }} 
+        className="bg-blue-900 text-white p-4 shadow-lg sticky top-0 z-20 cursor-pointer group"
+      >
+        <div className="max-w-5xl mx-auto flex justify-between items-center pointer-events-none">
           <div className="flex items-center gap-3">
-            <div className="bg-white rounded-lg overflow-hidden flex items-center justify-center h-10 w-10 border border-white/20 shadow-inner">
+            <div className="bg-white rounded-lg overflow-hidden flex items-center justify-center h-10 w-10 border border-white/20 shadow-inner group-hover:scale-110 transition-transform">
               {LOGO_URL ? (
                 <img src={LOGO_URL} alt="Logo" className="h-full w-full object-contain p-1" />
               ) : (
@@ -678,17 +694,18 @@ export default function App() {
               )}
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight leading-none">{t.appTitle}</h1>
+              <h1 className="text-xl font-bold tracking-tight leading-none group-hover:text-blue-200 transition-colors">{t.appTitle}</h1>
               <p className="text-[10px] font-black uppercase text-blue-300 tracking-widest mt-1">{t.season} {selectedYear}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pointer-events-auto">
             <div className="flex bg-blue-800 rounded-lg p-0.5 mr-2">
-              <button onClick={() => setLang('sv')} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'sv' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇸🇪</button>
-              <button onClick={() => setLang('en')} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
+              <button onClick={(e) => { e.stopPropagation(); setLang('sv'); }} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'sv' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇸🇪</button>
+              <button onClick={(e) => { e.stopPropagation(); setLang('en'); }} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
             </div>
             <select 
               value={selectedYear} 
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => setSelectedYear(e.target.value)}
               className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-2 py-1 outline-none appearance-none cursor-pointer"
             >
@@ -696,7 +713,12 @@ export default function App() {
               <option value="2026">2026</option>
               <option value="2027">2027</option>
             </select>
-            <button onClick={() => setShowAdminModal(true)} className="p-2 hover:bg-blue-800 rounded-full transition-colors ml-1"><Settings className="w-5 h-5" /></button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowAdminModal(true); }} 
+              className="p-2 hover:bg-blue-800 rounded-full transition-colors ml-1"
+            >
+                <Settings className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
@@ -827,6 +849,8 @@ export default function App() {
                     const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
                     const gameDateObj = new Date(game.date);
                     const dayOfWeek = t.days[gameDateObj.getDay()];
+                    const required = game.requiredUmpires || 2;
+
                     return (
                       <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
                         <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -862,7 +886,7 @@ export default function App() {
                               <>
                                 <div className="flex flex-col items-end">
                                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</span>
-                                  {gameAssignments.length > 0 && <span className="text-[10px] font-black text-green-600 uppercase tracking-widest mt-0.5">{gameAssignments.length}/4 {t.staffed}</span>}
+                                  {gameAssignments.length > 0 && <span className="text-[10px] font-black text-green-600 uppercase tracking-widest mt-0.5">{gameAssignments.length}/{required} {t.staffed}</span>}
                                 </div>
                                 <button onClick={() => toggleApplication(game.id)} disabled={isAssignedToThisGame} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}>{isApplied ? t.withdraw : t.interested}</button>
                               </>
@@ -898,6 +922,7 @@ export default function App() {
                 </div>
               )}
 
+              {/* Master List Manager */}
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Users className="w-4 h-4" /> {t.masterList}</h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
@@ -925,18 +950,20 @@ export default function App() {
                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t.pendingAssignments}</h3>
                    <button onClick={() => setShowStaffed(!showStaffed)} className="text-[10px] font-black text-blue-600 uppercase hover:underline">{showStaffed ? t.hideStaffed : t.showAll}</button>
                 </div>
-                {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < 4).map(game => {
+                {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
                   const applicants = applications.filter(a => a.gameId === game.id);
                   const gameAssignments = groupedAssignments[game.id] || [];
-                  const isFullyStaffed = gameAssignments.length >= 4;
+                  const required = game.requiredUmpires || 2;
+                  const isFullyStaffed = gameAssignments.length >= required;
                   const isEditingThisGame = editingGameData?.id === game.id;
+                  
                   return (
                     <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                       <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
                           <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length)}`}>{gameAssignments.length} / 4 {t.assignedTo}</span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <button onClick={() => setEditingGameData(isEditingThisGame ? null : { ...game })} className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}><Edit2 className="w-4 h-4" /></button>
@@ -952,6 +979,16 @@ export default function App() {
                              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label><input type="text" value={editingGameData.home} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
                              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label><input type="text" value={editingGameData.league} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
                              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label><input type="text" value={editingGameData.location} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.requiredUmpires}</label>
+                                <select 
+                                    value={editingGameData.requiredUmpires || 2} 
+                                    onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })}
+                                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
+                                >
+                                    {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                             </div>
                           </div>
                           <div className="flex gap-2"><button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">{t.saveChanges}</button><button onClick={() => setEditingGameData(null)} className="px-6 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest">{t.cancel}</button></div>
                         </div>
@@ -962,7 +999,7 @@ export default function App() {
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.crew}</p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {gameAssignments.map(asg => (
-                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30"><div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div><button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button></div>
+                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30"><div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div><button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button></div>
                                 ))}
                               </div>
                             </div>
