@@ -72,6 +72,9 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
 
+// --- LOGO CONFIGURATION ---
+const LOGO_URL = ""; 
+
 // --- Translation Dictionary ---
 const translations = {
   sv: {
@@ -166,7 +169,8 @@ const translations = {
     requiredUmpires: "Antal domare",
     level: "Nivå",
     name: "Namn",
-    sortBy: "Sortera"
+    sortBy: "Sortera",
+    week: "V."
   },
   en: {
     appTitle: "Domartillsättning",
@@ -260,8 +264,18 @@ const translations = {
     requiredUmpires: "Crew Size",
     level: "Level",
     name: "Name",
-    sortBy: "Sort by"
+    sortBy: "Sort by",
+    week: "W."
   }
+};
+
+// ISO 8601 Week Number Calculation
+const getISOWeekNumber = (date) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 };
 
 export default function App() {
@@ -304,7 +318,7 @@ export default function App() {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
-  const [umpireSort, setUmpireSort] = useState('level'); // 'level' or 'name'
+  const [umpireSort, setUmpireSort] = useState('level');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -422,14 +436,10 @@ export default function App() {
     };
   }, [user, appId, isAdmin]);
 
-  // 3. Scroll Tracking & Analytics tracking
+  // 3. Scroll Tracking & Analytics
   useEffect(() => {
     if (analytics) {
-      logEvent(analytics, 'screen_view', { 
-        firebase_screen: view, 
-        year: selectedYear, 
-        lang: lang 
-      });
+      logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
     }
     
     const handleScroll = () => { 
@@ -644,16 +654,36 @@ export default function App() {
 
   // --- DERIVED DATA ---
 
-  const calendarDays = useMemo(() => {
+  const calendarWeeks = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay(); 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const shiftedFirstDay = firstDay === 0 ? 6 : firstDay - 1; 
-    const days = [];
-    for (let i = 0; i < shiftedFirstDay; i++) days.push(null);
-    for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
-    return days;
+    
+    let currentWeek = [];
+    const weeks = [];
+
+    // Padding start
+    for (let i = 0; i < shiftedFirstDay; i++) currentWeek.push(null);
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      currentWeek.push(new Date(year, month, d));
+      if (currentWeek.length === 7) {
+        const validDate = currentWeek.find(day => day !== null);
+        weeks.push({ weekNumber: getISOWeekNumber(validDate), days: currentWeek });
+        currentWeek = [];
+      }
+    }
+
+    // Padding end
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 7) currentWeek.push(null);
+      const validDate = currentWeek.find(day => day !== null);
+      weeks.push({ weekNumber: getISOWeekNumber(validDate), days: currentWeek });
+    }
+
+    return weeks;
   }, [currentDate]);
 
   const groupedAssignments = useMemo(() => {
@@ -702,6 +732,14 @@ export default function App() {
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
+
+  // Shift days for UI to start on Monday (Mon - Sun instead of Sun - Sat)
+  const uiDays = useMemo(() => {
+    const arr = [...t.days];
+    const sunday = arr.shift();
+    arr.push(sunday);
+    return arr;
+  }, [t.days]);
 
   // Sort and filter logic specifically for the public umpire list tab
   const sortedUmpireList = useMemo(() => {
@@ -758,7 +796,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
       
-      {/* Header with full reset logic */}
       <header 
         onClick={() => { 
           setView('schedule'); 
@@ -808,7 +845,6 @@ export default function App() {
 
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         
-        {/* Navigation Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
             { id: 'schedule', label: t.schedule, icon: CalendarIcon },
@@ -830,7 +866,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* Global Filters */}
         {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -872,7 +907,6 @@ export default function App() {
 
         <section className="space-y-4">
           
-          {/* VIEW: SCHEDULE */}
           {view === 'schedule' && (
             <>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
@@ -916,41 +950,49 @@ export default function App() {
                             <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronRight className="w-4 h-4"/></button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-7 border-b border-slate-100">
-                        {["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map(d => (
+                    <div className="grid grid-cols-8 border-b border-slate-100">
+                        <div className="py-3 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest border-r border-slate-50">{t.week}</div>
+                        {uiDays.map(d => (
                           <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
                         ))}
                     </div>
-                    <div className="grid grid-cols-7">
-                        {calendarDays.map((day, idx) => {
-                          const dateStr = day ? toLocalISO(day) : null;
-                          const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
-                          const isToday = dateStr === today;
-                          
-                          return (
-                            <div key={idx} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
-                              {day && (
-                                <>
-                                  <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
-                                    {day.getDate()}
-                                  </span>
-                                  <div className="mt-2 space-y-1">
-                                    {matches.map(g => (
-                                      <button 
-                                        key={g.id} 
-                                        onClick={() => { setSearchQuery(g.home); setScheduleViewMode('list'); }} 
-                                        className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
-                                      >
-                                        <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
-                                        <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
+                    <div className="flex flex-col">
+                        {calendarWeeks.map((week, wIdx) => (
+                          <div key={wIdx} className="grid grid-cols-8 border-b border-slate-50 last:border-0">
+                            <div className="flex flex-col items-center justify-center border-r border-slate-50 bg-slate-50/30 p-2">
+                              <span className="text-xs font-black text-slate-400">{week.weekNumber}</span>
                             </div>
-                          );
-                        })}
+                            {week.days.map((day, idx) => {
+                              const dateStr = day ? toLocalISO(day) : null;
+                              const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
+                              const isToday = dateStr === today;
+                              
+                              return (
+                                <div key={idx} className={`min-h-[100px] p-2 border-r last:border-r-0 border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
+                                  {day && (
+                                    <>
+                                      <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
+                                        {day.getDate()}
+                                      </span>
+                                      <div className="mt-2 space-y-1">
+                                        {matches.map(g => (
+                                          <button 
+                                            key={g.id} 
+                                            onClick={() => { setSearchQuery(g.home); setScheduleViewMode('list'); }} 
+                                            className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
+                                          >
+                                            <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
+                                            <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
                     </div>
                 </div>
               ) : (
