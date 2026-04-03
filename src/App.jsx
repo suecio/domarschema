@@ -1176,24 +1176,56 @@ export default function App() {
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
+                            <button 
+                              onClick={() => { if(window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
+                              className="p-2 text-slate-300 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                         
                         {isEditingThisGame && (
-                          <div className="p-4 bg-blue-50/30 border-b border-slate-100 grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label>
-                              <select 
-                                value={editingGameData.requiredUmpires || 2} 
-                                onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
-                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
-                              >
-                                {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
-                              </select>
+                          <div className="p-6 bg-blue-50/30 border-b border-slate-100 space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
+                                <input type="date" value={editingGameData.date} onChange={(e) => setEditingGameData({ ...editingGameData, date: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.time}</label>
+                                <input type="text" value={editingGameData.time} onChange={(e) => setEditingGameData({ ...editingGameData, time: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.away}</label>
+                                <input type="text" value={editingGameData.away} onChange={(e) => setEditingGameData({ ...editingGameData, away: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label>
+                                <input type="text" value={editingGameData.home} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label>
+                                <input type="text" value={editingGameData.league} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label>
+                                <input type="text" value={editingGameData.location} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.requiredUmpires}</label>
+                                <select 
+                                  value={editingGameData.requiredUmpires || 2} 
+                                  onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
+                                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
+                                >
+                                  {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                              </div>
                             </div>
-                            <div className="flex items-end gap-2">
-                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold text-xs uppercase">{t.save}</button>
-                              <button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2 rounded-lg font-bold text-xs uppercase">{t.cancel}</button>
+                            <div className="flex gap-2">
+                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">{t.saveChanges}</button>
+                              <button onClick={() => setEditingGameData(null)} className="px-6 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest">{t.cancel}</button>
                             </div>
                           </div>
                         )}
