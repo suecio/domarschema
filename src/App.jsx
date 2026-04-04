@@ -72,9 +72,6 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
 
-// --- LOGO CONFIGURATION ---
-const LOGO_URL = ""; 
-
 // --- Translation Dictionary ---
 const translations = {
   sv: {
@@ -112,6 +109,7 @@ const translations = {
     deleteAllGames: "Rensa hela säsongen",
     deleteAllConfirm: "ÄR DU HELT SÄKER? Detta kommer radera ALLA matcher, intresseanmälningar och tillsättningar för det valda året.",
     deleteAllSuccess: "Säsongen har rensats.",
+    downloadBackup: "Ladda ner backup (JSON)",
     umpire: "Domare",
     interests: "Intresseanmälningar",
     gamesAssigned: "Dömda matcher",
@@ -207,6 +205,7 @@ const translations = {
     deleteAllGames: "Clear Entire Season",
     deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
     deleteAllSuccess: "Season cleared successfully.",
+    downloadBackup: "Download Backup (JSON)",
     umpire: "Umpire",
     interests: "Interests",
     gamesAssigned: "Games Assigned",
@@ -259,7 +258,7 @@ const translations = {
     saveChanges: "Save Changes",
     listView: "List",
     calendarView: "Calendar",
-    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Sat"],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     requiredUmpires: "Crew Size",
     level: "Level",
@@ -652,6 +651,30 @@ export default function App() {
     generateICS([game]);
   };
 
+  const handleDownloadBackup = () => {
+    if (!isAdmin) return;
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      year: selectedYear,
+      appId: appId,
+      collections: {
+        games,
+        applications,
+        assignments,
+        umpires: masterUmpires
+      }
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `umpire-backup-${selectedYear}-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
+  };
+
   // --- DERIVED DATA ---
 
   const calendarWeeks = useMemo(() => {
@@ -732,14 +755,6 @@ export default function App() {
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
-
-  // Shift days for UI to start on Monday (Mon - Sun instead of Sun - Sat)
-  const uiDays = useMemo(() => {
-    const arr = [...t.days];
-    const sunday = arr.shift();
-    arr.push(sunday);
-    return arr;
-  }, [t.days]);
 
   // Sort and filter logic specifically for the public umpire list tab
   const sortedUmpireList = useMemo(() => {
@@ -845,6 +860,7 @@ export default function App() {
 
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         
+        {/* Navigation Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
             { id: 'schedule', label: t.schedule, icon: CalendarIcon },
@@ -866,6 +882,7 @@ export default function App() {
           ))}
         </div>
 
+        {/* Global Filters */}
         {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -907,6 +924,7 @@ export default function App() {
 
         <section className="space-y-4">
           
+          {/* VIEW: SCHEDULE */}
           {view === 'schedule' && (
             <>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
@@ -952,7 +970,7 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-8 border-b border-slate-100">
                         <div className="py-3 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest border-r border-slate-50">{t.week}</div>
-                        {uiDays.map(d => (
+                        {["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map(d => (
                           <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
                         ))}
                     </div>
@@ -1130,6 +1148,24 @@ export default function App() {
           {/* VIEW: ADMIN */}
           {view === 'admin' && (
              <div className="space-y-6">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left"><h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2><p className="text-xs text-slate-500">{selectedYear} Season</p></div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 border border-slate-200 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2 shadow-sm">
+                      <Download className="w-4 h-4" /> {t.downloadBackup}
+                    </button>
+                    <button onClick={deleteAllGames} className="bg-red-50 text-red-600 border border-red-100 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-red-100 transition-all active:scale-95">{t.deleteAllGames}</button>
+                    <button onClick={() => setShowImportTool(!showImportTool)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
+                  </div>
+                </div>
+
+                {showImportTool && (
+                  <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 animate-in slide-in-from-top">
+                    <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3>
+                    <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder="YYYY-MM-DD	HH:MM	Serie	Borta	Hemma	Plats" className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
+                    <div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button></div>
+                  </div>
+                )}
                 
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
