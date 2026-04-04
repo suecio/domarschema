@@ -19,6 +19,7 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   signInAnonymously,
+  signInWithCustomToken,
   signOut
 } from 'firebase/auth';
 import { 
@@ -314,29 +315,27 @@ const getISOWeekNumber = (date) => {
 };
 
 export default function App() {
-  // ALL State declarations must be explicitly listed here to prevent ReferenceErrors
+  // Auth & Roles
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
-  
-  // Roles
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminEmails, setAdminEmails] = useState([]);
   
+  // Navigation & View
   const [view, setView] = useState('schedule');
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
   const [myGamesViewMode, setMyGamesViewMode] = useState('list'); 
   const [selectedYear, setSelectedYear] = useState('2026');
   
+  // Language & UI Context
   const defaultLang = typeof navigator !== 'undefined' && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
   const t = translations[lang];
-
-  // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // Data State
+  // Core Data
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -350,14 +349,15 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [authError, setAuthError] = useState('');
-  
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  
+  // Changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelog, setChangelog] = useState([]);
   const [loadingChangelog, setLoadingChangelog] = useState(false);
   
-  // Admin Controls
+  // Admin Editing Controls
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
@@ -376,7 +376,7 @@ export default function App() {
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
 
-  const appId = `baseball-umpire-scheduler-${selectedYear}`;
+  const appId = typeof window !== 'undefined' && typeof window.__app_id !== 'undefined' ? window.__app_id : `baseball-umpire-scheduler-${selectedYear}`;
   
   // Localized today for comparisons
   const today = (() => {
@@ -426,12 +426,15 @@ export default function App() {
   // 1. Authentication Configuration
   useEffect(() => {
     const initAuth = async () => {
-      try { 
-        // Force an anonymous sign-in to allow public reading of the database.
-        // It will be overwritten gracefully when they log in with Email/Password.
-        await signInAnonymously(auth); 
-      } catch (err) { 
-        console.warn("Anonymous auth failed (expected if disabled):", err); 
+      try {
+        if (typeof window !== 'undefined' && window.__initial_auth_token) {
+          await signInWithCustomToken(auth, window.__initial_auth_token);
+        } else {
+          // Attempt anonymous fallback if enabled. If disabled, it fails safely.
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.warn("Auth initialization fallback. Proceeding as guest.", err);
       }
     };
     initAuth();
@@ -444,9 +447,12 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Listeners (Public access due to anonymous auth)
+  // 2. Data Listeners (Modified for Public Access)
   useEffect(() => {
-    if (!user) return;
+    // In Canvas preview environments, strict proxy rules require a user object.
+    // On the live domain, public reads are supported regardless of auth state.
+    const isCanvas = typeof window !== 'undefined' && window.__app_id;
+    if (isCanvas && !user) return; 
 
     const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
     const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
@@ -485,17 +491,15 @@ export default function App() {
     };
   }, [user, appId]);
 
-  // 3. User Profile & Role Evaluation (Runs when User changes)
+  // 3. User Profile & Role Evaluation
   useEffect(() => {
     let unsubscribeProfile = () => {};
 
-    if (user) {
-      // Evaluate Roles safely
+    if (user && user.email) {
       const isMaster = user.email === 'suecio@tryempire.com';
-      const isStandardAdmin = user.email && adminEmails.includes(user.email);
+      const isStandardAdmin = adminEmails.includes(user.email);
       setIsAdmin(isMaster || isStandardAdmin);
 
-      // Fetch Profile
       const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
         if (snapshot.exists()) {
@@ -516,7 +520,7 @@ export default function App() {
     return () => unsubscribeProfile();
   }, [user, appId, adminEmails]);
 
-  // 4. Scroll Tracking & Analytics
+  // 4. Scroll & Analytics
   useEffect(() => {
     if (analytics) {
       logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
@@ -564,7 +568,6 @@ export default function App() {
       
       setShowAuthModal(false);
       
-      // If logging in/registering, check if they need to link a profile
       if (cred && cred.user) {
         const docRef = doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile', 'info');
         const docSnap = await getDoc(docRef);
@@ -598,14 +601,13 @@ export default function App() {
   };
 
   const updateProfile = async (name, id) => {
-    if (!user) return;
+    if (!user || !user.email) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
   };
 
   const logoutUmpire = async () => {
     await signOut(auth);
-    // Log them back in anonymously immediately so they don't lose public view
-    await signInAnonymously(auth);
+    try { await signInAnonymously(auth); } catch (e) { }
     setShowAdminModal(false);
     setView('schedule');
   };
@@ -641,7 +643,6 @@ export default function App() {
   };
 
   const toggleApplication = async (gameId) => {
-    // If not logged in via Email/Password, force them to log in before applying
     if (!user || !user.email) { 
       setShowAuthModal(true); 
       return; 
@@ -757,10 +758,7 @@ export default function App() {
 
   const generateICS = (gamesToExport) => {
     if (gamesToExport.length === 0) return;
-    
-    if (analytics) {
-      logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
-    }
+    if (analytics) logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
     
     const events = gamesToExport.map(game => {
       const cleanDate = game.date.replace(/-/g, '');
@@ -904,7 +902,6 @@ export default function App() {
   const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
 
-  // Adjust days array to start on Monday for UI representation in Calendar view
   const uiDays = useMemo(() => {
     const arr = [...t.days];
     const sunday = arr.shift();
@@ -913,14 +910,7 @@ export default function App() {
   }, [t.days]);
 
   const sortedUmpireList = useMemo(() => {
-    const levelOrder = {
-      'internationell': 1,
-      'elit': 2,
-      'nationell': 3,
-      'region': 4,
-      'förening': 5
-    };
-
+    const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
     let umps = masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
     
     if (umpireSort === 'level') {
@@ -1019,7 +1009,6 @@ export default function App() {
 
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         
-        {/* Navigation Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
             { id: 'schedule', label: t.schedule, icon: CalendarIcon },
@@ -1041,7 +1030,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* Global Filters */}
         {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
