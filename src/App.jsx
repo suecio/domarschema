@@ -197,7 +197,9 @@ const translations = {
     masterAdminInfo: "Du är inloggad som Master Admin.",
     linkedAccount: "Konto:",
     notLinked: "Inget konto",
-    linkEmailPlaceholder: "Koppla e-post..."
+    linkEmailPlaceholder: "Koppla e-post...",
+    selectEmail: "-- Välj E-post --",
+    otherEmail: "+ Ange annan..."
   },
   en: {
     appTitle: "Domartillsättning",
@@ -308,7 +310,9 @@ const translations = {
     masterAdminInfo: "You are logged in as Master Admin.",
     linkedAccount: "Account:",
     notLinked: "No account",
-    linkEmailPlaceholder: "Link email..."
+    linkEmailPlaceholder: "Link email...",
+    selectEmail: "-- Select Email --",
+    otherEmail: "+ Enter other..."
   }
 };
 
@@ -393,6 +397,7 @@ function MainApp() {
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [masterUmpires, setMasterUmpires] = useState([]);
+  const [registeredEmails, setRegisteredEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
@@ -420,10 +425,12 @@ function MainApp() {
   const [tempEditName, setTempEditName] = useState('');
   const [tempEditLevel, setTempEditLevel] = useState('');
   const [tempEditEmail, setTempEditEmail] = useState('');
+  const [showManualEmailInput, setShowManualEmailInput] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
   const [umpireSort, setUmpireSort] = useState('level');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -533,6 +540,13 @@ function MainApp() {
     const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => {
       setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     }, handleDbError);
+    
+    // Listen to registered users to populate the "unconnected emails" dropdown
+    const regUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'registered_users');
+    const unsubscribeRegUsers = onSnapshot(regUsersCol, (snapshot) => {
+      const emails = snapshot.docs.map(doc => doc.data().email).filter(Boolean);
+      setRegisteredEmails([...new Set(emails)]);
+    }, handleDbError);
 
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
@@ -546,6 +560,7 @@ function MainApp() {
       unsubscribeApps(); 
       unsubscribeAssign(); 
       unsubscribeUmpires();
+      unsubscribeRegUsers();
       unsubscribeSettings();
     };
   }, [user, appId]);
@@ -556,6 +571,12 @@ function MainApp() {
 
     if (user && user.email) {
       const isMaster = user.email === 'suecio@tryempire.com';
+      
+      // Auto-register user email to the public registry so admins can assign it
+      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
+        email: user.email.toLowerCase(),
+        lastSeen: Date.now()
+      }, { merge: true }).catch(err => console.warn("Failed to register email:", err));
 
       const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
@@ -706,7 +727,7 @@ function MainApp() {
   };
 
   const toggleUmpireAdmin = async (uId) => {
-    if (user?.email !== 'suecio@tryempire.com') return; // Only master can change roles
+    if (user?.email !== 'suecio@tryempire.com') return; 
     
     let updatedIds = [...(adminUmpireIds || [])];
     if (updatedIds.includes(uId)) {
@@ -921,30 +942,12 @@ function MainApp() {
     if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
   };
 
-  // --- DEFENSIVE UI HELPERS ---
-  const safeDateMonth = (dateString) => {
-    if (!dateString) return '';
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString; 
-    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
-  };
-
-  const safeDateDay = (dateString) => {
-    if (!dateString) return '-';
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return '-';
-    const dayIndex = d.getDay();
-    return (t.days && t.days[dayIndex]) ? t.days[dayIndex] : '-';
-  };
-
-  const safeDateNum = (dateString) => {
-    if (!dateString) return '-';
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return '-';
-    return d.getDate();
-  };
-
   // --- DERIVED DATA ---
+
+  const unconnectedEmails = useMemo(() => {
+    const linked = masterUmpires.map(u => (u.linkedEmail || '').toLowerCase()).filter(Boolean);
+    return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
+  }, [registeredEmails, masterUmpires]);
 
   const calendarWeeks = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -1500,13 +1503,47 @@ service cloud.firestore {
                               <option value="">- {t.level} -</option>
                               {['Internationell', 'Elit', 'Nationell', 'Region', 'Förening'].map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
-                            <input 
-                              type="email" 
-                              value={tempEditEmail} 
-                              onChange={(e) => setTempEditEmail(e.target.value)} 
-                              placeholder={t.linkEmailPlaceholder}
-                              className="flex-1 min-w-[150px] bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-bold outline-none" 
-                            />
+                            
+                            {!showManualEmailInput ? (
+                              <select 
+                                value={tempEditEmail} 
+                                onChange={(e) => {
+                                  if (e.target.value === 'MANUAL_ENTRY') {
+                                    setShowManualEmailInput(true);
+                                    setTempEditEmail('');
+                                  } else {
+                                    setTempEditEmail(e.target.value);
+                                  }
+                                }}
+                                className="flex-1 min-w-[150px] bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none"
+                              >
+                                <option value="">{t.selectEmail}</option>
+                                {unconnectedEmails.map(email => (
+                                  <option key={email} value={email}>{email}</option>
+                                ))}
+                                {tempEditEmail && !unconnectedEmails.includes(tempEditEmail) && tempEditEmail !== 'MANUAL_ENTRY' && (
+                                  <option value={tempEditEmail}>{tempEditEmail}</option>
+                                )}
+                                <option value="MANUAL_ENTRY">{t.otherEmail}</option>
+                              </select>
+                            ) : (
+                              <div className="flex-1 flex items-center min-w-[150px] relative">
+                                <input 
+                                  type="email" 
+                                  value={tempEditEmail} 
+                                  onChange={(e) => setTempEditEmail(e.target.value)} 
+                                  placeholder={t.linkEmailPlaceholder}
+                                  className="w-full bg-white border border-blue-300 px-3 py-1.5 pr-8 rounded-lg text-sm font-bold outline-none" 
+                                />
+                                <button 
+                                  onClick={() => { setShowManualEmailInput(false); setTempEditEmail(''); }} 
+                                  className="absolute right-2 text-slate-400 hover:text-slate-600"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+
                             <div className="flex gap-1 items-center">
                               <button 
                                 onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel, tempEditEmail); setEditingUmpireId(null); }} 
@@ -1555,7 +1592,13 @@ service cloud.firestore {
                                 </button>
                               )}
                               <button 
-                                onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); setTempEditEmail(u.linkedEmail || ''); }} 
+                                onClick={() => { 
+                                  setEditingUmpireId(u.id); 
+                                  setTempEditName(u.name || ''); 
+                                  setTempEditLevel(u.level || ''); 
+                                  setTempEditEmail(u.linkedEmail || ''); 
+                                  setShowManualEmailInput(false);
+                                }} 
                                 className="p-1.5 text-slate-400 hover:text-blue-600"
                               >
                                 <Edit2 className="w-4 h-4" />
