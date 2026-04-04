@@ -51,7 +51,9 @@ import {
   ChevronLeft,
   ArrowUpDown,
   ArrowUp,
-  Users2
+  Users2,
+  Github,
+  GitCommit
 } from 'lucide-react';
 
 /**
@@ -71,6 +73,10 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
+
+// --- GITHUB CONFIGURATION ---
+// Replace this with your actual GitHub username and repository name
+const GITHUB_REPO = "your-github-username/your-repo-name"; 
 
 // --- Translation Dictionary ---
 const translations = {
@@ -168,7 +174,9 @@ const translations = {
     level: "Nivå",
     name: "Namn",
     sortBy: "Sortera",
-    week: "V."
+    week: "V.",
+    systemUpdates: "Systemuppdateringar",
+    fetchError: "Kunde inte hämta uppdateringar"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -264,7 +272,9 @@ const translations = {
     level: "Level",
     name: "Name",
     sortBy: "Sort by",
-    week: "W."
+    week: "W.",
+    systemUpdates: "System Updates",
+    fetchError: "Could not fetch updates"
   }
 };
 
@@ -302,6 +312,10 @@ export default function App() {
   const [masterUmpires, setMasterUmpires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  
+  // GitHub Changelog State
+  const [changelog, setChangelog] = useState([]);
+  const [loadingChangelog, setLoadingChangelog] = useState(false);
   
   // UI Controls
   const [adminCode, setAdminCode] = useState('');
@@ -448,6 +462,29 @@ export default function App() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [view, selectedYear, lang]);
+
+  // 4. Fetch GitHub Changelog
+  useEffect(() => {
+    const fetchChangelog = async () => {
+      if (!GITHUB_REPO || GITHUB_REPO.includes("your-github-username")) return;
+      setLoadingChangelog(true);
+      try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=5`);
+        if (res.ok) {
+          const data = await res.json();
+          setChangelog(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch changelog:", err);
+      } finally {
+        setLoadingChangelog(false);
+      }
+    };
+
+    if (view === 'admin' && isAdmin && changelog.length === 0) {
+      fetchChangelog();
+    }
+  }, [view, isAdmin, changelog.length]);
 
   // --- ACTIONS ---
 
@@ -1353,6 +1390,49 @@ export default function App() {
                     );
                   })}
                 </div>
+                
+                {/* GITHUB CHANGELOG SECTION */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mt-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Github className="w-5 h-5 text-slate-700" />
+                    <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">{t.systemUpdates}</h3>
+                  </div>
+                  
+                  {loadingChangelog ? (
+                    <div className="py-8 flex justify-center"><RefreshCw className="animate-spin text-blue-500 w-6 h-6" /></div>
+                  ) : changelog.length > 0 ? (
+                    <div className="space-y-4">
+                      {changelog.map((commitData) => {
+                        const dateObj = new Date(commitData.commit.author.date);
+                        return (
+                          <div key={commitData.sha} className="flex gap-4 items-start p-4 rounded-xl bg-slate-50 border border-slate-100">
+                            <div className="mt-1 bg-blue-100 text-blue-600 p-2 rounded-lg">
+                              <GitCommit className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-bold text-slate-800 text-sm mb-1">{commitData.commit.message}</p>
+                              <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <span>{dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US')}</span>
+                                <span>•</span>
+                                <span>{commitData.commit.author.name}</span>
+                              </div>
+                            </div>
+                            <a href={commitData.html_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">
+                              {commitData.sha.substring(0, 7)}
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-xs text-slate-400 italic">
+                      {GITHUB_REPO.includes("your-github-username") ? 
+                        "Configure GITHUB_REPO constant to view updates." : 
+                        t.fetchError}
+                    </div>
+                  )}
+                </div>
+                
              </div>
           )}
 
