@@ -207,7 +207,12 @@ const translations = {
     assignedMatches: "Tillsatta matcher",
     noAssignedMatches: "Inga tillsatta matcher än.",
     totalAssignments: "Tillsättningar",
-    totalInterests: "Intresseanmälningar"
+    totalInterests: "Intresseanmälningar",
+    deleteUmpireConfirm: "Är du säker på att du vill ta bort",
+    umpireDeletedSubject: "Din domarprofil har tagits bort",
+    umpireDeletedBody: "Hej,\n\nEn administratör har tagit bort din domarprofil från domarsystemet.",
+    assignmentEmailSubject: "Ny matchtillsättning",
+    assignmentEmailBody: "Hej {name},\n\nDu har blivit tillsatt på matchen {away} @ {home} den {date} kl {time}."
   },
   en: {
     appTitle: "Umpire Portal",
@@ -326,7 +331,12 @@ const translations = {
     assignedMatches: "Assigned Matches",
     noAssignedMatches: "No assigned matches yet.",
     totalAssignments: "Assignments",
-    totalInterests: "Interests"
+    totalInterests: "Interests",
+    deleteUmpireConfirm: "Are you sure you want to remove",
+    umpireDeletedSubject: "Your umpire profile has been removed",
+    umpireDeletedBody: "Hello,\n\nAn admin has removed your umpire profile from the scheduling system.",
+    assignmentEmailSubject: "New Match Assignment",
+    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}."
   }
 };
 
@@ -786,9 +796,25 @@ function MainApp() {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), updateData, { merge: true });
   };
 
-  const deleteMasterUmpire = async (id) => {
+  const deleteMasterUmpire = async (id, name, linkedEmail) => {
     if (!isAdmin) return;
+    
+    if (typeof window !== 'undefined') {
+      if (!window.confirm(`${t.deleteUmpireConfirm} "${name}"?`)) return;
+    }
+
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id));
+    
+    if (linkedEmail) {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+        to: linkedEmail,
+        message: {
+          subject: t.umpireDeletedSubject,
+          text: t.umpireDeletedBody
+        },
+        createdAt: Date.now()
+      });
+    }
   };
 
   const toggleApplication = async (gameId) => {
@@ -825,6 +851,27 @@ function MainApp() {
       userName: name, 
       assignedAt: Date.now() 
     });
+
+    const umpire = masterUmpires.find(u => u.id === uId);
+    const game = games.find(g => g.id === gameId);
+    
+    if (umpire && umpire.linkedEmail && game) {
+      const body = t.assignmentEmailBody
+        .replace('{name}', name)
+        .replace('{away}', game.away || 'TBA')
+        .replace('{home}', game.home || 'TBA')
+        .replace('{date}', game.date || '')
+        .replace('{time}', game.time || '');
+
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+        to: umpire.linkedEmail,
+        message: {
+          subject: t.assignmentEmailSubject,
+          text: body
+        },
+        createdAt: Date.now()
+      });
+    }
   };
 
   const removeAssignment = async (gameId, uId) => {
@@ -1312,35 +1359,37 @@ service cloud.firestore {
                         ))}
                     </div>
                     <div className="grid grid-cols-7">
-                        {calendarDays.map((day, idx) => {
-                          const dateStr = day ? toLocalISO(day) : null;
-                          const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
-                          const isToday = dateStr === today;
-                          
-                          return (
-                            <div key={idx} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
-                              {day && (
-                                <>
-                                  <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
-                                    {day.getDate()}
-                                  </span>
-                                  <div className="mt-2 space-y-1">
-                                    {matches.map(g => (
-                                      <button 
-                                        key={g.id} 
-                                        onClick={() => { setSearchQuery(g.home || ''); setScheduleViewMode('list'); }} 
-                                        className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
-                                      >
-                                        <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
-                                        <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away || '-'} @ {g.home || '-'}</p>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
+                        {calendarWeeks.flatMap((week) => 
+                          week.days.map((day, idx) => {
+                            const dateStr = day ? toLocalISO(day) : null;
+                            const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
+                            const isToday = dateStr === today;
+                            
+                            return (
+                              <div key={`${week.weekNumber}-${idx}`} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
+                                {day && (
+                                  <>
+                                    <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
+                                      {day.getDate()}
+                                    </span>
+                                    <div className="mt-2 space-y-1">
+                                      {matches.map(g => (
+                                        <button 
+                                          key={g.id} 
+                                          onClick={() => { setSearchQuery(g.home || ''); setScheduleViewMode('list'); }} 
+                                          className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
+                                        >
+                                          <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
+                                          <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away || '-'} @ {g.home || '-'}</p>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
                     </div>
                 </div>
               ) : (
@@ -1721,7 +1770,7 @@ service cloud.firestore {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button 
-                                onClick={() => deleteMasterUmpire(u.id)} 
+                                onClick={() => deleteMasterUmpire(u.id, u.name, u.linkedEmail)} 
                                 className="p-1.5 text-slate-400 hover:text-red-600"
                               >
                                 <Trash2 className="w-4 h-4" />
