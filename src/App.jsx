@@ -196,7 +196,8 @@ const translations = {
     adminRemoved: "Admin borttagen",
     masterAdminInfo: "Du är inloggad som Master Admin.",
     linkedAccount: "Konto:",
-    notLinked: "Inget konto"
+    notLinked: "Inget konto",
+    linkEmailPlaceholder: "Koppla e-post..."
   },
   en: {
     appTitle: "Domartillsättning",
@@ -306,7 +307,8 @@ const translations = {
     adminRemoved: "Admin removed",
     masterAdminInfo: "You are logged in as Master Admin.",
     linkedAccount: "Account:",
-    notLinked: "No account"
+    notLinked: "No account",
+    linkEmailPlaceholder: "Link email..."
   }
 };
 
@@ -417,6 +419,7 @@ function MainApp() {
   const [editingUmpireId, setEditingUmpireId] = useState(null);
   const [tempEditName, setTempEditName] = useState('');
   const [tempEditLevel, setTempEditLevel] = useState('');
+  const [tempEditEmail, setTempEditEmail] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
@@ -556,7 +559,7 @@ function MainApp() {
 
       const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
-        if (snapshot.exists()) {
+        if (snapshot.exists() && snapshot.data().umpireId) {
           const data = snapshot.data();
           setUserName(data.name || '');
           setUmpireId(data.umpireId || '');
@@ -565,9 +568,15 @@ function MainApp() {
           const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
           setIsAdmin(isMaster || isStandardAdmin);
         } else {
-          setUserName('');
-          setUmpireId('');
-          setIsAdmin(isMaster);
+          // Auto-link feature: Check if admin pre-linked their email in the Master List
+          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
+          if (preLinkedUmpire) {
+             setDoc(profileDoc, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
+          } else {
+             setUserName('');
+             setUmpireId('');
+             setIsAdmin(isMaster);
+          }
         }
       }, (err) => console.error(err));
     } else {
@@ -577,7 +586,7 @@ function MainApp() {
     }
 
     return () => unsubscribeProfile();
-  }, [user, appId, adminUmpireIds]);
+  }, [user, appId, adminUmpireIds, masterUmpires]);
 
   // 3.5 Auto-link email to public umpire profile for Admin visibility
   useEffect(() => {
@@ -649,7 +658,13 @@ function MainApp() {
         const docRef = doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile', 'info');
         const docSnap = await getDoc(docRef);
         if (!docSnap.exists() || !docSnap.data().umpireId) {
-          setShowNamePrompt(true);
+          // Check if admin already pre-linked this email
+          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === authEmail.toLowerCase());
+          if (preLinkedUmpire) {
+            await setDoc(docRef, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
+          } else {
+            setShowNamePrompt(true);
+          }
         }
       }
     } catch (err) {
@@ -711,9 +726,13 @@ function MainApp() {
     return docRef.id;
   };
 
-  const updateMasterUmpire = async (id, newName, newLevel) => {
+  const updateMasterUmpire = async (id, newName, newLevel, newEmail) => {
     if (!isAdmin || !newName.trim()) return;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { name: newName, level: newLevel }, { merge: true });
+    const updateData = { name: newName, level: newLevel };
+    if (newEmail !== undefined) {
+      updateData.linkedEmail = newEmail.trim().toLowerCase();
+    }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), updateData, { merge: true });
   };
 
   const deleteMasterUmpire = async (id) => {
@@ -1464,38 +1483,47 @@ service cloud.firestore {
                   </div>
                   <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                     {masterUmpires.map(u => (
-                      <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                      <div key={u.id} className="flex flex-col gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                         {editingUmpireId === u.id ? (
                           <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
                             <input 
                               type="text" 
                               value={tempEditName} 
                               onChange={(e) => setTempEditName(e.target.value)} 
-                              className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none" 
+                              className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-bold outline-none" 
                             />
                             <select 
                               value={tempEditLevel} 
                               onChange={(e) => setTempEditLevel(e.target.value)} 
-                              className="w-32 bg-white border border-blue-300 px-2 py-1 rounded-lg text-sm font-bold outline-none"
+                              className="w-32 bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none"
                             >
                               <option value="">- {t.level} -</option>
                               {['Internationell', 'Elit', 'Nationell', 'Region', 'Förening'].map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
-                            <button 
-                              onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel); setEditingUmpireId(null); }} 
-                              className="bg-green-600 text-white p-1.5 rounded-lg"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => setEditingUmpireId(null)} 
-                              className="bg-slate-200 text-slate-600 p-1.5 rounded-lg"
-                            >
-                              <UserMinus className="w-4 h-4" />
-                            </button>
+                            <input 
+                              type="email" 
+                              value={tempEditEmail} 
+                              onChange={(e) => setTempEditEmail(e.target.value)} 
+                              placeholder={t.linkEmailPlaceholder}
+                              className="flex-1 min-w-[150px] bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-bold outline-none" 
+                            />
+                            <div className="flex gap-1 items-center">
+                              <button 
+                                onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel, tempEditEmail); setEditingUmpireId(null); }} 
+                                className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => setEditingUmpireId(null)} 
+                                className="bg-slate-200 text-slate-600 p-2 rounded-lg hover:bg-slate-300 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         ) : (
-                          <>
+                          <div className="flex items-center justify-between">
                             <div className="flex flex-col">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
@@ -1527,7 +1555,7 @@ service cloud.firestore {
                                 </button>
                               )}
                               <button 
-                                onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); }} 
+                                onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); setTempEditEmail(u.linkedEmail || ''); }} 
                                 className="p-1.5 text-slate-400 hover:text-blue-600"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -1539,7 +1567,7 @@ service cloud.firestore {
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
-                          </>
+                          </div>
                         )}
                       </div>
                     ))}
