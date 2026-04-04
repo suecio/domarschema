@@ -62,7 +62,9 @@ import {
   Github,
   GitCommit,
   X,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeft,
+  UserCircle
 } from 'lucide-react';
 
 /**
@@ -199,7 +201,13 @@ const translations = {
     notLinked: "Inget konto",
     linkEmailPlaceholder: "Koppla e-post...",
     selectEmail: "-- Välj E-post --",
-    otherEmail: "+ Ange annan..."
+    otherEmail: "+ Ange annan...",
+    umpireProfile: "Domarprofil",
+    back: "Tillbaka",
+    assignedMatches: "Tillsatta matcher",
+    noAssignedMatches: "Inga tillsatta matcher än.",
+    totalAssignments: "Tillsättningar",
+    totalInterests: "Intresseanmälningar"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -312,7 +320,13 @@ const translations = {
     notLinked: "No account",
     linkEmailPlaceholder: "Link email...",
     selectEmail: "-- Select Email --",
-    otherEmail: "+ Enter other..."
+    otherEmail: "+ Enter other...",
+    umpireProfile: "Umpire Profile",
+    back: "Back",
+    assignedMatches: "Assigned Matches",
+    noAssignedMatches: "No assigned matches yet.",
+    totalAssignments: "Assignments",
+    totalInterests: "Interests"
   }
 };
 
@@ -409,6 +423,7 @@ function MainApp() {
   const [authError, setAuthError] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState(null);
   
   // Changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
@@ -1007,11 +1022,12 @@ function MainApp() {
     const stats = {};
     assignments.forEach(asg => {
       if (!asg.userId) return;
-      if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName || 'Unknown', games: 0, interest: 0 };
+      if (!stats[asg.userId]) stats[asg.userId] = { userId: asg.userId, name: asg.userName || 'Unknown', games: 0, interest: 0 };
       stats[asg.userId].games += 1;
     });
     applications.forEach(app => {
-      if (!stats[app.userId]) stats[app.userId] = { name: app.userName || 'Unknown', games: 0, interest: 0 };
+      if (!stats[app.userId]) return;
+      if (!stats[app.userId]) stats[app.userId] = { userId: app.userId, name: app.userName || 'Unknown', games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
     const data = Object.values(stats).map(s => {
@@ -1435,13 +1451,17 @@ service cloud.firestore {
                
                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                  {sortedUmpireList.map(u => (
-                   <div key={u.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
+                   <button 
+                     key={u.id} 
+                     onClick={() => { setSelectedProfileId(u.id); setView('umpire-profile'); scrollToTop(); }}
+                     className="w-full text-left flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-300 hover:shadow-md transition-all active:scale-95 group"
+                   >
                      <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-blue-900 shadow-sm">
+                       <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-blue-900 shadow-sm group-hover:bg-blue-900 group-hover:text-white transition-colors">
                          {(u.name || '?').charAt(0)}
                        </div>
                        <div className="flex flex-col">
-                         <span className="font-bold text-slate-800">{u.name || '-'}</span>
+                         <span className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors">{u.name || '-'}</span>
                          {u.level && (
                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-1 ${getLevelStyles(u.level)}`}>
                              {u.level}
@@ -1449,13 +1469,103 @@ service cloud.firestore {
                          )}
                        </div>
                      </div>
-                   </div>
+                     <ChevronRight className="w-5 h-5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                   </button>
                  ))}
                  {sortedUmpireList.length === 0 && (
                    <p className="col-span-full text-center py-12 text-slate-400 italic">{t.noGames}</p>
                  )}
                </div>
              </div>
+          )}
+
+          {/* VIEW: UMPIRE PROFILE */}
+          {view === 'umpire-profile' && selectedProfileId && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {(() => {
+                const profileUser = masterUmpires.find(u => u.id === selectedProfileId);
+                if (!profileUser) return <div className="text-center p-8">{t.fetchError}</div>;
+                
+                const profileAsgs = assignments.filter(a => a.userId === selectedProfileId);
+                const profileApps = applications.filter(a => a.userId === selectedProfileId);
+                const profileGames = games.filter(g => profileAsgs.some(a => a.gameId === g.id)).sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+                
+                return (
+                  <>
+                    <button 
+                      onClick={() => { setView('umpire-list'); setSelectedProfileId(null); }} 
+                      className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4" /> {t.back}
+                    </button>
+                    
+                    <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-900/10 to-transparent" />
+                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-blue-900 text-white flex items-center justify-center text-4xl font-black shadow-lg border-4 border-white z-10 shrink-0 mt-4 sm:mt-0">
+                        {(profileUser.name || '?').charAt(0)}
+                      </div>
+                      <div className="relative z-10 flex-1 w-full">
+                        <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{profileUser.name}</h2>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
+                          {profileUser.level && (
+                            <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLevelStyles(profileUser.level)}`}>
+                              {profileUser.level}
+                            </span>
+                          )}
+                          {(adminUmpireIds || []).includes(profileUser.id) && (
+                            <span className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded border uppercase font-black flex items-center gap-1">
+                              <Shield className="w-3 h-3" /> Admin
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-6">
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center sm:items-start">
+                            <span className="text-3xl font-black text-blue-600 leading-none">{profileAsgs.length}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{t.totalAssignments}</span>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center sm:items-start">
+                            <span className="text-3xl font-black text-slate-700 leading-none">{profileApps.length}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{t.totalInterests}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <CalendarIcon className="w-4 h-4" /> {t.assignedMatches}
+                      </h3>
+                      {profileGames.length === 0 ? (
+                        <div className="bg-white p-8 rounded-3xl text-center border border-slate-200">
+                          <p className="text-slate-400 font-medium text-sm">{t.noAssignedMatches}</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {profileGames.map(game => (
+                            <div key={game.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-200 transition-colors">
+                              <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[65px] border border-slate-100 flex flex-col justify-center">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
+                                <p className="text-xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
+                              </div>
+                              <div>
+                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league || '-'}</span>
+                                <p className="font-bold text-slate-900 text-sm leading-tight">{game.away || '-'} @ {game.home || '-'}</p>
+                                <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> {game.time || '-'}
+                                  <MapPin className="w-3 h-3 ml-2" /> {game.location || '-'}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           )}
 
           {/* VIEW: ADMIN */}
@@ -1684,7 +1794,12 @@ service cloud.firestore {
                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
                                    <div className="flex items-center gap-2">
                                      <Users2 className="w-3 h-3 text-green-600" />
-                                     <span className="text-xs font-bold text-slate-700">{asg.userName || '-'}</span>
+                                     <button 
+                                       onClick={() => { setSelectedProfileId(asg.userId); setView('umpire-profile'); scrollToTop(); }}
+                                       className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline text-left"
+                                     >
+                                       {asg.userName || '-'}
+                                     </button>
                                      {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                    </div>
                                    <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg">
@@ -1767,9 +1882,14 @@ service cloud.firestore {
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{(stat.name || '?').charAt(0)}</div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-slate-700">{stat.name}</span>
+                            <button 
+                              onClick={() => { setSelectedProfileId(stat.userId); setView('umpire-profile'); scrollToTop(); }}
+                              className="font-bold text-slate-700 text-left hover:text-blue-600 hover:underline"
+                            >
+                              {stat.name}
+                            </button>
                             {masterUmpires.find(m => m.name === stat.name)?.level && (
-                              <span className={`text-[8px] font-black px-1 rounded border uppercase w-max ${getLevelStyles(masterUmpires.find(m => m.name === stat.name)?.level)}`}>
+                              <span className={`text-[8px] font-black px-1 rounded border uppercase w-max mt-0.5 ${getLevelStyles(masterUmpires.find(m => m.name === stat.name)?.level)}`}>
                                 {masterUmpires.find(m => m.name === stat.name)?.level}
                               </span>
                             )}
