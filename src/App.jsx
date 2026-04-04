@@ -18,6 +18,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  signInAnonymously,
   signOut
 } from 'firebase/auth';
 import { 
@@ -42,6 +43,7 @@ import {
   BarChart3,
   History as HistoryIcon,
   Info,
+  User,
   UserPlus,
   UserMinus,
   Download,
@@ -275,7 +277,7 @@ const translations = {
     saveChanges: "Save Changes",
     listView: "List",
     calendarView: "Calendar",
-    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Sat"],
+    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     requiredUmpires: "Crew Size",
     level: "Level",
@@ -312,6 +314,7 @@ const getISOWeekNumber = (date) => {
 };
 
 export default function App() {
+  // ALL State declarations must be explicitly listed here to prevent ReferenceErrors
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
@@ -420,17 +423,31 @@ export default function App() {
     return 'bg-green-100 text-green-700 border-green-200';
   };
 
-  // 1. Authentication Listener (No Anonymous Login anymore)
+  // 1. Authentication Configuration
   useEffect(() => {
+    const initAuth = async () => {
+      try { 
+        // Force an anonymous sign-in to allow public reading of the database.
+        // It will be overwritten gracefully when they log in with Email/Password.
+        await signInAnonymously(auth); 
+      } catch (err) { 
+        console.warn("Anonymous auth failed (expected if disabled):", err); 
+      }
+    };
+    initAuth();
+    
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
     });
+    
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Listeners (Public Read Access)
+  // 2. Data Listeners (Public access due to anonymous auth)
   useEffect(() => {
+    if (!user) return;
+
     const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
     const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
       const gamesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -466,16 +483,16 @@ export default function App() {
       unsubscribeUmpires();
       unsubscribeSettings();
     };
-  }, [appId]);
+  }, [user, appId]);
 
   // 3. User Profile & Role Evaluation (Runs when User changes)
   useEffect(() => {
     let unsubscribeProfile = () => {};
 
     if (user) {
-      // Evaluate Roles
+      // Evaluate Roles safely
       const isMaster = user.email === 'suecio@tryempire.com';
-      const isStandardAdmin = adminEmails.includes(user.email);
+      const isStandardAdmin = user.email && adminEmails.includes(user.email);
       setIsAdmin(isMaster || isStandardAdmin);
 
       // Fetch Profile
@@ -587,6 +604,8 @@ export default function App() {
 
   const logoutUmpire = async () => {
     await signOut(auth);
+    // Log them back in anonymously immediately so they don't lose public view
+    await signInAnonymously(auth);
     setShowAdminModal(false);
     setView('schedule');
   };
@@ -622,8 +641,15 @@ export default function App() {
   };
 
   const toggleApplication = async (gameId) => {
-    if (!user) { setShowAuthModal(true); return; }
-    if (!umpireId) { setShowNamePrompt(true); return; }
+    // If not logged in via Email/Password, force them to log in before applying
+    if (!user || !user.email) { 
+      setShowAuthModal(true); 
+      return; 
+    }
+    if (!umpireId) { 
+      setShowNamePrompt(true); 
+      return; 
+    }
     
     const appIdStr = `${gameId}_${umpireId}`;
     const existing = applications.find(a => a.id === appIdStr);
@@ -878,6 +904,14 @@ export default function App() {
   const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
 
+  // Adjust days array to start on Monday for UI representation in Calendar view
+  const uiDays = useMemo(() => {
+    const arr = [...t.days];
+    const sunday = arr.shift();
+    arr.push(sunday);
+    return arr;
+  }, [t.days]);
+
   const sortedUmpireList = useMemo(() => {
     const levelOrder = {
       'internationell': 1,
@@ -972,12 +1006,12 @@ export default function App() {
             <button 
               onClick={(e) => { 
                 e.stopPropagation(); 
-                if (user) setShowAdminModal(true); 
+                if (user && user.email) setShowAdminModal(true); 
                 else setShowAuthModal(true); 
               }} 
               className="p-1.5 sm:p-2 hover:bg-blue-800 rounded-full transition-colors ml-0.5"
             >
-              {user ? <Settings className="w-4 h-4 sm:w-5 sm:h-5" /> : <User className="w-4 h-4 sm:w-5 sm:h-5" />}
+              {user && user.email ? <Settings className="w-4 h-4 sm:w-5 sm:h-5" /> : <User className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
           </div>
         </div>
@@ -1095,7 +1129,7 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-8 border-b border-slate-100">
                         <div className="py-3 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest border-r border-slate-50">{t.week}</div>
-                        {["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map(d => (
+                        {uiDays.map(d => (
                           <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
                         ))}
                     </div>
@@ -1495,28 +1529,24 @@ export default function App() {
                           
                           <div className="space-y-1">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
-                                  const m = masterUmpires.find(mu => mu.id === app.userId); 
-                                  return (
-                                    <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold">{app.userName}</span>
-                                        {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                                      </div>
-                                      <button 
-                                        disabled={isFullyStaffed} 
-                                        onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
-                                        className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
-                                      >
-                                        <UserPlus className="w-3 h-3" /> Assign
-                                      </button>
-                                    </div>
-                                  ); 
-                                })}
-                              </div>
-                            )}
+                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
+                              const m = masterUmpires.find(mu => mu.id === app.userId); 
+                              return (
+                                <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold">{app.userName}</span>
+                                    {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                                  </div>
+                                  <button 
+                                    disabled={isFullyStaffed} 
+                                    onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
+                                    className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <UserPlus className="w-3 h-3" /> Assign
+                                  </button>
+                                </div>
+                              ); 
+                            })}
                           </div>
                         </div>
                       </div>
@@ -1595,7 +1625,7 @@ export default function App() {
           {view === 'my-apps' && (
             <div className="space-y-4">
               <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
-              {!user ? (
+              {!user || !user.email ? (
                 <div className="bg-white p-12 rounded-3xl text-center border border-slate-200 shadow-sm">
                   <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <User className="w-8 h-8 text-blue-600" />
@@ -1654,7 +1684,7 @@ export default function App() {
         </button>
       )}
 
-      {user ? (
+      {user && user.email ? (
         umpireId ? (
           <button 
             onClick={() => setShowNamePrompt(true)} 
@@ -1690,7 +1720,6 @@ export default function App() {
       )}
 
       {/* Modals */}
-      
       {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 relative">
@@ -1823,6 +1852,62 @@ export default function App() {
             
             <button onClick={() => setShowNamePrompt(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">
               {t.cancel}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showChangelogModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-md w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                <Github className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800 leading-tight">{t.systemUpdates}</h3>
+                <p className="text-xs text-slate-400 font-medium">Senaste ändringarna</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4 min-h-[150px]">
+              {loadingChangelog ? (
+                <div className="py-8 flex justify-center"><RefreshCw className="animate-spin text-blue-500 w-6 h-6" /></div>
+              ) : changelog.length > 0 ? (
+                <div className="space-y-3">
+                  {changelog.map((commitData) => {
+                    const dateObj = new Date(commitData.commit.author.date);
+                    return (
+                      <div key={commitData.sha} className="flex gap-4 items-start p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors">
+                        <div className="mt-0.5 bg-blue-100 text-blue-600 p-1.5 rounded-lg">
+                          <GitCommit className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-slate-800 text-sm mb-1">{commitData.commit.message}</p>
+                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <span>{dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US')}</span>
+                            <span>•</span>
+                            <span>{commitData.commit.author.name}</span>
+                          </div>
+                        </div>
+                        <a href={commitData.html_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">
+                          {commitData.sha.substring(0, 7)}
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-400 italic">
+                  {GITHUB_REPO.includes("your-github-username") ? 
+                    "Configure GITHUB_REPO constant to view updates." : 
+                    t.fetchError}
+                </div>
+              )}
+            </div>
+            
+            <button onClick={() => setShowChangelogModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">
+              {t.close}
             </button>
           </div>
         </div>
