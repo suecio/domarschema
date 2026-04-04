@@ -329,13 +329,15 @@ export default function App() {
   const [selectedYear, setSelectedYear] = useState('2026');
   
   // Language & UI Context
-  const defaultLang = typeof navigator !== 'undefined' && navigator.language.startsWith('sv') ? 'sv' : 'en';
+  const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
-  const t = translations[lang];
+  const t = translations[lang] || translations['en']; // Defensive fallback
+
+  // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // Core Data
+  // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -376,7 +378,7 @@ export default function App() {
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
 
-  const appId = typeof window !== 'undefined' && typeof window.__app_id !== 'undefined' ? window.__app_id : `baseball-umpire-scheduler-${selectedYear}`;
+  const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : `baseball-umpire-scheduler-${selectedYear}`;
   
   // Localized today for comparisons
   const today = (() => {
@@ -386,7 +388,7 @@ export default function App() {
 
   // --- HELPERS ---
   const toLocalISO = (date) => {
-    if (!date) return "";
+    if (!date || isNaN(date.getTime())) return "";
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
@@ -394,11 +396,13 @@ export default function App() {
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const getLeagueStyles = (league) => {
-    const l = league?.toLowerCase() || '';
+    const l = (league || '').toLowerCase();
     if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
     if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
     if (l.includes('pre') || l.includes('off')) return 'bg-red-100 text-red-700 border-red-200';
@@ -407,7 +411,7 @@ export default function App() {
   };
 
   const getLevelStyles = (level) => {
-    const l = level?.toLowerCase() || '';
+    const l = (level || '').toLowerCase();
     if (l.includes('internationell')) return 'bg-[#204d99] text-white border-[#1a3d7a]';
     if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]';
     if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]';
@@ -430,11 +434,10 @@ export default function App() {
         if (typeof window !== 'undefined' && window.__initial_auth_token) {
           await signInWithCustomToken(auth, window.__initial_auth_token);
         } else {
-          // Attempt anonymous fallback if enabled. If disabled, it fails safely.
           await signInAnonymously(auth);
         }
       } catch (err) {
-        console.warn("Auth initialization fallback. Proceeding as guest.", err);
+        console.warn("Auth initialization fallback. Proceeding safely.", err);
       }
     };
     initAuth();
@@ -447,17 +450,18 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Listeners (Modified for Public Access)
+  // 2. Data Listeners (Public access without restrictive user checks)
   useEffect(() => {
-    // In Canvas preview environments, strict proxy rules require a user object.
-    // On the live domain, public reads are supported regardless of auth state.
-    const isCanvas = typeof window !== 'undefined' && window.__app_id;
+    // In Canvas strictly require auth token presence to prevent proxy 403 blocks.
+    // In live production, this bypasses and queries data publicly.
+    const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null;
     if (isCanvas && !user) return; 
 
     const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
     const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
       const gamesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setGames(gamesList.sort((a, b) => a.date.localeCompare(b.date)));
+      // Safe localeCompare for dates
+      setGames(gamesList.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
     }, (err) => console.error(err));
 
     const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
@@ -472,7 +476,8 @@ export default function App() {
 
     const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires');
     const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => {
-      setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.name.localeCompare(b.name)));
+      // Safe localeCompare for names
+      setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     }, (err) => console.error(err));
 
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings');
@@ -497,7 +502,7 @@ export default function App() {
 
     if (user && user.email) {
       const isMaster = user.email === 'suecio@tryempire.com';
-      const isStandardAdmin = adminEmails.includes(user.email);
+      const isStandardAdmin = Array.isArray(adminEmails) && adminEmails.includes(user.email);
       setIsAdmin(isMaster || isStandardAdmin);
 
       const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
@@ -525,9 +530,13 @@ export default function App() {
     if (analytics) {
       logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
     }
-    const handleScroll = () => { setShowBackToTop(window.scrollY > 300); };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const handleScroll = () => { 
+      if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); 
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
   }, [view, selectedYear, lang]);
 
   // 5. Fetch GitHub Changelog
@@ -614,19 +623,19 @@ export default function App() {
 
   const handleAddAdmin = async () => {
     if (!newAdminEmail.trim() || !newAdminEmail.includes('@')) return;
-    const updatedEmails = [...adminEmails, newAdminEmail.trim().toLowerCase()];
+    const updatedEmails = [...(adminEmails || []), newAdminEmail.trim().toLowerCase()];
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings'), { adminEmails: updatedEmails }, { merge: true });
     setNewAdminEmail('');
   };
 
   const handleRemoveAdmin = async (emailToRemove) => {
-    const updatedEmails = adminEmails.filter(e => e !== emailToRemove);
+    const updatedEmails = (adminEmails || []).filter(e => e !== emailToRemove);
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings'), { adminEmails: updatedEmails }, { merge: true });
   };
 
   const addMasterUmpire = async (name, level = "") => {
     if (!name.trim()) return "";
-    const exists = masterUmpires.find(u => u.name.toLowerCase() === name.toLowerCase());
+    const exists = masterUmpires.find(u => (u.name || '').toLowerCase() === name.toLowerCase());
     if (exists) return exists.id;
     const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name, level });
     return docRef.id;
@@ -711,7 +720,7 @@ export default function App() {
       await batch.commit();
       setBulkInput(''); 
       setShowImportTool(false);
-      alert(t.importSuccess);
+      if (typeof window !== 'undefined') alert(t.importSuccess);
     } catch (e) { 
       console.error(e); 
     } finally { 
@@ -740,7 +749,7 @@ export default function App() {
 
   const deleteAllGames = async () => {
     if (!isAdmin) return;
-    if (!window.confirm(t.deleteAllConfirm)) return;
+    if (typeof window !== 'undefined' && !window.confirm(t.deleteAllConfirm)) return;
     setSyncing(true);
     try {
       const batch = writeBatch(db);
@@ -748,7 +757,7 @@ export default function App() {
       assignments.forEach(asg => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`)));
       applications.forEach(app => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`)));
       await batch.commit();
-      alert(t.deleteAllSuccess);
+      if (typeof window !== 'undefined') alert(t.deleteAllSuccess);
     } catch (e) { 
       console.error(e); 
     } finally { 
@@ -757,16 +766,16 @@ export default function App() {
   };
 
   const generateICS = (gamesToExport) => {
-    if (gamesToExport.length === 0) return;
+    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
     if (analytics) logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
     
     const events = gamesToExport.map(game => {
-      const cleanDate = game.date.replace(/-/g, '');
-      const cleanTime = game.time.replace(/:/g, '');
+      const cleanDate = (game.date || '').replace(/-/g, '');
+      const cleanTime = (game.time || '00:00').replace(/:/g, '');
       const startTime = `${cleanDate}T${cleanTime}00`;
-      const [hours, mins] = game.time.split(':');
-      const endHours = (parseInt(hours) + 3).toString().padStart(2, '0');
-      const endTime = `${cleanDate}T${endHours}${mins}00`;
+      const [hours, mins] = (game.time || '00:00').split(':');
+      const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
+      const endTime = `${cleanDate}T${endHours}${mins || '00'}00`;
       
       return [
         'BEGIN:VEVENT',
@@ -774,9 +783,9 @@ export default function App() {
         `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
         `DTSTART:${startTime}`,
         `DTEND:${endTime}`,
-        `SUMMARY:${game.away} @ ${game.home} (${game.league})`,
-        `DESCRIPTION:League: ${game.league}\\nLocation: ${game.location}`,
-        `LOCATION:${game.location}`,
+        `SUMMARY:${game.away || 'TBA'} @ ${game.home || 'TBA'} (${game.league || 'Unknown'})`,
+        `DESCRIPTION:League: ${game.league || ''}\\nLocation: ${game.location || ''}`,
+        `LOCATION:${game.location || ''}`,
         'END:VEVENT'
       ].join('\n');
     }).join('\n');
@@ -799,7 +808,7 @@ export default function App() {
   };
 
   const handleDownloadBackup = () => {
-    if (!isAdmin) return;
+    if (!isAdmin || typeof window === 'undefined') return;
     const backupData = {
       timestamp: new Date().toISOString(),
       year: selectedYear,
@@ -823,6 +832,29 @@ export default function App() {
     if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
   };
 
+  // --- DEFENSIVE UI HELPERS ---
+  const safeDateMonth = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString; 
+    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
+  };
+
+  const safeDateDay = (dateString) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    const dayIndex = d.getDay();
+    return t.days[dayIndex] || '-';
+  };
+
+  const safeDateNum = (dateString) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    return d.getDate();
+  };
+
   // --- DERIVED DATA ---
 
   const calendarWeeks = useMemo(() => {
@@ -841,7 +873,7 @@ export default function App() {
       currentWeek.push(new Date(year, month, d));
       if (currentWeek.length === 7) {
         const validDate = currentWeek.find(day => day !== null);
-        weeks.push({ weekNumber: getISOWeekNumber(validDate), days: currentWeek });
+        weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
         currentWeek = [];
       }
     }
@@ -849,7 +881,7 @@ export default function App() {
     if (currentWeek.length > 0) {
       while (currentWeek.length < 7) currentWeek.push(null);
       const validDate = currentWeek.find(day => day !== null);
-      weeks.push({ weekNumber: getISOWeekNumber(validDate), days: currentWeek });
+      weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
     }
 
     return weeks;
@@ -868,11 +900,11 @@ export default function App() {
     const stats = {};
     assignments.forEach(asg => {
       if (!asg.userId) return;
-      if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName, games: 0, interest: 0 };
+      if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName || 'Unknown', games: 0, interest: 0 };
       stats[asg.userId].games += 1;
     });
     applications.forEach(app => {
-      if (!stats[app.userId]) stats[app.userId] = { name: app.userName, games: 0, interest: 0 };
+      if (!stats[app.userId]) stats[app.userId] = { name: app.userName || 'Unknown', games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
     const data = Object.values(stats).map(s => {
@@ -891,43 +923,50 @@ export default function App() {
 
   const filteredGames = useMemo(() => {
     return games.filter(game => {
-      const matchesSearch = game.home.toLowerCase().includes(searchQuery.toLowerCase()) || game.away.toLowerCase().includes(searchQuery.toLowerCase());
+      const hName = (game.home || '').toLowerCase();
+      const aName = (game.away || '').toLowerCase();
+      const search = searchQuery.toLowerCase();
+      
+      const matchesSearch = hName.includes(search) || aName.includes(search);
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
-      const isHistorical = game.date < today;
+      const isHistorical = (game.date || '') < today;
+      
       return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation : !isHistorical && matchesSearch && matchesLeague && matchesLocation;
     });
   }, [games, searchQuery, filterLeague, filterLocation, showHistory, today]);
 
-  const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
-  const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
+  const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))], [games]);
+  const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))], [games]);
 
   const uiDays = useMemo(() => {
-    const arr = [...t.days];
-    const sunday = arr.shift();
-    arr.push(sunday);
+    const arr = [...(t.days || [])];
+    if (arr.length > 0) {
+      const sunday = arr.shift();
+      arr.push(sunday);
+    }
     return arr;
   }, [t.days]);
 
   const sortedUmpireList = useMemo(() => {
     const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
-    let umps = masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    let umps = masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
     
     if (umpireSort === 'level') {
       umps.sort((a, b) => {
-        const orderA = levelOrder[a.level?.toLowerCase()] || 99;
-        const orderB = levelOrder[b.level?.toLowerCase()] || 99;
+        const orderA = levelOrder[(a.level || '').toLowerCase()] || 99;
+        const orderB = levelOrder[(b.level || '').toLowerCase()] || 99;
         if (orderA !== orderB) return orderA - orderB;
-        return a.name.localeCompare(b.name);
+        return (a.name || '').localeCompare(b.name || '');
       });
     } else {
-      umps.sort((a, b) => a.name.localeCompare(b.name));
+      umps.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     }
     return umps;
   }, [masterUmpires, searchQuery, umpireSort]);
 
   const filteredMasterUmpires = useMemo(() => {
-    return masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
   }, [masterUmpires, searchQuery]);
 
   const myAssignedGames = useMemo(() => {
@@ -1009,6 +1048,7 @@ export default function App() {
 
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         
+        {/* Navigation Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {[
             { id: 'schedule', label: t.schedule, icon: CalendarIcon },
@@ -1030,6 +1070,7 @@ export default function App() {
           ))}
         </div>
 
+        {/* Global Filters */}
         {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1117,8 +1158,8 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-8 border-b border-slate-100">
                         <div className="py-3 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest border-r border-slate-50">{t.week}</div>
-                        {uiDays.map(d => (
-                          <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
+                        {uiDays.map((d, i) => (
+                          <div key={i} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
                         ))}
                     </div>
                     <div className="flex flex-col">
@@ -1143,11 +1184,11 @@ export default function App() {
                                         {matches.map(g => (
                                           <button 
                                             key={g.id} 
-                                            onClick={() => { setSearchQuery(g.home); setScheduleViewMode('list'); }} 
+                                            onClick={() => { setSearchQuery(g.home || ''); setScheduleViewMode('list'); }} 
                                             className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
                                           >
                                             <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
-                                            <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
+                                            <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away || '-'} @ {g.home || '-'}</p>
                                           </button>
                                         ))}
                                       </div>
@@ -1172,29 +1213,28 @@ export default function App() {
                     const appsCount = applications.filter(a => a.gameId === game.id).length;
                     const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
                     const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
-                    const d = new Date(game.date);
                     const required = game.requiredUmpires || 2;
                     
                     return (
                       <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
                         <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex gap-4">
-                            <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100">
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.days[d.getDay()]}</p>
-                              <p className="text-2xl font-black text-slate-800 leading-none">{d.getDate()}</p>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' })}</p>
+                            <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100 flex flex-col justify-center">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
+                              <p className="text-2xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league || '-'}</span>
                                 <button onClick={() => handleCalendarExport(game)} className="text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}>
                                   <CalendarPlus className="w-4 h-4" />
                                 </button>
                               </div>
-                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away} @ {game.home}</h3>
+                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away || '-'} @ {game.home || '-'}</h3>
                               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
-                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
-                                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
+                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time || '-'}</span>
+                                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location || '-'}</span>
                               </div>
                               
                               {gameAssignments.length > 0 && (
@@ -1203,7 +1243,7 @@ export default function App() {
                                       const m = masterUmpires.find(mu => mu.id === asg.userId);
                                       return (
                                         <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
-                                            <CheckCircle className="w-3 h-3" /> {asg.userName} 
+                                            <CheckCircle className="w-3 h-3" /> {asg.userName || '-'} 
                                             {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                         </div>
                                       );
@@ -1272,10 +1312,10 @@ export default function App() {
                    <div key={u.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
                      <div className="flex items-center gap-3">
                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-blue-900 shadow-sm">
-                         {u.name.charAt(0)}
+                         {(u.name || '?').charAt(0)}
                        </div>
                        <div className="flex flex-col">
-                         <span className="font-bold text-slate-800">{u.name}</span>
+                         <span className="font-bold text-slate-800">{u.name || '-'}</span>
                          {u.level && (
                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-1 ${getLevelStyles(u.level)}`}>
                              {u.level}
@@ -1343,7 +1383,7 @@ export default function App() {
                            <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black">Master</span>
                          </div>
                       </div>
-                      {adminEmails.map(email => (
+                      {(adminEmails || []).map(email => (
                         <div key={email} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                           <span className="text-sm font-bold text-slate-700">{email}</span>
                           <button onClick={() => handleRemoveAdmin(email)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg">
@@ -1394,7 +1434,7 @@ export default function App() {
                         ) : (
                           <>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                              <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
                               {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
                             </div>
                             <div className="flex gap-1">
@@ -1431,8 +1471,8 @@ export default function App() {
                       <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                           <div className="flex items-center gap-3 flex-wrap">
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                            <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league || '-'}</span>
+                            <p className="text-xs font-bold text-slate-600">{game.away || '-'} @ {game.home || '-'} | {game.date || '-'}</p>
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -1443,7 +1483,7 @@ export default function App() {
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button 
-                              onClick={() => { if(window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
+                              onClick={() => { if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
                               className="p-2 text-slate-300 hover:text-red-500"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1456,27 +1496,27 @@ export default function App() {
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
-                                <input type="date" value={editingGameData.date} onChange={(e) => setEditingGameData({ ...editingGameData, date: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                                <input type="date" value={editingGameData.date || ''} onChange={(e) => setEditingGameData({ ...editingGameData, date: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.time}</label>
-                                <input type="text" value={editingGameData.time} onChange={(e) => setEditingGameData({ ...editingGameData, time: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                                <input type="text" value={editingGameData.time || ''} onChange={(e) => setEditingGameData({ ...editingGameData, time: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.away}</label>
-                                <input type="text" value={editingGameData.away} onChange={(e) => setEditingGameData({ ...editingGameData, away: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                                <input type="text" value={editingGameData.away || ''} onChange={(e) => setEditingGameData({ ...editingGameData, away: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label>
-                                <input type="text" value={editingGameData.home} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                                <input type="text" value={editingGameData.home || ''} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label>
-                                <input type="text" value={editingGameData.league} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                                <input type="text" value={editingGameData.league || ''} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label>
-                                <input type="text" value={editingGameData.location} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                                <input type="text" value={editingGameData.location || ''} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.requiredUmpires}</label>
@@ -1504,7 +1544,7 @@ export default function App() {
                                  <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
                                    <div className="flex items-center gap-2">
                                      <Users2 className="w-3 h-3 text-green-600" />
-                                     <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
+                                     <span className="text-xs font-bold text-slate-700">{asg.userName || '-'}</span>
                                      {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                    </div>
                                    <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg">
@@ -1522,7 +1562,7 @@ export default function App() {
                               return (
                                 <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold">{app.userName}</span>
+                                    <span className="text-xs font-bold">{app.userName || '-'}</span>
                                     {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                   </div>
                                   <button 
@@ -1581,7 +1621,7 @@ export default function App() {
                     <tr key={stat.name} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div>
+                          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{(stat.name || '?').charAt(0)}</div>
                           <div className="flex flex-col">
                             <span className="font-bold text-slate-700">{stat.name}</span>
                             {masterUmpires.find(m => m.name === stat.name)?.level && (
@@ -1630,8 +1670,8 @@ export default function App() {
                       <div className="flex items-center gap-4">
                         <div className="p-3 rounded-xl bg-green-100 text-green-600"><CalendarIcon className="w-5 h-5" /></div>
                         <div>
-                          <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
-                          <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
+                          <p className="font-bold text-slate-900">{game.away || '-'} @ {game.home || '-'}</p>
+                          <p className="text-[10px] text-slate-400 font-black uppercase">{game.date || '-'} @ {game.time || '-'}</p>
                         </div>
                       </div>
                       <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</div>
@@ -1645,8 +1685,8 @@ export default function App() {
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
                           <div>
-                            <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
-                            <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
+                            <p className="font-bold text-slate-900">{game.away || '-'} @ {game.home || '-'}</p>
+                            <p className="text-[10px] text-slate-400 font-black uppercase">{game.date || '-'} @ {game.time || '-'}</p>
                           </div>
                         </div>
                         <button onClick={() => toggleApplication(game.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
@@ -1680,7 +1720,7 @@ export default function App() {
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
-                {userName ? userName.charAt(0) : '?'}
+                {(userName || '?').charAt(0)}
               </div>
               <div className="text-left">
                 <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
@@ -1804,11 +1844,11 @@ export default function App() {
                     filteredMasterUmpires.map(u => (
                       <button 
                         key={u.id} 
-                        onClick={async () => { setUserName(u.name); setUmpireId(u.id); await updateProfile(u.name, u.id); setShowNamePrompt(false); setSearchQuery(''); }} 
+                        onClick={async () => { setUserName(u.name || ''); setUmpireId(u.id); await updateProfile(u.name || '', u.id); setShowNamePrompt(false); setSearchQuery(''); }} 
                         className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                          <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
                           {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
@@ -1865,17 +1905,18 @@ export default function App() {
                 <div className="space-y-3">
                   {changelog.map((commitData) => {
                     const dateObj = new Date(commitData.commit.author.date);
+                    const isValidDate = !isNaN(dateObj.getTime());
                     return (
                       <div key={commitData.sha} className="flex gap-4 items-start p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors">
                         <div className="mt-0.5 bg-blue-100 text-blue-600 p-1.5 rounded-lg">
                           <GitCommit className="w-4 h-4" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-bold text-slate-800 text-sm mb-1">{commitData.commit.message}</p>
+                          <p className="font-bold text-slate-800 text-sm mb-1">{commitData?.commit?.message || 'Update'}</p>
                           <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            <span>{dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US')}</span>
+                            <span>{isValidDate ? dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US') : '-'}</span>
                             <span>•</span>
-                            <span>{commitData.commit.author.name}</span>
+                            <span>{commitData?.commit?.author?.name || 'Admin'}</span>
                           </div>
                         </div>
                         <a href={commitData.html_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">
