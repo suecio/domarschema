@@ -202,7 +202,7 @@ const translations = {
     otherEmail: "+ Ange annan..."
   },
   en: {
-    appTitle: "Domartillsättning",
+    appTitle: "Umpire Portal",
     season: "Season",
     schedule: "Schedule",
     myGames: "My Games",
@@ -316,7 +316,6 @@ const translations = {
   }
 };
 
-// ISO 8601 Week Number Calculation
 const getISOWeekNumber = (date) => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
@@ -326,7 +325,7 @@ const getISOWeekNumber = (date) => {
 };
 
 // ==========================================
-// ERROR BOUNDARY (Prevents White Screen of Death)
+// ERROR BOUNDARY
 // ==========================================
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -439,13 +438,35 @@ function MainApp() {
 
   const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : `baseball-umpire-scheduler-${selectedYear}`;
   
-  // Localized today for comparisons
+  // Localized today
   const today = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
-  // --- HELPERS ---
+  // --- DEFENSIVE UI HELPERS ---
+  const safeDateMonth = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString; 
+    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
+  };
+
+  const safeDateDay = (dateString) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    const dayIndex = d.getDay(); // 0 is Sunday, 1 is Monday...
+    return (t.days && t.days[dayIndex]) ? t.days[dayIndex] : '-';
+  };
+
+  const safeDateNum = (dateString) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    return d.getDate();
+  };
+
   const toLocalISO = (date) => {
     if (!date || isNaN(date.getTime())) return "";
     const y = date.getFullYear();
@@ -541,7 +562,6 @@ function MainApp() {
       setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     }, handleDbError);
     
-    // Listen to registered users to populate the "unconnected emails" dropdown
     const regUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'registered_users');
     const unsubscribeRegUsers = onSnapshot(regUsersCol, (snapshot) => {
       const emails = snapshot.docs.map(doc => doc.data().email).filter(Boolean);
@@ -572,7 +592,6 @@ function MainApp() {
     if (user && user.email) {
       const isMaster = user.email === 'suecio@tryempire.com';
       
-      // Auto-register user email to the public registry so admins can assign it
       setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
         email: user.email.toLowerCase(),
         lastSeen: Date.now()
@@ -585,11 +604,9 @@ function MainApp() {
           setUserName(data.name || '');
           setUmpireId(data.umpireId || '');
           
-          // Check if this umpire's ID is in the admin list
           const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
           setIsAdmin(isMaster || isStandardAdmin);
         } else {
-          // Auto-link feature: Check if admin pre-linked their email in the Master List
           const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
           if (preLinkedUmpire) {
              setDoc(profileDoc, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
@@ -609,11 +626,10 @@ function MainApp() {
     return () => unsubscribeProfile();
   }, [user, appId, adminUmpireIds, masterUmpires]);
 
-  // 3.5 Auto-link email to public umpire profile for Admin visibility
+  // 3.5 Auto-link email to public umpire profile
   useEffect(() => {
     if (user && user.email && umpireId && masterUmpires.length > 0) {
       const myUmpire = masterUmpires.find(u => u.id === umpireId);
-      // Only update if it's missing or different, to avoid infinite loops
       if (myUmpire && myUmpire.linkedEmail !== user.email) {
         updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
           linkedUserId: user.uid,
@@ -679,7 +695,6 @@ function MainApp() {
         const docRef = doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile', 'info');
         const docSnap = await getDoc(docRef);
         if (!docSnap.exists() || !docSnap.data().umpireId) {
-          // Check if admin already pre-linked this email
           const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === authEmail.toLowerCase());
           if (preLinkedUmpire) {
             await setDoc(docRef, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
@@ -1082,7 +1097,7 @@ function MainApp() {
          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full border border-red-100 text-center">
            <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
            <h2 className="text-2xl font-black text-slate-800 mb-2">Databasåtkomst Nekad</h2>
-           <p className="text-slate-600 mb-6 font-medium leading-relaxed">Applikationen kan inte hämta spelschemat eftersom Firebase-reglerna blockerar åtkomst (Anonym inloggning är avstängd). För att besökare ska kunna se schemat måste du tillåta publik läsning.</p>
+           <p className="text-slate-600 mb-6 font-medium leading-relaxed">Applikationen kan inte hämta spelschemat eftersom Firebase-reglerna blockerar åtkomst. För att besökare ska kunna se schemat måste du tillåta publik läsning.</p>
            <div className="bg-slate-900 rounded-xl p-4 text-left overflow-x-auto mb-6 shadow-inner">
              <pre className="text-green-400 text-xs font-mono leading-relaxed">
 {`rules_version = '2';
@@ -1275,49 +1290,41 @@ service cloud.firestore {
                             <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronRight className="w-4 h-4"/></button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-8 border-b border-slate-100">
-                        <div className="py-3 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest border-r border-slate-50">{t.week}</div>
+                    <div className="grid grid-cols-7 border-b border-slate-100">
                         {uiDays.map((d, i) => (
                           <div key={i} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
                         ))}
                     </div>
-                    <div className="flex flex-col">
-                        {calendarWeeks.map((week, wIdx) => (
-                          <div key={wIdx} className="grid grid-cols-8 border-b border-slate-50 last:border-0">
-                            <div className="flex flex-col items-center justify-center border-r border-slate-50 bg-slate-50/30 p-2">
-                              <span className="text-xs font-black text-slate-400">{week.weekNumber}</span>
+                    <div className="grid grid-cols-7">
+                        {calendarDays.map((day, idx) => {
+                          const dateStr = day ? toLocalISO(day) : null;
+                          const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
+                          const isToday = dateStr === today;
+                          
+                          return (
+                            <div key={idx} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
+                              {day && (
+                                <>
+                                  <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
+                                    {day.getDate()}
+                                  </span>
+                                  <div className="mt-2 space-y-1">
+                                    {matches.map(g => (
+                                      <button 
+                                        key={g.id} 
+                                        onClick={() => { setSearchQuery(g.home || ''); setScheduleViewMode('list'); }} 
+                                        className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
+                                      >
+                                        <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
+                                        <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away || '-'} @ {g.home || '-'}</p>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            {week.days.map((day, idx) => {
-                              const dateStr = day ? toLocalISO(day) : null;
-                              const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
-                              const isToday = dateStr === today;
-                              
-                              return (
-                                <div key={idx} className={`min-h-[100px] p-2 border-r last:border-r-0 border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
-                                  {day && (
-                                    <>
-                                      <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
-                                        {day.getDate()}
-                                      </span>
-                                      <div className="mt-2 space-y-1">
-                                        {matches.map(g => (
-                                          <button 
-                                            key={g.id} 
-                                            onClick={() => { setSearchQuery(g.home || ''); setScheduleViewMode('list'); }} 
-                                            className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
-                                          >
-                                            <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
-                                            <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away || '-'} @ {g.home || '-'}</p>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                 </div>
               ) : (
@@ -1651,46 +1658,20 @@ service cloud.firestore {
                         </div>
                         
                         {isEditingThisGame && (
-                          <div className="p-6 bg-blue-50/30 border-b border-slate-100 space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
-                                <input type="date" value={editingGameData.date || ''} onChange={(e) => setEditingGameData({ ...editingGameData, date: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.time}</label>
-                                <input type="text" value={editingGameData.time || ''} onChange={(e) => setEditingGameData({ ...editingGameData, time: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.away}</label>
-                                <input type="text" value={editingGameData.away || ''} onChange={(e) => setEditingGameData({ ...editingGameData, away: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label>
-                                <input type="text" value={editingGameData.home || ''} onChange={(e) => setEditingGameData({ ...editingGameData, home: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label>
-                                <input type="text" value={editingGameData.league || ''} onChange={(e) => setEditingGameData({ ...editingGameData, league: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label>
-                                <input type="text" value={editingGameData.location || ''} onChange={(e) => setEditingGameData({ ...editingGameData, location: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.requiredUmpires}</label>
-                                <select 
-                                  value={editingGameData.requiredUmpires || 2} 
-                                  onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
-                                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
-                                >
-                                  {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
-                                </select>
-                              </div>
+                          <div className="p-4 bg-blue-50/30 border-b border-slate-100 grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label>
+                              <select 
+                                value={editingGameData.requiredUmpires || 2} 
+                                onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
+                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
+                              >
+                                {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
+                              </select>
                             </div>
-                            <div className="flex gap-2">
-                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">{t.saveChanges}</button>
-                              <button onClick={() => setEditingGameData(null)} className="px-6 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest">{t.cancel}</button>
+                            <div className="flex items-end gap-2">
+                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold text-xs uppercase">{t.save}</button>
+                              <button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2 rounded-lg font-bold text-xs uppercase">{t.cancel}</button>
                             </div>
                           </div>
                         )}
