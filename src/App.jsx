@@ -13,8 +13,11 @@ import {
 } from 'firebase/firestore';
 import { 
   getAuth,
-  signInAnonymously,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut
 } from 'firebase/auth';
 import { 
   getAnalytics, 
@@ -176,7 +179,16 @@ const translations = {
     sortBy: "Sortera",
     week: "V.",
     systemUpdates: "Systemuppdateringar",
-    fetchError: "Kunde inte hämta uppdateringar"
+    fetchError: "Kunde inte hämta uppdateringar",
+    login: "Logga in",
+    register: "Skapa konto",
+    email: "E-postadress",
+    password: "Lösenord",
+    forgotPassword: "Glömt lösenord?",
+    loginToContinue: "Logga in för att fortsätta",
+    createAnAccount: "Skapa ett nytt konto",
+    noAccount: "Inget konto? Registrera dig här",
+    hasAccount: "Har du redan ett konto? Logga in"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -274,7 +286,16 @@ const translations = {
     sortBy: "Sort by",
     week: "W.",
     systemUpdates: "System Updates",
-    fetchError: "Could not fetch updates"
+    fetchError: "Could not fetch updates",
+    login: "Login",
+    register: "Register",
+    email: "Email Address",
+    password: "Password",
+    forgotPassword: "Forgot Password?",
+    loginToContinue: "Login to continue",
+    createAnAccount: "Create a new account",
+    noAccount: "No account? Register here",
+    hasAccount: "Already have an account? Login"
   }
 };
 
@@ -313,12 +334,17 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   
+  // Auth State
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [authError, setAuthError] = useState('');
+
   // GitHub Changelog State
   const [changelog, setChangelog] = useState([]);
   const [loadingChangelog, setLoadingChangelog] = useState(false);
   
   // UI Controls
-  const [adminCode, setAdminCode] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [showChangelogModal, setShowChangelogModal] = useState(false);
@@ -389,17 +415,13 @@ export default function App() {
 
   // 1. Authentication
   useEffect(() => {
-    const initAuth = async () => {
-      try { 
-        await signInAnonymously(auth); 
-      } catch (err) { 
-        console.error("Auth error:", err); 
-      }
-    };
-    initAuth();
-    
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      if (u && u.email === 'suecio@tryempire.com') {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
     
@@ -437,7 +459,7 @@ export default function App() {
         const data = snapshot.data();
         setUserName(data.name || '');
         setUmpireId(data.umpireId || '');
-        setIsAdmin(data.isAdmin || false);
+        // isAdmin is handled securely via Auth state now
       }
     }, (err) => console.error(err));
 
@@ -496,6 +518,33 @@ export default function App() {
     }));
   };
 
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      if (isLoginMode) {
+        await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      } else {
+        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      }
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!authEmail) {
+      setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Fill in the email address above first.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, authEmail);
+      alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!');
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
   const updateProfile = async (name, id) => {
     if (!user) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id, isAdmin }, { merge: true });
@@ -505,8 +554,8 @@ export default function App() {
     if (!user) return;
     setUserName(''); 
     setUmpireId('');
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', umpireId: '', isAdmin: false }, { merge: true });
-    setShowNamePrompt(true);
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', umpireId: '' }, { merge: true });
+    await signOut(auth);
   };
 
   const addMasterUmpire = async (name, level = "") => {
@@ -633,14 +682,6 @@ export default function App() {
       console.error(e); 
     } finally { 
       setSyncing(false); 
-    }
-  };
-
-  const handleAdminAuth = async () => {
-    if (adminCode === 'admin123' && user) {
-      setIsAdmin(true); 
-      setShowAdminModal(false);
-      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { isAdmin: true }, { merge: true });
     }
   };
 
@@ -842,6 +883,77 @@ export default function App() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 text-blue-600">
         <RefreshCw className="animate-spin w-8 h-8" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 selection:bg-blue-100">
+        <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300">
+          <div className="text-center space-y-2">
+            <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.appTitle}</h3>
+            <p className="text-xs text-slate-400 font-medium">{isLoginMode ? t.loginToContinue : t.createAnAccount}</p>
+          </div>
+          
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            {authError && (
+              <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 break-words">
+                {authError}
+              </div>
+            )}
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.email}</label>
+              <input 
+                type="email" 
+                value={authEmail} 
+                onChange={(e) => setAuthEmail(e.target.value)} 
+                required 
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
+                placeholder="namn@exempel.se" 
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.password}</label>
+              <input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => setAuthPassword(e.target.value)} 
+                required 
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
+                placeholder="••••••••" 
+              />
+            </div>
+            
+            <button 
+              type="submit" 
+              className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+            >
+              {isLoginMode ? t.login : t.register}
+            </button>
+          </form>
+          
+          <div className="pt-4 border-t border-slate-100 flex flex-col items-center gap-2">
+            <button 
+              onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} 
+              className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
+            >
+              {isLoginMode ? t.noAccount : t.hasAccount}
+            </button>
+            {isLoginMode && (
+              <button 
+                onClick={handleResetPassword} 
+                type="button"
+                className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors mt-2"
+              >
+                {t.forgotPassword}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1652,7 +1764,7 @@ export default function App() {
           <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
             <div>
               <h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3>
-              <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p>
+              <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{user?.email}</p>
             </div>
             
             <div className="space-y-4">
@@ -1666,25 +1778,15 @@ export default function App() {
                 </button>
               </div>
               
-              <div className="pt-6 border-t border-slate-100">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.adminVerify}</label>
-                {!isAdmin ? (
-                  <div className="flex gap-2 mt-2">
-                    <input type="password" placeholder={t.accessCode} value={adminCode} onChange={(e) => setAdminCode(e.target.value)} className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" />
-                    <button onClick={handleAdminAuth} className="bg-slate-800 text-white px-5 rounded-2xl font-black uppercase text-xs hover:bg-black transition-all">{t.verify}</button>
+              {isAdmin && (
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs font-black text-blue-800 uppercase tracking-widest">{t.adminActive}</p>
+                    <p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p>
                   </div>
-                ) : (
-                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center mt-2">
-                    <p className="text-blue-700 font-black text-xs uppercase flex items-center justify-center gap-2"><Shield className="w-4 h-4" /> {t.adminActive}</p>
-                    <button 
-                      onClick={async () => { setIsAdmin(false); await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { isAdmin: false }, { merge: true }); }} 
-                      className="text-[10px] font-black text-red-500 uppercase hover:underline mt-2.5 block w-full text-center"
-                    >
-                      {t.logoutAdmin}
-                    </button>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
               
               <div className="pt-6 border-t border-slate-100">
                 <button 
