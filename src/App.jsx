@@ -389,7 +389,7 @@ function MainApp() {
   const [masterUmpires, setMasterUmpires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [firebaseError, setFirebaseError] = useState(null); // Tracks DB permission blocks
+  const [firebaseError, setFirebaseError] = useState(null); 
   
   // Auth & Modals State
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -494,14 +494,11 @@ function MainApp() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Listeners (Public access without restrictive user checks)
+  // 2. Data Listeners 
   useEffect(() => {
-    // In Canvas strictly require auth token presence to prevent proxy 403 blocks.
-    // In live production, this bypasses and queries data publicly.
     const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null;
     if (isCanvas && !user) return; 
 
-    // Error handler that specifically checks for permission blocks
     const handleDbError = (err) => {
       console.error("Firebase Sync Error:", err);
       if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
@@ -531,7 +528,8 @@ function MainApp() {
       setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     }, handleDbError);
 
-    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings');
+    // FIX: Using 6 segments for document reference (collection / doc / collection / doc)
+    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
         setAdminEmails(snapshot.data().adminEmails || []);
@@ -675,13 +673,15 @@ function MainApp() {
   const handleAddAdmin = async () => {
     if (!newAdminEmail.trim() || !newAdminEmail.includes('@')) return;
     const updatedEmails = [...(adminEmails || []), newAdminEmail.trim().toLowerCase()];
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings'), { adminEmails: updatedEmails }, { merge: true });
+    // FIX: Using 6 segments for settings doc
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminEmails: updatedEmails }, { merge: true });
     setNewAdminEmail('');
   };
 
   const handleRemoveAdmin = async (emailToRemove) => {
     const updatedEmails = (adminEmails || []).filter(e => e !== emailToRemove);
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings'), { adminEmails: updatedEmails }, { merge: true });
+    // FIX: Using 6 segments for settings doc
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminEmails: updatedEmails }, { merge: true });
   };
 
   const addMasterUmpire = async (name, level = "") => {
@@ -1517,7 +1517,7 @@ service cloud.firestore {
                             </div>
                             <div className="flex gap-1">
                               <button 
-                                onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name); setTempEditLevel(u.level || ''); }} 
+                                onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); }} 
                                 className="p-1.5 text-slate-400 hover:text-blue-600"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -2049,6 +2049,21 @@ service cloud.firestore {
                   </div>
                 </div>
               )}
+
+              <div className="pt-6 border-t border-slate-100">
+                <button 
+                  onClick={() => { setShowAdminModal(false); setShowChangelogModal(true); }} 
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50 rounded-2xl transition-colors border border-slate-200 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <Github className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-sm text-slate-700 group-hover:text-blue-700">{t.systemUpdates}</span>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+                </button>
+              </div>
             </div>
             
             <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">
