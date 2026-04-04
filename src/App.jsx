@@ -194,7 +194,9 @@ const translations = {
     addAdmin: "Lägg till admin",
     adminAdded: "Admin tillagd",
     adminRemoved: "Admin borttagen",
-    masterAdminInfo: "Du är inloggad som Master Admin."
+    masterAdminInfo: "Du är inloggad som Master Admin.",
+    linkedAccount: "Konto:",
+    notLinked: "Inget konto"
   },
   en: {
     appTitle: "Domartillsättning",
@@ -302,7 +304,9 @@ const translations = {
     addAdmin: "Add Admin",
     adminAdded: "Admin added",
     adminRemoved: "Admin removed",
-    masterAdminInfo: "You are logged in as Master Admin."
+    masterAdminInfo: "You are logged in as Master Admin.",
+    linkedAccount: "Account:",
+    notLinked: "No account"
   }
 };
 
@@ -527,7 +531,6 @@ function MainApp() {
       setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     }, handleDbError);
 
-    // FIX: Using 6 segments for document reference (collection / doc / collection / doc)
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
@@ -575,6 +578,20 @@ function MainApp() {
 
     return () => unsubscribeProfile();
   }, [user, appId, adminUmpireIds]);
+
+  // 3.5 Auto-link email to public umpire profile for Admin visibility
+  useEffect(() => {
+    if (user && user.email && umpireId && masterUmpires.length > 0) {
+      const myUmpire = masterUmpires.find(u => u.id === umpireId);
+      // Only update if it's missing or different, to avoid infinite loops
+      if (myUmpire && myUmpire.linkedEmail !== user.email) {
+        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
+          linkedUserId: user.uid,
+          linkedEmail: user.email
+        }).catch(e => console.warn("Background email sync failed", e));
+      }
+    }
+  }, [user, umpireId, masterUmpires, appId]);
 
   // 4. Scroll & Analytics
   useEffect(() => {
@@ -663,6 +680,7 @@ function MainApp() {
   const updateProfile = async (name, id) => {
     if (!user || !user.email) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
   };
 
   const logoutUmpire = async () => {
@@ -1444,7 +1462,7 @@ service cloud.firestore {
                       </span>
                     )}
                   </div>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                     {masterUmpires.map(u => (
                       <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                         {editingUmpireId === u.id ? (
@@ -1478,16 +1496,27 @@ service cloud.firestore {
                           </div>
                         ) : (
                           <>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
-                              {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
-                              {(adminUmpireIds || []).includes(u.id) && (
-                                <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5">
-                                  <Shield className="w-2 h-2" /> Admin
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
+                                {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
+                                {(adminUmpireIds || []).includes(u.id) && (
+                                  <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5">
+                                    <Shield className="w-2 h-2" /> Admin
+                                  </span>
+                                )}
+                              </div>
+                              {u.linkedEmail ? (
+                                <span className="text-[10px] text-green-600 font-bold mt-1 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" /> {t.linkedAccount} {u.linkedEmail}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 font-medium mt-1 flex items-center gap-1">
+                                  <Info className="w-3 h-3" /> {t.notLinked}
                                 </span>
                               )}
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 items-start">
                               {user?.email === 'suecio@tryempire.com' && (
                                 <button 
                                   onClick={() => toggleUmpireAdmin(u.id)} 
@@ -1616,24 +1645,28 @@ service cloud.firestore {
                           
                           <div className="space-y-1">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
-                              const m = masterUmpires.find(mu => mu.id === app.userId); 
-                              return (
-                                <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold">{app.userName || '-'}</span>
-                                    {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                                  </div>
-                                  <button 
-                                    disabled={isFullyStaffed} 
-                                    onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
-                                    className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
-                                  >
-                                    <UserPlus className="w-3 h-3" /> Assign
-                                  </button>
-                                </div>
-                              ); 
-                            })}
+                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
+                                  const m = masterUmpires.find(mu => mu.id === app.userId); 
+                                  return (
+                                    <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold">{app.userName || '-'}</span>
+                                        {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                                      </div>
+                                      <button 
+                                        disabled={isFullyStaffed} 
+                                        onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
+                                        className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                                      >
+                                        <UserPlus className="w-3 h-3" /> Assign
+                                      </button>
+                                    </div>
+                                  ); 
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
