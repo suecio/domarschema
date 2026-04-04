@@ -365,7 +365,7 @@ function MainApp() {
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminEmails, setAdminEmails] = useState([]);
+  const [adminUmpireIds, setAdminUmpireIds] = useState([]);
   
   // Navigation & View
   const [view, setView] = useState('schedule');
@@ -417,7 +417,6 @@ function MainApp() {
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
   const [umpireSort, setUmpireSort] = useState('level');
-  const [newAdminEmail, setNewAdminEmail] = useState('');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -532,7 +531,7 @@ function MainApp() {
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
-        setAdminEmails(snapshot.data().adminEmails || []);
+        setAdminUmpireIds(snapshot.data().adminUmpireIds || []);
       }
     }, handleDbError);
 
@@ -551,8 +550,6 @@ function MainApp() {
 
     if (user && user.email) {
       const isMaster = user.email === 'suecio@tryempire.com';
-      const isStandardAdmin = Array.isArray(adminEmails) && adminEmails.includes(user.email);
-      setIsAdmin(isMaster || isStandardAdmin);
 
       const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
@@ -560,9 +557,14 @@ function MainApp() {
           const data = snapshot.data();
           setUserName(data.name || '');
           setUmpireId(data.umpireId || '');
+          
+          // Check if this umpire's ID is in the admin list
+          const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
+          setIsAdmin(isMaster || isStandardAdmin);
         } else {
           setUserName('');
           setUmpireId('');
+          setIsAdmin(isMaster);
         }
       }, (err) => console.error(err));
     } else {
@@ -572,7 +574,7 @@ function MainApp() {
     }
 
     return () => unsubscribeProfile();
-  }, [user, appId, adminEmails]);
+  }, [user, appId, adminUmpireIds]);
 
   // 4. Scroll & Analytics
   useEffect(() => {
@@ -670,18 +672,17 @@ function MainApp() {
     setView('schedule');
   };
 
-  const handleAddAdmin = async () => {
-    if (!newAdminEmail.trim() || !newAdminEmail.includes('@')) return;
-    const updatedEmails = [...(adminEmails || []), newAdminEmail.trim().toLowerCase()];
-    // FIX: Using 6 segments for settings doc
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminEmails: updatedEmails }, { merge: true });
-    setNewAdminEmail('');
-  };
-
-  const handleRemoveAdmin = async (emailToRemove) => {
-    const updatedEmails = (adminEmails || []).filter(e => e !== emailToRemove);
-    // FIX: Using 6 segments for settings doc
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminEmails: updatedEmails }, { merge: true });
+  const toggleUmpireAdmin = async (uId) => {
+    if (user?.email !== 'suecio@tryempire.com') return; // Only master can change roles
+    
+    let updatedIds = [...(adminUmpireIds || [])];
+    if (updatedIds.includes(uId)) {
+      updatedIds = updatedIds.filter(id => id !== uId);
+    } else {
+      updatedIds.push(uId);
+    }
+    
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminUmpireIds: updatedIds }, { merge: true });
   };
 
   const addMasterUmpire = async (name, level = "") => {
@@ -869,7 +870,7 @@ function MainApp() {
         applications,
         assignments,
         umpires: masterUmpires,
-        adminEmails
+        adminUmpireIds
       }
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -1431,55 +1432,21 @@ service cloud.firestore {
                     <div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button></div>
                   </div>
                 )}
-                
-                {/* ROLE MANAGEMENT (MASTER ADMIN ONLY) */}
-                {user?.email === 'suecio@tryempire.com' && (
-                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <Shield className="w-4 h-4" /> {t.adminManagement}
-                    </h3>
-                    <div className="flex gap-2 mb-4">
-                      <input 
-                        type="email" 
-                        value={newAdminEmail} 
-                        onChange={(e) => setNewAdminEmail(e.target.value)} 
-                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold outline-none" 
-                        placeholder="E-postadress..." 
-                      />
-                      <button 
-                        onClick={handleAddAdmin} 
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase"
-                      >
-                        {t.addAdmin}
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100">
-                         <div className="flex items-center gap-2">
-                           <Shield className="w-4 h-4 text-blue-600" />
-                           <span className="text-sm font-bold text-blue-900">suecio@tryempire.com</span>
-                           <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black">Master</span>
-                         </div>
-                      </div>
-                      {(adminEmails || []).map(email => (
-                        <div key={email} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
-                          <span className="text-sm font-bold text-slate-700">{email}</span>
-                          <button onClick={() => handleRemoveAdmin(email)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Users2 className="w-4 h-4" /> {t.masterList}
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <Users2 className="w-4 h-4" /> {t.masterList}
+                    </h3>
+                    {user?.email === 'suecio@tryempire.com' && (
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                        <Shield className="w-3 h-3" /> Master Admin
+                      </span>
+                    )}
+                  </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                     {masterUmpires.map(u => (
-                      <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                         {editingUmpireId === u.id ? (
                           <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
                             <input 
@@ -1514,8 +1481,22 @@ service cloud.firestore {
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
                               {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
+                              {(adminUmpireIds || []).includes(u.id) && (
+                                <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5">
+                                  <Shield className="w-2 h-2" /> Admin
+                                </span>
+                              )}
                             </div>
                             <div className="flex gap-1">
+                              {user?.email === 'suecio@tryempire.com' && (
+                                <button 
+                                  onClick={() => toggleUmpireAdmin(u.id)} 
+                                  className={`p-1.5 rounded-lg transition-colors ${(adminUmpireIds || []).includes(u.id) ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-blue-600'}`}
+                                  title={(adminUmpireIds || []).includes(u.id) ? "Ta bort administratör" : "Gör till administratör"}
+                                >
+                                  <Shield className="w-4 h-4" />
+                                </button>
+                              )}
                               <button 
                                 onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); }} 
                                 className="p-1.5 text-slate-400 hover:text-blue-600"
