@@ -76,7 +76,7 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : nu
 
 // --- GITHUB CONFIGURATION ---
 // Replace this with your actual GitHub username and repository name
-const GITHUB_REPO = "your-github-username/your-repo-name"; 
+const GITHUB_REPO = "suecio/domarschema"; 
 
 // --- Translation Dictionary ---
 const translations = {
@@ -321,6 +321,7 @@ export default function App() {
   const [adminCode, setAdminCode] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
@@ -481,10 +482,10 @@ export default function App() {
       }
     };
 
-    if (view === 'admin' && isAdmin && changelog.length === 0) {
+    if (showChangelogModal && changelog.length === 0) {
       fetchChangelog();
     }
-  }, [view, isAdmin, changelog.length]);
+  }, [showChangelogModal, changelog.length]);
 
   // --- ACTIONS ---
 
@@ -885,6 +886,13 @@ export default function App() {
               <option value="2026">2026</option>
               <option value="2027">2027</option>
             </select>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowChangelogModal(true); }} 
+              className="p-2 hover:bg-blue-800 rounded-full transition-colors ml-1"
+              title={t.systemUpdates}
+            >
+              <Github className="w-5 h-5" />
+            </button>
             <button 
               onClick={(e) => { e.stopPropagation(); setShowAdminModal(true); }} 
               className="p-2 hover:bg-blue-800 rounded-full transition-colors ml-1"
@@ -1390,49 +1398,6 @@ export default function App() {
                     );
                   })}
                 </div>
-                
-                {/* GITHUB CHANGELOG SECTION */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mt-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Github className="w-5 h-5 text-slate-700" />
-                    <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">{t.systemUpdates}</h3>
-                  </div>
-                  
-                  {loadingChangelog ? (
-                    <div className="py-8 flex justify-center"><RefreshCw className="animate-spin text-blue-500 w-6 h-6" /></div>
-                  ) : changelog.length > 0 ? (
-                    <div className="space-y-4">
-                      {changelog.map((commitData) => {
-                        const dateObj = new Date(commitData.commit.author.date);
-                        return (
-                          <div key={commitData.sha} className="flex gap-4 items-start p-4 rounded-xl bg-slate-50 border border-slate-100">
-                            <div className="mt-1 bg-blue-100 text-blue-600 p-2 rounded-lg">
-                              <GitCommit className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-bold text-slate-800 text-sm mb-1">{commitData.commit.message}</p>
-                              <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                <span>{dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US')}</span>
-                                <span>•</span>
-                                <span>{commitData.commit.author.name}</span>
-                              </div>
-                            </div>
-                            <a href={commitData.html_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">
-                              {commitData.sha.substring(0, 7)}
-                            </a>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-xs text-slate-400 italic">
-                      {GITHUB_REPO.includes("your-github-username") ? 
-                        "Configure GITHUB_REPO constant to view updates." : 
-                        t.fetchError}
-                    </div>
-                  )}
-                </div>
-                
              </div>
           )}
 
@@ -1566,6 +1531,62 @@ export default function App() {
       </button>
 
       {/* Modals */}
+      {showChangelogModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-md w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                <Github className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800 leading-tight">{t.systemUpdates}</h3>
+                <p className="text-xs text-slate-400 font-medium">Senaste ändringarna</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4 min-h-[150px]">
+              {loadingChangelog ? (
+                <div className="py-8 flex justify-center"><RefreshCw className="animate-spin text-blue-500 w-6 h-6" /></div>
+              ) : changelog.length > 0 ? (
+                <div className="space-y-3">
+                  {changelog.map((commitData) => {
+                    const dateObj = new Date(commitData.commit.author.date);
+                    return (
+                      <div key={commitData.sha} className="flex gap-4 items-start p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors">
+                        <div className="mt-0.5 bg-blue-100 text-blue-600 p-1.5 rounded-lg">
+                          <GitCommit className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-slate-800 text-sm mb-1">{commitData.commit.message}</p>
+                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <span>{dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US')}</span>
+                            <span>•</span>
+                            <span>{commitData.commit.author.name}</span>
+                          </div>
+                        </div>
+                        <a href={commitData.html_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">
+                          {commitData.sha.substring(0, 7)}
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-400 italic">
+                  {GITHUB_REPO.includes("your-github-username") ? 
+                    "Configure GITHUB_REPO constant to view updates." : 
+                    t.fetchError}
+                </div>
+              )}
+            </div>
+            
+            <button onClick={() => setShowChangelogModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">
+              {t.close}
+            </button>
+          </div>
+        </div>
+      )}
+
       {showNamePrompt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20">
