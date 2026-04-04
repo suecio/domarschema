@@ -5,6 +5,7 @@ import {
   collection, 
   doc, 
   setDoc, 
+  getDoc,
   onSnapshot, 
   deleteDoc,
   writeBatch,
@@ -56,7 +57,8 @@ import {
   ArrowUp,
   Users2,
   Github,
-  GitCommit
+  GitCommit,
+  X
 } from 'lucide-react';
 
 /**
@@ -78,7 +80,6 @@ const db = getFirestore(firebaseApp);
 const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
 
 // --- GITHUB CONFIGURATION ---
-// Replace this with your actual GitHub username and repository name
 const GITHUB_REPO = "suecio/domarschema"; 
 
 // --- Translation Dictionary ---
@@ -133,11 +134,6 @@ const translations = {
     profileAccess: "Konfigurera profil & åtkomst",
     displayName: "Visningsnamn",
     namePlaceholder: "Sök eller skriv ditt namn...",
-    adminVerify: "Admin-verifiering",
-    accessCode: "Åtkomstkod",
-    verify: "Verifiera",
-    adminActive: "Admin aktiv",
-    logoutAdmin: "Logga ut admin",
     logout: "Logga ut",
     close: "Stäng",
     status: "Status",
@@ -153,7 +149,7 @@ const translations = {
     confirmedGames: "Bekräftade uppdrag",
     interestedGames: "Anmält intresse",
     nameRequiredTitle: "Vem är du?",
-    nameRequiredDesc: "Välj ditt namn från listan nedan för att se ditt schema på alla enheter.",
+    nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.",
     saveName: "Välj profil",
     addNewName: "Hittar du inte ditt namn?",
     createUmpire: "Skapa ny profil",
@@ -188,7 +184,13 @@ const translations = {
     loginToContinue: "Logga in för att fortsätta",
     createAnAccount: "Skapa ett nytt konto",
     noAccount: "Inget konto? Registrera dig här",
-    hasAccount: "Har du redan ett konto? Logga in"
+    hasAccount: "Har du redan ett konto? Logga in",
+    loginRequiredMsg: "Du måste logga in för att se detta.",
+    adminManagement: "Administratörer",
+    addAdmin: "Lägg till admin",
+    adminAdded: "Admin tillagd",
+    adminRemoved: "Admin borttagen",
+    masterAdminInfo: "Du är inloggad som Master Admin."
   },
   en: {
     appTitle: "Domartillsättning",
@@ -240,11 +242,6 @@ const translations = {
     profileAccess: "Configure profile & access",
     displayName: "Display Name",
     namePlaceholder: "Search or type name...",
-    adminVerify: "Admin Verification",
-    accessCode: "Access Code",
-    verify: "Verify",
-    adminActive: "Admin Active",
-    logoutAdmin: "Logout Admin",
     logout: "Logout",
     close: "Close",
     status: "Status",
@@ -295,7 +292,13 @@ const translations = {
     loginToContinue: "Login to continue",
     createAnAccount: "Create a new account",
     noAccount: "No account? Register here",
-    hasAccount: "Already have an account? Login"
+    hasAccount: "Already have an account? Login",
+    loginRequiredMsg: "You must be logged in to view this.",
+    adminManagement: "Admin Roles",
+    addAdmin: "Add Admin",
+    adminAdded: "Admin added",
+    adminRemoved: "Admin removed",
+    masterAdminInfo: "You are logged in as Master Admin."
   }
 };
 
@@ -312,7 +315,11 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
+  
+  // Roles
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminEmails, setAdminEmails] = useState([]);
+  
   const [view, setView] = useState('schedule');
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
   const [myGamesViewMode, setMyGamesViewMode] = useState('list'); 
@@ -334,20 +341,20 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   
-  // Auth State
+  // Auth & Modals State
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [authError, setAuthError] = useState('');
-
-  // GitHub Changelog State
-  const [changelog, setChangelog] = useState([]);
-  const [loadingChangelog, setLoadingChangelog] = useState(false);
   
-  // UI Controls
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [showChangelogModal, setShowChangelogModal] = useState(false);
+  const [changelog, setChangelog] = useState([]);
+  const [loadingChangelog, setLoadingChangelog] = useState(false);
+  
+  // Admin Controls
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
@@ -359,6 +366,7 @@ export default function App() {
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
   const [umpireSort, setUmpireSort] = useState('level');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -374,7 +382,6 @@ export default function App() {
   })();
 
   // --- HELPERS ---
-
   const toLocalISO = (date) => {
     if (!date) return "";
     const y = date.getFullYear();
@@ -413,25 +420,17 @@ export default function App() {
     return 'bg-green-100 text-green-700 border-green-200';
   };
 
-  // 1. Authentication
+  // 1. Authentication Listener (No Anonymous Login anymore)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u && u.email === 'suecio@tryempire.com') {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
       setLoading(false);
     });
-    
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Listeners
+  // 2. Data Listeners (Public Read Access)
   useEffect(() => {
-    if (!user) return;
-
     const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
     const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
       const gamesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -453,13 +452,10 @@ export default function App() {
       setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.name.localeCompare(b.name)));
     }, (err) => console.error(err));
 
-    const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-    const unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
+    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings');
+    const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
-        const data = snapshot.data();
-        setUserName(data.name || '');
-        setUmpireId(data.umpireId || '');
-        // isAdmin is handled securely via Auth state now
+        setAdminEmails(snapshot.data().adminEmails || []);
       }
     }, (err) => console.error(err));
 
@@ -467,26 +463,53 @@ export default function App() {
       unsubscribeGames(); 
       unsubscribeApps(); 
       unsubscribeAssign(); 
-      unsubscribeUmpires(); 
-      unsubscribeProfile();
+      unsubscribeUmpires();
+      unsubscribeSettings();
     };
-  }, [user, appId, isAdmin]);
+  }, [appId]);
 
-  // 3. Scroll Tracking & Analytics
+  // 3. User Profile & Role Evaluation (Runs when User changes)
+  useEffect(() => {
+    let unsubscribeProfile = () => {};
+
+    if (user) {
+      // Evaluate Roles
+      const isMaster = user.email === 'suecio@tryempire.com';
+      const isStandardAdmin = adminEmails.includes(user.email);
+      setIsAdmin(isMaster || isStandardAdmin);
+
+      // Fetch Profile
+      const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+      unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setUserName(data.name || '');
+          setUmpireId(data.umpireId || '');
+        } else {
+          setUserName('');
+          setUmpireId('');
+        }
+      }, (err) => console.error(err));
+    } else {
+      setIsAdmin(false);
+      setUserName('');
+      setUmpireId('');
+    }
+
+    return () => unsubscribeProfile();
+  }, [user, appId, adminEmails]);
+
+  // 4. Scroll Tracking & Analytics
   useEffect(() => {
     if (analytics) {
       logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
     }
-    
-    const handleScroll = () => { 
-      setShowBackToTop(window.scrollY > 300); 
-    };
-    
+    const handleScroll = () => { setShowBackToTop(window.scrollY > 300); };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [view, selectedYear, lang]);
 
-  // 4. Fetch GitHub Changelog
+  // 5. Fetch GitHub Changelog
   useEffect(() => {
     const fetchChangelog = async () => {
       if (!GITHUB_REPO || GITHUB_REPO.includes("your-github-username")) return;
@@ -511,21 +534,26 @@ export default function App() {
 
   // --- ACTIONS ---
 
-  const handleSort = (key) => {
-    setSortConfig(prev => ({ 
-      key, 
-      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' 
-    }));
-  };
-
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
     try {
+      let cred;
       if (isLoginMode) {
-        await signInWithEmailAndPassword(auth, authEmail, authPassword);
+        cred = await signInWithEmailAndPassword(auth, authEmail, authPassword);
       } else {
-        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+        cred = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      }
+      
+      setShowAuthModal(false);
+      
+      // If logging in/registering, check if they need to link a profile
+      if (cred && cred.user) {
+        const docRef = doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile', 'info');
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists() || !docSnap.data().umpireId) {
+          setShowNamePrompt(true);
+        }
       }
     } catch (err) {
       setAuthError(err.message);
@@ -534,7 +562,7 @@ export default function App() {
 
   const handleResetPassword = async () => {
     if (!authEmail) {
-      setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Fill in the email address above first.');
+      setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Please enter your email address first.');
       return;
     }
     try {
@@ -545,17 +573,34 @@ export default function App() {
     }
   };
 
+  const handleSort = (key) => {
+    setSortConfig(prev => ({ 
+      key, 
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' 
+    }));
+  };
+
   const updateProfile = async (name, id) => {
     if (!user) return;
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id, isAdmin }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
   };
 
   const logoutUmpire = async () => {
-    if (!user) return;
-    setUserName(''); 
-    setUmpireId('');
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', umpireId: '' }, { merge: true });
     await signOut(auth);
+    setShowAdminModal(false);
+    setView('schedule');
+  };
+
+  const handleAddAdmin = async () => {
+    if (!newAdminEmail.trim() || !newAdminEmail.includes('@')) return;
+    const updatedEmails = [...adminEmails, newAdminEmail.trim().toLowerCase()];
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings'), { adminEmails: updatedEmails }, { merge: true });
+    setNewAdminEmail('');
+  };
+
+  const handleRemoveAdmin = async (emailToRemove) => {
+    const updatedEmails = adminEmails.filter(e => e !== emailToRemove);
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings'), { adminEmails: updatedEmails }, { merge: true });
   };
 
   const addMasterUmpire = async (name, level = "") => {
@@ -577,10 +622,9 @@ export default function App() {
   };
 
   const toggleApplication = async (gameId) => {
-    if (!user || !umpireId) { 
-      setShowNamePrompt(true); 
-      return; 
-    }
+    if (!user) { setShowAuthModal(true); return; }
+    if (!umpireId) { setShowNamePrompt(true); return; }
+    
     const appIdStr = `${gameId}_${umpireId}`;
     const existing = applications.find(a => a.id === appIdStr);
     
@@ -740,7 +784,8 @@ export default function App() {
         games,
         applications,
         assignments,
-        umpires: masterUmpires
+        umpires: masterUmpires,
+        adminEmails
       }
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -766,7 +811,6 @@ export default function App() {
     let currentWeek = [];
     const weeks = [];
 
-    // Padding start
     for (let i = 0; i < shiftedFirstDay; i++) currentWeek.push(null);
 
     for (let d = 1; d <= daysInMonth; d++) {
@@ -778,7 +822,6 @@ export default function App() {
       }
     }
 
-    // Padding end
     if (currentWeek.length > 0) {
       while (currentWeek.length < 7) currentWeek.push(null);
       const validDate = currentWeek.find(day => day !== null);
@@ -835,7 +878,6 @@ export default function App() {
   const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
 
-  // Sort and filter logic specifically for the public umpire list tab
   const sortedUmpireList = useMemo(() => {
     const levelOrder = {
       'internationell': 1,
@@ -887,81 +929,9 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 selection:bg-blue-100">
-        <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300">
-          <div className="text-center space-y-2">
-            <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-blue-600" />
-            </div>
-            <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.appTitle}</h3>
-            <p className="text-xs text-slate-400 font-medium">{isLoginMode ? t.loginToContinue : t.createAnAccount}</p>
-          </div>
-          
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
-            {authError && (
-              <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 break-words">
-                {authError}
-              </div>
-            )}
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.email}</label>
-              <input 
-                type="email" 
-                value={authEmail} 
-                onChange={(e) => setAuthEmail(e.target.value)} 
-                required 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
-                placeholder="namn@exempel.se" 
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.password}</label>
-              <input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => setAuthPassword(e.target.value)} 
-                required 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
-                placeholder="••••••••" 
-              />
-            </div>
-            
-            <button 
-              type="submit" 
-              className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
-            >
-              {isLoginMode ? t.login : t.register}
-            </button>
-          </form>
-          
-          <div className="pt-4 border-t border-slate-100 flex flex-col items-center gap-2">
-            <button 
-              onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} 
-              className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
-            >
-              {isLoginMode ? t.noAccount : t.hasAccount}
-            </button>
-            {isLoginMode && (
-              <button 
-                onClick={handleResetPassword} 
-                type="button"
-                className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors mt-2"
-              >
-                {t.forgotPassword}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
       
-      {/* Responsive Header Setup to fix Mobile Overlap */}
       <header 
         onClick={() => { 
           setView('schedule'); 
@@ -999,12 +969,15 @@ export default function App() {
               <option value="2026">2026</option>
               <option value="2027">2027</option>
             </select>
-            {/* Note: GitHub icon removed from here to clean up mobile view and added to Settings Modal */}
             <button 
-              onClick={(e) => { e.stopPropagation(); setShowAdminModal(true); }} 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                if (user) setShowAdminModal(true); 
+                else setShowAuthModal(true); 
+              }} 
               className="p-1.5 sm:p-2 hover:bg-blue-800 rounded-full transition-colors ml-0.5"
             >
-              <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+              {user ? <Settings className="w-4 h-4 sm:w-5 sm:h-5" /> : <User className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
           </div>
         </div>
@@ -1319,6 +1292,47 @@ export default function App() {
                   </div>
                 )}
                 
+                {/* ROLE MANAGEMENT (MASTER ADMIN ONLY) */}
+                {user?.email === 'suecio@tryempire.com' && (
+                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Shield className="w-4 h-4" /> {t.adminManagement}
+                    </h3>
+                    <div className="flex gap-2 mb-4">
+                      <input 
+                        type="email" 
+                        value={newAdminEmail} 
+                        onChange={(e) => setNewAdminEmail(e.target.value)} 
+                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold outline-none" 
+                        placeholder="E-postadress..." 
+                      />
+                      <button 
+                        onClick={handleAddAdmin} 
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase"
+                      >
+                        {t.addAdmin}
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100">
+                         <div className="flex items-center gap-2">
+                           <Shield className="w-4 h-4 text-blue-600" />
+                           <span className="text-sm font-bold text-blue-900">suecio@tryempire.com</span>
+                           <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black">Master</span>
+                         </div>
+                      </div>
+                      {adminEmails.map(email => (
+                        <div key={email} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                          <span className="text-sm font-bold text-slate-700">{email}</span>
+                          <button onClick={() => handleRemoveAdmin(email)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <Users2 className="w-4 h-4" /> {t.masterList}
@@ -1481,24 +1495,28 @@ export default function App() {
                           
                           <div className="space-y-1">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
-                              const m = masterUmpires.find(mu => mu.id === app.userId); 
-                              return (
-                                <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold">{app.userName}</span>
-                                    {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                                  </div>
-                                  <button 
-                                    disabled={isFullyStaffed} 
-                                    onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
-                                    className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
-                                  >
-                                    <UserPlus className="w-3 h-3" /> Assign
-                                  </button>
-                                </div>
-                              ); 
-                            })}
+                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
+                                  const m = masterUmpires.find(mu => mu.id === app.userId); 
+                                  return (
+                                    <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold">{app.userName}</span>
+                                        {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                                      </div>
+                                      <button 
+                                        disabled={isFullyStaffed} 
+                                        onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
+                                        className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                                      >
+                                        <UserPlus className="w-3 h-3" /> Assign
+                                      </button>
+                                    </div>
+                                  ); 
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1577,36 +1595,50 @@ export default function App() {
           {view === 'my-apps' && (
             <div className="space-y-4">
               <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
-              {myAssignedGames.map(game => (
-                <div key={game.id} className="bg-white p-4 rounded-2xl border border-green-200 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-green-100 text-green-600"><CalendarIcon className="w-5 h-5" /></div>
-                    <div>
-                      <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
-                      <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
-                    </div>
+              {!user ? (
+                <div className="bg-white p-12 rounded-3xl text-center border border-slate-200 shadow-sm">
+                  <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <User className="w-8 h-8 text-blue-600" />
                   </div>
-                  <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</div>
+                  <p className="text-slate-500 font-medium mb-6">{t.loginRequiredMsg}</p>
+                  <button onClick={() => setShowAuthModal(true)} className="bg-blue-600 text-white px-8 py-3 rounded-full font-black uppercase text-xs shadow-lg hover:bg-blue-700 transition-colors">
+                    {t.login}
+                  </button>
                 </div>
-              ))}
-              
-              <div className="pt-4 border-t border-slate-100">
-                <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
-                {myInterestedGames.map(game => (
-                  <div key={game.id} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
-                      <div>
-                        <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
-                        <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
+              ) : (
+                <>
+                  {myAssignedGames.map(game => (
+                    <div key={game.id} className="bg-white p-4 rounded-2xl border border-green-200 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-green-100 text-green-600"><CalendarIcon className="w-5 h-5" /></div>
+                        <div>
+                          <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
+                          <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
+                        </div>
                       </div>
+                      <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</div>
                     </div>
-                    <button onClick={() => toggleApplication(game.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  ))}
+                  
+                  <div className="pt-4 border-t border-slate-100">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
+                    {myInterestedGames.map(game => (
+                      <div key={game.id} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
+                          <div>
+                            <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
+                            <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => toggleApplication(game.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
             </div>
           )}
         </section>
@@ -1622,74 +1654,111 @@ export default function App() {
         </button>
       )}
 
-      <button 
-        onClick={() => setShowNamePrompt(true)} 
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
-            {userName ? userName.charAt(0) : '?'}
-          </div>
-          <div className="text-left">
-            <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
-            <span className="text-sm font-bold whitespace-nowrap leading-none">{userName || t.selectFromList}</span>
-          </div>
-        </div>
-      </button>
+      {user ? (
+        umpireId ? (
+          <button 
+            onClick={() => setShowNamePrompt(true)} 
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
+                {userName ? userName.charAt(0) : '?'}
+              </div>
+              <div className="text-left">
+                <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
+                <span className="text-sm font-bold whitespace-nowrap leading-none">{userName || t.selectFromList}</span>
+              </div>
+            </div>
+          </button>
+        ) : (
+          <button 
+            onClick={() => setShowNamePrompt(true)} 
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-500 backdrop-blur-md animate-pulse"
+          >
+            <UserCheck className="w-5 h-5" />
+            <span className="text-sm font-black uppercase tracking-widest">{t.saveName}</span>
+          </button>
+        )
+      ) : (
+        <button 
+          onClick={() => setShowAuthModal(true)} 
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-800/50 backdrop-blur-md hover:bg-blue-800 transition-colors"
+        >
+          <User className="w-5 h-5" />
+          <span className="text-sm font-black uppercase tracking-widest">{t.login}</span>
+        </button>
+      )}
 
       {/* Modals */}
-      {showChangelogModal && (
+      
+      {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-md w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="bg-blue-50 p-3 rounded-full text-blue-600">
-                <Github className="w-6 h-6" />
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 relative">
+            <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center space-y-2">
+              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-blue-600" />
               </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-800 leading-tight">{t.systemUpdates}</h3>
-                <p className="text-xs text-slate-400 font-medium">Senaste ändringarna</p>
-              </div>
+              <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.appTitle}</h3>
+              <p className="text-xs text-slate-400 font-medium">{isLoginMode ? t.loginToContinue : t.createAnAccount}</p>
             </div>
             
-            <div className="space-y-4 min-h-[150px]">
-              {loadingChangelog ? (
-                <div className="py-8 flex justify-center"><RefreshCw className="animate-spin text-blue-500 w-6 h-6" /></div>
-              ) : changelog.length > 0 ? (
-                <div className="space-y-3">
-                  {changelog.map((commitData) => {
-                    const dateObj = new Date(commitData.commit.author.date);
-                    return (
-                      <div key={commitData.sha} className="flex gap-4 items-start p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors">
-                        <div className="mt-0.5 bg-blue-100 text-blue-600 p-1.5 rounded-lg">
-                          <GitCommit className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-800 text-sm mb-1">{commitData.commit.message}</p>
-                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            <span>{dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US')}</span>
-                            <span>•</span>
-                            <span>{commitData.commit.author.name}</span>
-                          </div>
-                        </div>
-                        <a href={commitData.html_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">
-                          {commitData.sha.substring(0, 7)}
-                        </a>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-xs text-slate-400 italic">
-                  {GITHUB_REPO.includes("your-github-username") ? 
-                    "Configure GITHUB_REPO constant to view updates." : 
-                    t.fetchError}
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authError && (
+                <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 break-words">
+                  {authError}
                 </div>
               )}
-            </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.email}</label>
+                <input 
+                  type="email" 
+                  value={authEmail} 
+                  onChange={(e) => setAuthEmail(e.target.value)} 
+                  required 
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
+                  placeholder="namn@exempel.se" 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.password}</label>
+                <input 
+                  type="password" 
+                  value={authPassword} 
+                  onChange={(e) => setAuthPassword(e.target.value)} 
+                  required 
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
+                  placeholder="••••••••" 
+                />
+              </div>
+              
+              <button 
+                type="submit" 
+                className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+              >
+                {isLoginMode ? t.login : t.register}
+              </button>
+            </form>
             
-            <button onClick={() => setShowChangelogModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">
-              {t.close}
-            </button>
+            <div className="pt-4 border-t border-slate-100 flex flex-col items-center gap-2">
+              <button 
+                onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} 
+                className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
+              >
+                {isLoginMode ? t.noAccount : t.hasAccount}
+              </button>
+              {isLoginMode && (
+                <button 
+                  onClick={handleResetPassword} 
+                  type="button"
+                  className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors mt-2"
+                >
+                  {t.forgotPassword}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1787,22 +1856,6 @@ export default function App() {
                   </div>
                 </div>
               )}
-              
-              <div className="pt-6 border-t border-slate-100">
-                <button 
-                  onClick={() => { setShowAdminModal(false); setShowChangelogModal(true); }} 
-                  className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50 rounded-2xl transition-colors border border-slate-200 group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <Github className="w-5 h-5" />
-                    </div>
-                    <span className="font-bold text-sm text-slate-700 group-hover:text-blue-700">{t.systemUpdates}</span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
-                </button>
-              </div>
-
             </div>
             
             <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">
