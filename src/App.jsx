@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Component } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -61,7 +61,8 @@ import {
   Users2,
   Github,
   GitCommit,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 
 /**
@@ -314,7 +315,51 @@ const getISOWeekNumber = (date) => {
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 };
 
-export default function App() {
+// ==========================================
+// ERROR BOUNDARY (Prevents White Screen of Death)
+// ==========================================
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Critical React Crash:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full text-center border border-red-100">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Ett oväntat fel uppstod</h2>
+            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade under laddning. Felet var:</p>
+            <div className="bg-red-50 rounded-xl p-4 text-left overflow-x-auto mb-6 border border-red-100">
+              <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap">
+                {this.state.error?.toString()}
+              </pre>
+            </div>
+            <button onClick={() => window.location.reload()} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-colors">
+              Ladda om sidan
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
+
+// ==========================================
+// MAIN APPLICATION COMPONENT
+// ==========================================
+function MainApp() {
   // Auth & Roles
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
@@ -331,7 +376,7 @@ export default function App() {
   // Language & UI Context
   const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
-  const t = translations[lang] || translations['en']; // Defensive fallback
+  const t = translations[lang] || translations['en'];
 
   // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -344,6 +389,7 @@ export default function App() {
   const [masterUmpires, setMasterUmpires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [firebaseError, setFirebaseError] = useState(null); // Tracks DB permission blocks
   
   // Auth & Modals State
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -396,9 +442,7 @@ export default function App() {
   };
 
   const scrollToTop = () => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getLeagueStyles = (league) => {
@@ -457,35 +501,42 @@ export default function App() {
     const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null;
     if (isCanvas && !user) return; 
 
+    // Error handler that specifically checks for permission blocks
+    const handleDbError = (err) => {
+      console.error("Firebase Sync Error:", err);
+      if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
+        setFirebaseError('permission-denied');
+      }
+    };
+
     const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
     const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
       const gamesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Safe localeCompare for dates
       setGames(gamesList.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
-    }, (err) => console.error(err));
+      setFirebaseError(null);
+    }, handleDbError);
 
     const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
     const unsubscribeApps = onSnapshot(appsCol, (snapshot) => {
       setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.error(err));
+    }, handleDbError);
 
     const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments');
     const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => {
       setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.error(err));
+    }, handleDbError);
 
     const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires');
     const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => {
-      // Safe localeCompare for names
       setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
-    }, (err) => console.error(err));
+    }, handleDbError);
 
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
         setAdminEmails(snapshot.data().adminEmails || []);
       }
-    }, (err) => console.error(err));
+    }, handleDbError);
 
     return () => {
       unsubscribeGames(); 
@@ -596,7 +647,7 @@ export default function App() {
     }
     try {
       await sendPasswordResetEmail(auth, authEmail);
-      alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!');
+      if (typeof window !== 'undefined') alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!');
     } catch (err) {
       setAuthError(err.message);
     }
@@ -845,7 +896,7 @@ export default function App() {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return '-';
     const dayIndex = d.getDay();
-    return t.days[dayIndex] || '-';
+    return (t.days && t.days[dayIndex]) ? t.days[dayIndex] : '-';
   };
 
   const safeDateNum = (dateString) => {
@@ -983,6 +1034,33 @@ export default function App() {
   }, [games, applications, groupedAssignments, umpireId]);
 
   // --- RENDER ---
+
+  if (firebaseError === 'permission-denied') {
+    return (
+      <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center font-sans">
+         <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full border border-red-100 text-center">
+           <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
+           <h2 className="text-2xl font-black text-slate-800 mb-2">Databasåtkomst Nekad</h2>
+           <p className="text-slate-600 mb-6 font-medium leading-relaxed">Applikationen kan inte hämta spelschemat eftersom Firebase-reglerna blockerar åtkomst (Anonym inloggning är avstängd). För att besökare ska kunna se schemat måste du tillåta publik läsning.</p>
+           <div className="bg-slate-900 rounded-xl p-4 text-left overflow-x-auto mb-6 shadow-inner">
+             <pre className="text-green-400 text-xs font-mono leading-relaxed">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/{appId}/{document=**} {
+      allow read: if true; 
+      allow write: if request.auth != null; 
+    }
+  }
+}`}
+             </pre>
+           </div>
+           <p className="text-sm text-slate-500 font-bold mb-4">1. Gå till Firebase Console &rarr; Firestore Database &rarr; Rules.</p>
+           <p className="text-sm text-slate-500 font-bold">2. Klistra in koden ovan och klicka "Publish".</p>
+         </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -1748,6 +1826,7 @@ export default function App() {
       )}
 
       {/* Modals */}
+      
       {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 relative">
@@ -1979,5 +2058,13 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
   );
 }
