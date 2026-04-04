@@ -849,6 +849,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
       
+      {/* Responsive Header Setup to fix Mobile Overlap */}
       <header 
         onClick={() => { 
           setView('schedule'); 
@@ -859,45 +860,39 @@ export default function App() {
           setShowHistory(false); 
           scrollToTop(); 
         }} 
-        className="bg-blue-900 text-white p-4 shadow-lg sticky top-0 z-20 cursor-pointer group"
+        className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-20 cursor-pointer group"
       >
-        <div className="max-w-5xl mx-auto flex justify-between items-center pointer-events-none">
-          <div className="flex items-center gap-3">
-            <div className="bg-white rounded-lg overflow-hidden flex items-center justify-center h-10 w-10 border border-white/20 shadow-inner group-hover:scale-110 transition-transform">
-              <Trophy className="w-6 h-6 text-blue-900" />
+        <div className="max-w-5xl mx-auto flex justify-between items-center pointer-events-none gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="bg-white rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 border border-white/20 shadow-inner group-hover:scale-110 transition-transform">
+              <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-blue-900" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight leading-none group-hover:text-blue-200 transition-colors">{t.appTitle}</h1>
-              <p className="text-[10px] font-black uppercase text-blue-300 tracking-widest mt-1">{t.season} {selectedYear}</p>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-xl font-bold tracking-tight leading-none group-hover:text-blue-200 transition-colors truncate">{t.appTitle}</h1>
+              <p className="text-[8px] sm:text-[10px] font-black uppercase text-blue-300 tracking-widest mt-1 truncate">{t.season} {selectedYear}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <div className="flex bg-blue-800 rounded-lg p-0.5 mr-2">
-              <button onClick={(e) => { e.stopPropagation(); setLang('sv'); }} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'sv' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇸🇪</button>
-              <button onClick={(e) => { e.stopPropagation(); setLang('en'); }} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
+          <div className="flex items-center gap-1 sm:gap-2 pointer-events-auto flex-shrink-0">
+            <div className="flex bg-blue-800 rounded-lg p-0.5">
+              <button onClick={(e) => { e.stopPropagation(); setLang('sv'); }} className={`px-1.5 py-1 sm:px-2 text-[10px] sm:text-xs rounded-md transition-all ${lang === 'sv' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇸🇪</button>
+              <button onClick={(e) => { e.stopPropagation(); setLang('en'); }} className={`px-1.5 py-1 sm:px-2 text-[10px] sm:text-xs rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
             </div>
             <select 
               value={selectedYear} 
               onClick={(e) => e.stopPropagation()} 
               onChange={(e) => setSelectedYear(e.target.value)} 
-              className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-2 py-1 outline-none appearance-none cursor-pointer"
+              className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-1.5 py-1 sm:px-2 outline-none appearance-none cursor-pointer"
             >
               <option value="2025">2025</option>
               <option value="2026">2026</option>
               <option value="2027">2027</option>
             </select>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setShowChangelogModal(true); }} 
-              className="p-2 hover:bg-blue-800 rounded-full transition-colors ml-1"
-              title={t.systemUpdates}
-            >
-              <Github className="w-5 h-5" />
-            </button>
+            {/* Note: GitHub icon removed from here to clean up mobile view and added to Settings Modal */}
             <button 
               onClick={(e) => { e.stopPropagation(); setShowAdminModal(true); }} 
-              className="p-2 hover:bg-blue-800 rounded-full transition-colors ml-1"
+              className="p-1.5 sm:p-2 hover:bg-blue-800 rounded-full transition-colors ml-0.5"
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
@@ -1690,6 +1685,22 @@ export default function App() {
                   </div>
                 )}
               </div>
+              
+              <div className="pt-6 border-t border-slate-100">
+                <button 
+                  onClick={() => { setShowAdminModal(false); setShowChangelogModal(true); }} 
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50 rounded-2xl transition-colors border border-slate-200 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <Github className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-sm text-slate-700 group-hover:text-blue-700">{t.systemUpdates}</span>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+                </button>
+              </div>
+
             </div>
             
             <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">
