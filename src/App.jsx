@@ -1593,7 +1593,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din första skärmavbild */}
-                            <img src="src/IMG_3614.jpeg" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://raw.githubusercontent.com/suecio/domarschema/72d9cca83a50386e09064a93afa1bc50de4d1db3/src/IMG_3614.jpeg" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
@@ -1609,7 +1609,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din andra skärmavbild */}
-                            <img src="https://drive.google.com/file/d/1SfwQaowUcVfvY7DgqJf6xM5fGSFGhKf7/view?usp=sharing" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://raw.githubusercontent.com/suecio/domarschema/blob/09b438482ba230232de25f244c1281b4c2c146dc/src/Ska%CC%88rmavbild%202026-04-05%20kl.%2014.24.40.png" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
