@@ -1609,7 +1609,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din andra skärmavbild */}
-                            <img src="https://raw.githubusercontent.com/suecio/domarschema/blob/09b438482ba230232de25f244c1281b4c2c146dc/src/Ska%CC%88rmavbild%202026-04-05%20kl.%2014.24.40.png" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://raw.githubusercontent.com/suecio/domarschema/09b438482ba230232de25f244c1281b4c2c146dc/src/Ska%CC%88rmavbild%202026-04-05%20kl.%2014.24.40.png" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
@@ -1625,7 +1625,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-blue-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din tredje skärmavbild */}
-                            <img src="https://drive.google.com/file/d/1SfwQaowUcVfvY7DgqJf6xM5fGSFGhKf7/view?usp=sharing" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://placehold.co/600x400" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
