@@ -1076,20 +1076,29 @@ function MainApp() {
 
   const sortedStatistics = useMemo(() => {
     const stats = {};
+    
+    // Seed with all master umpires so everyone is visible
+    masterUmpires.forEach(u => {
+      stats[u.id] = { userId: u.id, name: u.name || 'Unknown', games: 0, interest: 0 };
+    });
+
     assignments.forEach(asg => {
       if (!asg.userId) return;
       if (!stats[asg.userId]) stats[asg.userId] = { userId: asg.userId, name: asg.userName || 'Unknown', games: 0, interest: 0 };
       stats[asg.userId].games += 1;
     });
+
     applications.forEach(app => {
-      if (!stats[app.userId]) return;
+      if (!app.userId) return;
       if (!stats[app.userId]) stats[app.userId] = { userId: app.userId, name: app.userName || 'Unknown', games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
+
     const data = Object.values(stats).map(s => {
       const rate = s.interest > 0 ? Math.round((s.games / s.interest) * 100) : (s.games > 0 ? 100 : 0);
       return { ...s, rate };
     });
+    
     return data.sort((a, b) => {
       let valA = a[sortConfig.key];
       let valB = b[sortConfig.key];
@@ -1098,7 +1107,7 @@ function MainApp() {
       if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [assignments, applications, sortConfig]);
+  }, [assignments, applications, masterUmpires, sortConfig]);
 
   const filteredGames = useMemo(() => {
     return games.filter(game => {
