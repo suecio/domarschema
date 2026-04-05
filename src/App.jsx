@@ -70,7 +70,8 @@ import {
   MessageCircle,
   Code,
   Mail,
-  Send
+  Send,
+  Share2
 } from 'lucide-react';
 
 /**
@@ -253,7 +254,9 @@ const translations = {
     sending: "Skickar...",
     msgSentTitle: "Meddelande skickat!",
     msgSentDesc: "Tack för ditt meddelande. Vi återkommer till dig så snart som möjligt på den angivna e-postadressen.",
-    sendAnother: "Skicka ett nytt meddelande"
+    sendAnother: "Skicka ett nytt meddelande",
+    shareGuide: "Dela guide",
+    linkCopied: "Länk kopierad till urklipp!"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -412,7 +415,9 @@ const translations = {
     sending: "Sending...",
     msgSentTitle: "Message Sent!",
     msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
-    sendAnother: "Send another message"
+    sendAnother: "Send another message",
+    shareGuide: "Share Guide",
+    linkCopied: "Link copied to clipboard!"
   }
 };
 
@@ -491,7 +496,13 @@ function MainApp() {
   const [adminUmpireIds, setAdminUmpireIds] = useState([]);
   
   // Navigation & View
-  const [view, setView] = useState('schedule');
+  const [view, setView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('view') || 'schedule';
+    }
+    return 'schedule';
+  });
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
   const [selectedYear, setSelectedYear] = useState('2026');
   
@@ -506,7 +517,13 @@ function MainApp() {
   const [globalNote, setGlobalNote] = useState('');
   
   // Help View State
-  const [helpTab, setHelpTab] = useState('guide');
+  const [helpTab, setHelpTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('tab') || 'guide';
+    }
+    return 'guide';
+  });
   const [readmeContent, setReadmeContent] = useState(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
   
@@ -931,6 +948,28 @@ function MainApp() {
     if (!isAdmin) return;
     setEditNoteText('');
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: '' }, { merge: true });
+  };
+
+  const copyGuideLink = () => {
+    if (typeof window !== 'undefined') {
+      const link = `${window.location.origin}${window.location.pathname}?view=help&tab=guide`;
+      navigator.clipboard.writeText(link).then(() => {
+        alert(t.linkCopied);
+      }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = link;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          alert(t.linkCopied);
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+        }
+        document.body.removeChild(textArea);
+      });
+    }
   };
 
   const toggleUmpireAdmin = async (uId) => {
@@ -1532,6 +1571,13 @@ service cloud.firestore {
                         </div>
                         <h2 className="text-2xl font-black text-slate-800">{t.guide}</h2>
                         <p className="text-slate-500 font-medium mt-2">Hur du kopplar ditt konto till din domarprofil</p>
+                        
+                        <button 
+                          onClick={copyGuideLink}
+                          className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-100 text-blue-700 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-blue-200 transition-colors shadow-sm active:scale-95"
+                        >
+                          <Share2 className="w-4 h-4" /> {t.shareGuide}
+                        </button>
                       </div>
 
                       <div className="grid gap-6">
