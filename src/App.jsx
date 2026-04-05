@@ -64,7 +64,7 @@ import {
   X,
   AlertTriangle,
   ArrowLeft,
-  UserCircle
+  Megaphone
 } from 'lucide-react';
 
 /**
@@ -212,7 +212,12 @@ const translations = {
     umpireDeletedSubject: "Din domarprofil har tagits bort",
     umpireDeletedBody: "Hej,\n\nEn administratör har tagit bort din domarprofil från domarsystemet.",
     assignmentEmailSubject: "Ny matchtillsättning",
-    assignmentEmailBody: "Hej {name},\n\nDu har blivit tillsatt på matchen {away} @ {home} den {date} kl {time}."
+    assignmentEmailBody: "Hej {name},\n\nDu har blivit tillsatt på matchen {away} @ {home} den {date} kl {time}.",
+    myGamesReminder: "Viktigt! Om du måste lämna återbud till en redan tillsatt match är det ditt ansvar att hitta en ersättare samt att informera Elitdomargruppen.",
+    globalAnnouncement: "Globalt Meddelande",
+    saveAnnouncement: "Publicera",
+    clearAnnouncement: "Ta bort",
+    announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla..."
   },
   en: {
     appTitle: "Umpire Portal",
@@ -336,7 +341,12 @@ const translations = {
     umpireDeletedSubject: "Your umpire profile has been removed",
     umpireDeletedBody: "Hello,\n\nAn admin has removed your umpire profile from the scheduling system.",
     assignmentEmailSubject: "New Match Assignment",
-    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}."
+    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}.",
+    myGamesReminder: "Important! If you need to cancel an assigned game, it is your responsibility to find a replacement and notify the elite umpire group.",
+    globalAnnouncement: "Global Announcement",
+    saveAnnouncement: "Publish",
+    clearAnnouncement: "Clear",
+    announcementPlaceholder: "Type an important message to display to everyone..."
   }
 };
 
@@ -414,6 +424,7 @@ function MainApp() {
   // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [globalNote, setGlobalNote] = useState('');
 
   // Data State
   const [games, setGames] = useState([]);
@@ -449,6 +460,7 @@ function MainApp() {
   const [tempEditName, setTempEditName] = useState('');
   const [tempEditLevel, setTempEditLevel] = useState('');
   const [tempEditEmail, setTempEditEmail] = useState('');
+  const [editNoteText, setEditNoteText] = useState('');
   const [showManualEmailInput, setShowManualEmailInput] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
@@ -468,6 +480,11 @@ function MainApp() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
+
+  // Keep admin edit note perfectly in sync when loaded
+  useEffect(() => {
+    setEditNoteText(globalNote);
+  }, [globalNote]);
 
   // --- DEFENSIVE UI HELPERS ---
   const safeDateMonth = (dateString) => {
@@ -596,7 +613,9 @@ function MainApp() {
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
-        setAdminUmpireIds(snapshot.data().adminUmpireIds || []);
+        const data = snapshot.data();
+        setAdminUmpireIds(data.adminUmpireIds || []);
+        setGlobalNote(data.globalNote || '');
       }
     }, handleDbError);
 
@@ -766,6 +785,17 @@ function MainApp() {
     setView('schedule');
   };
 
+  const saveGlobalNote = async () => {
+    if (!isAdmin) return;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: editNoteText }, { merge: true });
+  };
+  
+  const clearGlobalNote = async () => {
+    if (!isAdmin) return;
+    setEditNoteText('');
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: '' }, { merge: true });
+  };
+
   const toggleUmpireAdmin = async (uId) => {
     if (user?.email !== 'suecio@tryempire.com') return; 
     
@@ -851,27 +881,6 @@ function MainApp() {
       userName: name, 
       assignedAt: Date.now() 
     });
-
-    const umpire = masterUmpires.find(u => u.id === uId);
-    const game = games.find(g => g.id === gameId);
-    
-    if (umpire && umpire.linkedEmail && game) {
-      const body = t.assignmentEmailBody
-        .replace('{name}', name)
-        .replace('{away}', game.away || 'TBA')
-        .replace('{home}', game.home || 'TBA')
-        .replace('{date}', game.date || '')
-        .replace('{time}', game.time || '');
-
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: umpire.linkedEmail,
-        message: {
-          subject: t.assignmentEmailSubject,
-          text: body
-        },
-        createdAt: Date.now()
-      });
-    }
   };
 
   const removeAssignment = async (gameId, uId) => {
@@ -1267,6 +1276,14 @@ service cloud.firestore {
           ))}
         </div>
 
+        {/* Global Announcement Banner */}
+        {globalNote && (
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl shadow-sm flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
+            <Megaphone className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+            <p className="text-sm font-bold text-yellow-800 whitespace-pre-wrap">{globalNote}</p>
+          </div>
+        )}
+
         {/* Global Filters */}
         {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -1640,6 +1657,22 @@ service cloud.firestore {
                 )}
 
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Megaphone className="w-4 h-4" /> {t.globalAnnouncement}
+                  </h3>
+                  <textarea
+                    value={editNoteText}
+                    onChange={(e) => setEditNoteText(e.target.value)}
+                    placeholder={t.announcementPlaceholder}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-h-[80px]"
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={saveGlobalNote} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.saveAnnouncement}</button>
+                    <button onClick={clearGlobalNote} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.clearAnnouncement}</button>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                       <Users2 className="w-4 h-4" /> {t.masterList}
@@ -1966,6 +1999,14 @@ service cloud.firestore {
           {view === 'my-apps' && (
             <div className="space-y-4">
               <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
+              
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex gap-3 items-start mb-6">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <p className="text-xs sm:text-sm font-medium text-blue-800 leading-relaxed">
+                  {t.myGamesReminder}
+                </p>
+              </div>
+
               {!user || !user.email ? (
                 <div className="bg-white p-12 rounded-3xl text-center border border-slate-200 shadow-sm">
                   <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
