@@ -2078,16 +2078,16 @@ service cloud.firestore {
       {user && user.email ? (
         umpireId ? (
           <button 
-            onClick={() => setShowNamePrompt(true)} 
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md"
+            onClick={() => setShowAdminModal(true)} 
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md hover:scale-105 transition-transform"
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
                 {(userName || '?').charAt(0)}
               </div>
               <div className="text-left">
-                <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
-                <span className="text-sm font-bold whitespace-nowrap leading-none">{userName || t.selectFromList}</span>
+                <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{t.userSettings}</p>
+                <span className="text-sm font-bold whitespace-nowrap leading-none">{userName}</span>
               </div>
             </div>
           </button>
