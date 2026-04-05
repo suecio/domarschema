@@ -1593,7 +1593,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din första skärmavbild */}
-                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Skapa+Konto" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://share.icloud.com/photos/015b6AAKOG-90n2XQhAZ7-hqQ" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
@@ -1609,7 +1609,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din andra skärmavbild */}
-                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Sök+Profil" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://drive.google.com/file/d/1SfwQaowUcVfvY7DgqJf6xM5fGSFGhKf7/view?usp=sharing" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
@@ -1625,7 +1625,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-blue-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din tredje skärmavbild */}
-                            <img src="https://placehold.co/800x400/eff6ff/1e3a8a?text=Skärmavbild:+Koppla+Konto" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://drive.google.com/file/d/1SfwQaowUcVfvY7DgqJf6xM5fGSFGhKf7/view?usp=sharing" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
