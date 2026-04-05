@@ -1593,7 +1593,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din första skärmavbild */}
-                            <img src="https://share.icloud.com/photos/015b6AAKOG-90n2XQhAZ7-hqQ" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://drive.google.com/file/d/1-C6mrAnHM2kvxwrv2ht5bvgR-U2PPYwx/view?usp=share_link" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
