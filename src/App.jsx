@@ -1838,8 +1838,8 @@ service cloud.firestore {
                       <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
                         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                           <div className="flex items-center gap-3 flex-wrap">
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league || '-'}</span>
-                            <p className="text-xs font-bold text-slate-600">{game.away || '-'} @ {game.home || '-'} | {game.date || '-'}</p>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                            <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -1849,30 +1849,50 @@ service cloud.firestore {
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button 
-                              onClick={() => { if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
-                              className="p-2 text-slate-300 hover:text-red-500"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </div>
                         </div>
                         
                         {isEditingThisGame && (
-                          <div className="p-4 bg-blue-50/30 border-b border-slate-100 grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label>
-                              <select 
-                                value={editingGameData.requiredUmpires || 2} 
-                                onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
-                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
-                              >
-                                {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
-                              </select>
+                          <div className="p-4 bg-blue-50/30 border-b border-slate-100 flex flex-col gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400">{t.date}</label>
+                                <input type="date" value={editingGameData.date || ''} onChange={e => setEditingGameData({...editingGameData, date: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400">{t.time}</label>
+                                <input type="time" value={editingGameData.time || ''} onChange={e => setEditingGameData({...editingGameData, time: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400">{t.league}</label>
+                                <input type="text" value={editingGameData.league || ''} onChange={e => setEditingGameData({...editingGameData, league: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label>
+                                <select 
+                                  value={editingGameData.requiredUmpires || 2} 
+                                  onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
+                                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
+                                >
+                                  {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400">{t.away}</label>
+                                <input type="text" value={editingGameData.away || ''} onChange={e => setEditingGameData({...editingGameData, away: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400">{t.home}</label>
+                                <input type="text" value={editingGameData.home || ''} onChange={e => setEditingGameData({...editingGameData, home: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
+                              <div className="space-y-1 sm:col-span-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400">{t.location}</label>
+                                <input type="text" value={editingGameData.location || ''} onChange={e => setEditingGameData({...editingGameData, location: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                              </div>
                             </div>
-                            <div className="flex items-end gap-2">
-                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold text-xs uppercase">{t.save}</button>
-                              <button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2 rounded-lg font-bold text-xs uppercase">{t.cancel}</button>
+                            <div className="flex gap-2">
+                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold text-xs uppercase shadow-sm hover:bg-green-700">{t.saveChanges}</button>
+                              <button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-lg font-bold text-xs uppercase hover:bg-slate-300">{t.cancel}</button>
                             </div>
                           </div>
                         )}
