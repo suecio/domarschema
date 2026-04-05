@@ -504,6 +504,7 @@ function MainApp() {
     return 'schedule';
   });
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
+  const [myGamesViewMode, setMyGamesViewMode] = useState('list');
   const [selectedYear, setSelectedYear] = useState('2026');
   
   // Language & UI Context
