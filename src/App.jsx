@@ -64,7 +64,13 @@ import {
   X,
   AlertTriangle,
   ArrowLeft,
-  Megaphone
+  Megaphone,
+  HelpCircle,
+  BookOpen,
+  MessageCircle,
+  Code,
+  Mail,
+  Send
 } from 'lucide-react';
 
 /**
@@ -181,7 +187,7 @@ const translations = {
     sortBy: "Sortera",
     week: "V.",
     systemUpdates: "Systemuppdateringar",
-    fetchError: "Kunde inte hämta uppdateringar",
+    fetchError: "Kunde inte hämta data",
     login: "Logga in",
     register: "Skapa konto",
     email: "E-postadress",
@@ -217,7 +223,37 @@ const translations = {
     globalAnnouncement: "Globalt Meddelande",
     saveAnnouncement: "Publicera",
     clearAnnouncement: "Ta bort",
-    announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla..."
+    announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...",
+    helpAndInfo: "Hjälp & Info",
+    guide: "Kom igång",
+    faq: "Vanliga frågor",
+    about: "Om Appen",
+    guideStep1Title: "1. Skapa ett konto",
+    guideStep1Desc: "Klicka på inloggningsikonen längst ner eller uppe i hörnet och välj 'Skapa ett nytt konto'. Fyll i din e-post och ett valfritt lösenord.",
+    guideStep2Title: "2. Sök efter din profil",
+    guideStep2Desc: "Direkt efter inloggning visas rutan 'Vem är du?'. Skriv ditt namn i sökfältet för att hitta dig själv i domarlistan.",
+    guideStep3Title: "3. Bekräfta & Koppla",
+    guideStep3Desc: "Klicka på ditt namn i listan. Detta kopplar ditt konto till profilen permanent så att ditt schema synkas över alla dina enheter.",
+    guideStep4Title: "4. Saknas ditt namn?",
+    guideStep4Desc: "Om du är helt ny och inte finns i listan klickar du på 'Hittar du inte ditt namn?' för att skapa din domarprofil från grunden.",
+    faq1Q: "Kan jag byta namn eller profil om jag valde fel?",
+    faq1A: "Nej, av säkerhetsskäl låses ditt konto till den profil du väljer. Råkade du välja fel person måste du kontakta en administratör för att återställa kopplingen.",
+    faq2Q: "Hur anmäler jag intresse för att döma en match?",
+    faq2A: "Gå till 'Spelschema'. Klicka på den blå knappen 'Intresserad' bredvid de matcher du kan och vill döma.",
+    faq3Q: "Vem tillsätter matcherna?",
+    faq3A: "Du anmäler intresse, men det är Elitdomargruppen/Administratörerna som gör den slutgiltiga schemaläggningen och tillsättningen.",
+    faq4Q: "Varför är min statistiksida tom?",
+    faq4A: "Statistiken uppdateras och visas så fort du anmäler intresse för en match eller blir tilldelad ett uppdrag.",
+    loadingReadme: "Hämtar README från GitHub...",
+    contactUs: "Kontakta oss",
+    contactDesc: "Behöver du hjälp eller har du en fråga? Skicka ett meddelande till oss så hjälper vi dig.",
+    subject: "Ämne",
+    message: "Meddelande",
+    sendMsg: "Skicka Meddelande",
+    sending: "Skickar...",
+    msgSentTitle: "Meddelande skickat!",
+    msgSentDesc: "Tack för ditt meddelande. Vi återkommer till dig så snart som möjligt på den angivna e-postadressen.",
+    sendAnother: "Skicka ett nytt meddelande"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -310,7 +346,7 @@ const translations = {
     sortBy: "Sort by",
     week: "W.",
     systemUpdates: "System Updates",
-    fetchError: "Could not fetch updates",
+    fetchError: "Could not fetch data",
     login: "Login",
     register: "Register",
     email: "Email Address",
@@ -346,7 +382,37 @@ const translations = {
     globalAnnouncement: "Global Announcement",
     saveAnnouncement: "Publish",
     clearAnnouncement: "Clear",
-    announcementPlaceholder: "Type an important message to display to everyone..."
+    announcementPlaceholder: "Type an important message to display to everyone...",
+    helpAndInfo: "Help & Info",
+    guide: "Getting Started",
+    faq: "FAQ",
+    about: "About App",
+    guideStep1Title: "1. Create an account",
+    guideStep1Desc: "Click the login icon and select 'Create a new account'. Fill in your email address and a secure password.",
+    guideStep2Title: "2. Search for your profile",
+    guideStep2Desc: "Immediately after logging in, the 'Who are you?' prompt appears. Type your name into the search bar.",
+    guideStep3Title: "3. Confirm & Link",
+    guideStep3Desc: "Click your name in the list. This permanently links your account to the official profile, syncing your schedule across devices.",
+    guideStep4Title: "4. Name Missing?",
+    guideStep4Desc: "If you are completely new and not in the list, click 'Can't find your name?' to create a brand new profile from scratch.",
+    faq1Q: "Can I change my linked profile if I made a mistake?",
+    faq1A: "No, for security reasons your account is locked to the chosen profile. Contact an administrator to reset the link.",
+    faq2Q: "How do I apply to umpire a game?",
+    faq2A: "Navigate to 'Schedule' and click the blue 'Interested' button next to the games you are available for.",
+    faq3Q: "Who assigns the games?",
+    faq3A: "You mark your interest, but the Elite Umpire Group/Administrators make the final staffing assignments.",
+    faq4Q: "Why is my stats page empty?",
+    faq4A: "Your statistics will be generated as soon as you mark interest for a game or receive an assignment.",
+    loadingReadme: "Fetching README from GitHub...",
+    contactUs: "Contact Us",
+    contactDesc: "Need help or have a question? Send us a message and we'll assist you.",
+    subject: "Subject",
+    message: "Message",
+    sendMsg: "Send Message",
+    sending: "Sending...",
+    msgSentTitle: "Message Sent!",
+    msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
+    sendAnother: "Send another message"
   }
 };
 
@@ -356,6 +422,20 @@ const getISOWeekNumber = (date) => {
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+};
+
+// --- MARKDOWN PARSER FOR README ---
+const renderMarkdown = (text) => {
+  if (!text) return null;
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('# ')) return <h1 key={i} className="text-3xl font-black text-slate-800 mb-4 mt-8 tracking-tight">{line.substring(2)}</h1>;
+    if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-bold text-slate-800 mb-3 mt-6 pb-2 border-b border-slate-100">{line.substring(3)}</h2>;
+    if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-bold text-slate-700 mb-2 mt-4">{line.substring(4)}</h3>;
+    if (line.startsWith('- ')) return <li key={i} className="ml-6 list-disc mb-1 text-slate-600 font-medium">{line.substring(2)}</li>;
+    if (line.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-blue-400 bg-blue-50 p-3 my-4 italic text-slate-700 rounded-r-lg">{line.substring(2)}</blockquote>;
+    if (line.trim() === '') return <div key={i} className="h-2"></div>;
+    return <p key={i} className="mb-2 text-slate-600 font-medium leading-relaxed">{line.replace(/\*\*(.*?)\*\*/g, '$1')}</p>;
+  });
 };
 
 // ==========================================
@@ -413,7 +493,6 @@ function MainApp() {
   // Navigation & View
   const [view, setView] = useState('schedule');
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
-  const [myGamesViewMode, setMyGamesViewMode] = useState('list'); 
   const [selectedYear, setSelectedYear] = useState('2026');
   
   // Language & UI Context
@@ -425,6 +504,18 @@ function MainApp() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
+  
+  // Help View State
+  const [helpTab, setHelpTab] = useState('guide');
+  const [readmeContent, setReadmeContent] = useState(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
+  
+  // Contact Form State
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactStatus, setContactStatus] = useState('idle'); // idle, sending, success, error
 
   // Data State
   const [games, setGames] = useState([]);
@@ -466,7 +557,6 @@ function MainApp() {
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
   const [umpireSort, setUmpireSort] = useState('level');
-  const [newAdminEmail, setNewAdminEmail] = useState('');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -486,6 +576,29 @@ function MainApp() {
     setEditNoteText(globalNote);
   }, [globalNote]);
 
+  // Fetch GitHub README when About Tab is opened
+  useEffect(() => {
+    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
+      setReadmeLoading(true);
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.content) {
+            // Decode Base64 containing UTF-8 characters safely
+            const text = decodeURIComponent(escape(atob(data.content)));
+            setReadmeContent(text);
+          } else {
+            setReadmeContent(t.fetchError);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          setReadmeContent(t.fetchError);
+        })
+        .finally(() => setReadmeLoading(false));
+    }
+  }, [view, helpTab, readmeContent, t.fetchError]);
+
   // --- DEFENSIVE UI HELPERS ---
   const safeDateMonth = (dateString) => {
     if (!dateString) return '';
@@ -498,7 +611,7 @@ function MainApp() {
     if (!dateString) return '-';
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return '-';
-    const dayIndex = d.getDay(); // 0 is Sunday, 1 is Monday...
+    const dayIndex = d.getDay(); 
     return (t.days && t.days[dayIndex]) ? t.days[dayIndex] : '-';
   };
 
@@ -635,6 +748,7 @@ function MainApp() {
 
     if (user && user.email) {
       const isMaster = user.email === 'suecio@tryempire.com';
+      setContactEmail(user.email);
       
       setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
         email: user.email.toLowerCase(),
@@ -646,6 +760,7 @@ function MainApp() {
         if (snapshot.exists() && snapshot.data().umpireId) {
           const data = snapshot.data();
           setUserName(data.name || '');
+          setContactName(data.name || '');
           setUmpireId(data.umpireId || '');
           
           const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
@@ -770,6 +885,28 @@ function MainApp() {
       key, 
       direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' 
     }));
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setContactStatus('sending');
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+        to: 'admin@domarweb.se',
+        replyTo: contactEmail,
+        message: {
+          subject: `[Kontaktformulär] ${contactSubject}`,
+          text: `Nytt meddelande från Domarportalen:\n\nAvsändare: ${contactName}\nE-post: ${contactEmail}\n\nMeddelande:\n${contactMessage}`
+        },
+        createdAt: Date.now()
+      });
+      setContactStatus('success');
+      setContactSubject('');
+      setContactMessage('');
+    } catch (error) {
+      console.error("Error sending contact email:", error);
+      setContactStatus('error');
+    }
   };
 
   const updateProfile = async (name, id) => {
@@ -1241,12 +1378,23 @@ service cloud.firestore {
               value={selectedYear} 
               onClick={(e) => e.stopPropagation()} 
               onChange={(e) => setSelectedYear(e.target.value)} 
-              className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-1.5 py-1 sm:px-2 outline-none appearance-none cursor-pointer"
+              className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-1.5 py-1 sm:px-2 outline-none appearance-none cursor-pointer hidden sm:block"
             >
               <option value="2025">2025</option>
               <option value="2026">2026</option>
               <option value="2027">2027</option>
             </select>
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setView('help');
+                setHelpTab('guide');
+              }} 
+              className="p-1.5 sm:p-2 hover:bg-blue-800 rounded-full transition-colors ml-0.5"
+              title={t.helpAndInfo}
+            >
+              <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
             <button 
               onClick={(e) => { 
                 e.stopPropagation(); 
@@ -1264,29 +1412,31 @@ service cloud.firestore {
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         
         {/* Navigation Tabs */}
-        <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          {[
-            { id: 'schedule', label: t.schedule, icon: CalendarIcon },
-            { id: 'umpire-list', label: t.umpireList, icon: Users2 },
-            ...(user && user.email ? [{ id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
-            ...(isAdmin ? [
-                { id: 'admin', label: t.staffing, icon: Shield }, 
-                { id: 'stats', label: t.analytics, icon: BarChart3 }
-              ] : [])
-          ].map(tab => (
-            <button 
-              key={tab.id} 
-              onClick={() => { setView(tab.id); scrollToTop(); }} 
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
-        </div>
+        {view !== 'help' && (
+          <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            {[
+              { id: 'schedule', label: t.schedule, icon: CalendarIcon },
+              { id: 'umpire-list', label: t.umpireList, icon: Users2 },
+              ...(user && user.email ? [{ id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
+              ...(isAdmin ? [
+                  { id: 'admin', label: t.staffing, icon: Shield }, 
+                  { id: 'stats', label: t.analytics, icon: BarChart3 }
+                ] : [])
+            ].map(tab => (
+              <button 
+                key={tab.id} 
+                onClick={() => { setView(tab.id); scrollToTop(); }} 
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Global Announcement Banner */}
-        {globalNote && (
+        {globalNote && view !== 'help' && (
           <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl shadow-sm flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
             <Megaphone className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
             <p className="text-sm font-bold text-yellow-800 whitespace-pre-wrap">{globalNote}</p>
@@ -1335,6 +1485,217 @@ service cloud.firestore {
 
         <section className="space-y-4">
           
+          {/* VIEW: HELP & INFO */}
+          {view === 'help' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <button 
+                onClick={() => { setView('schedule'); }} 
+                className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> {t.back}
+              </button>
+
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex border-b border-slate-100 bg-slate-50 overflow-x-auto custom-scrollbar">
+                  <button 
+                    onClick={() => setHelpTab('guide')}
+                    className={`min-w-[120px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'guide' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
+                  >
+                    <BookOpen className="w-4 h-4" /> {t.guide}
+                  </button>
+                  <button 
+                    onClick={() => setHelpTab('faq')}
+                    className={`min-w-[120px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'faq' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
+                  >
+                    <MessageCircle className="w-4 h-4" /> {t.faq}
+                  </button>
+                  <button 
+                    onClick={() => setHelpTab('contact')}
+                    className={`min-w-[140px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'contact' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
+                  >
+                    <Mail className="w-4 h-4" /> {t.contactUs}
+                  </button>
+                  <button 
+                    onClick={() => setHelpTab('about')}
+                    className={`min-w-[120px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'about' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
+                  >
+                    <Code className="w-4 h-4" /> {t.about}
+                  </button>
+                </div>
+
+                <div className="p-6 sm:p-8">
+                  {helpTab === 'guide' && (
+                    <div className="space-y-8 max-w-2xl mx-auto">
+                      <div className="text-center mb-8">
+                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <BookOpen className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">{t.guide}</h2>
+                        <p className="text-slate-500 font-medium mt-2">Hur du kopplar ditt konto till din domarprofil</p>
+                      </div>
+
+                      <div className="grid gap-6">
+                        <div className="flex gap-4 sm:gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 items-start">
+                          <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
+                            <UserPlus className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-800">{t.guideStep1Title}</h3>
+                            <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep1Desc}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 sm:gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 items-start">
+                          <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
+                            <Search className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-800">{t.guideStep2Title}</h3>
+                            <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep2Desc}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 sm:gap-6 bg-blue-50 p-6 rounded-2xl border border-blue-100 items-start shadow-sm">
+                          <div className="bg-blue-600 p-3 rounded-xl shadow-md shrink-0">
+                            <CheckCircle className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-blue-900">{t.guideStep3Title}</h3>
+                            <p className="text-blue-800 font-medium leading-relaxed mt-1">{t.guideStep3Desc}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 sm:gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 items-start mt-4">
+                          <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
+                            <Info className="w-6 h-6 text-slate-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-800">{t.guideStep4Title}</h3>
+                            <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep4Desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {helpTab === 'faq' && (
+                    <div className="max-w-2xl mx-auto space-y-6">
+                      <div className="text-center mb-8">
+                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MessageCircle className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">{t.faq}</h2>
+                      </div>
+
+                      <div className="space-y-4">
+                        {[
+                          { q: t.faq1Q, a: t.faq1A },
+                          { q: t.faq2Q, a: t.faq2A },
+                          { q: t.faq3Q, a: t.faq3A },
+                          { q: t.faq4Q, a: t.faq4A }
+                        ].map((faq, idx) => (
+                          <div key={idx} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                            <h3 className="text-sm font-black uppercase text-slate-800 mb-2">{faq.q}</h3>
+                            <p className="text-slate-600 font-medium leading-relaxed">{faq.a}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {helpTab === 'contact' && (
+                    <div className="max-w-2xl mx-auto">
+                      <div className="text-center mb-8">
+                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Mail className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">{t.contactUs}</h2>
+                        <p className="text-slate-500 font-medium mt-2">{t.contactDesc}</p>
+                      </div>
+
+                      {contactStatus === 'success' ? (
+                        <div className="bg-green-50 border border-green-200 rounded-3xl p-8 text-center animate-in zoom-in-95 duration-300">
+                          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle className="w-8 h-8" />
+                          </div>
+                          <h3 className="text-xl font-black text-green-800 mb-2">{t.msgSentTitle}</h3>
+                          <p className="text-green-700 font-medium mb-6">{t.msgSentDesc}</p>
+                          <button 
+                            onClick={() => setContactStatus('idle')} 
+                            className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs hover:bg-green-700 transition-colors shadow-md"
+                          >
+                            {t.sendAnother}
+                          </button>
+                        </div>
+                      ) : (
+                        <form onSubmit={handleContactSubmit} className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-100 space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.name}</label>
+                              <input type="text" required value={contactName} onChange={e => setContactName(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.email}</label>
+                              <input type="email" required value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.subject}</label>
+                            <input type="text" required value={contactSubject} onChange={e => setContactSubject(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.message}</label>
+                            <textarea required value={contactMessage} onChange={e => setContactMessage(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[150px]" />
+                          </div>
+
+                          <div className="pt-2">
+                            <button 
+                              type="submit" 
+                              disabled={contactStatus === 'sending'} 
+                              className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                            >
+                              {contactStatus === 'sending' ? (
+                                <><RefreshCw className="w-4 h-4 animate-spin" /> {t.sending}</>
+                              ) : (
+                                <><Send className="w-4 h-4" /> {t.sendMsg}</>
+                              )}
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+
+                  {helpTab === 'about' && (
+                    <div className="max-w-3xl mx-auto">
+                      <div className="text-center mb-8">
+                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Code className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">{t.about}</h2>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-6 sm:p-10 rounded-3xl border border-slate-100">
+                        {readmeLoading ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-4">
+                            <RefreshCw className="w-8 h-8 animate-spin" />
+                            <p className="text-sm font-bold">{t.loadingReadme}</p>
+                          </div>
+                        ) : (
+                          <div className="markdown-body text-sm sm:text-base">
+                            {renderMarkdown(readmeContent)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* VIEW: SCHEDULE */}
           {view === 'schedule' && (
             <>
@@ -1380,8 +1741,8 @@ service cloud.firestore {
                         </div>
                     </div>
                     <div className="grid grid-cols-7 border-b border-slate-100">
-                        {uiDays.map((d, i) => (
-                          <div key={i} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
+                        {["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map(d => (
+                          <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
                         ))}
                     </div>
                     <div className="grid grid-cols-7">
@@ -1402,11 +1763,11 @@ service cloud.firestore {
                                       {matches.map(g => (
                                         <button 
                                           key={g.id} 
-                                          onClick={() => { setSearchQuery(g.home || ''); setScheduleViewMode('list'); }} 
+                                          onClick={() => { setSearchQuery(g.home); setScheduleViewMode('list'); }} 
                                           className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
                                         >
                                           <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
-                                          <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away || '-'} @ {g.home || '-'}</p>
+                                          <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
                                         </button>
                                       ))}
                                     </div>
@@ -1443,15 +1804,15 @@ service cloud.firestore {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league || '-'}</span>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
                                 <button onClick={() => handleCalendarExport(game)} className="text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}>
                                   <CalendarPlus className="w-4 h-4" />
                                 </button>
                               </div>
-                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away || '-'} @ {game.home || '-'}</h3>
+                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away} @ {game.home}</h3>
                               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
-                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time || '-'}</span>
-                                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location || '-'}</span>
+                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
+                                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
                               </div>
                               
                               {gameAssignments.length > 0 && (
@@ -1460,7 +1821,7 @@ service cloud.firestore {
                                       const m = masterUmpires.find(mu => mu.id === asg.userId);
                                       return (
                                         <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
-                                            <CheckCircle className="w-3 h-3" /> {asg.userName || '-'} 
+                                            <CheckCircle className="w-3 h-3" /> {asg.userName} 
                                             {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                         </div>
                                       );
@@ -1533,10 +1894,10 @@ service cloud.firestore {
                    >
                      <div className="flex items-center gap-3">
                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-blue-900 shadow-sm group-hover:bg-blue-900 group-hover:text-white transition-colors">
-                         {(u.name || '?').charAt(0)}
+                         {u.name.charAt(0)}
                        </div>
                        <div className="flex flex-col">
-                         <span className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors">{u.name || '-'}</span>
+                         <span className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors">{u.name}</span>
                          {u.level && (
                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-1 ${getLevelStyles(u.level)}`}>
                              {u.level}
@@ -1577,7 +1938,7 @@ service cloud.firestore {
                     <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-900/10 to-transparent" />
                       <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-blue-900 text-white flex items-center justify-center text-4xl font-black shadow-lg border-4 border-white z-10 shrink-0 mt-4 sm:mt-0">
-                        {(profileUser.name || '?').charAt(0)}
+                        {profileUser.name.charAt(0)}
                       </div>
                       <div className="relative z-10 flex-1 w-full">
                         <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{profileUser.name}</h2>
@@ -1625,11 +1986,11 @@ service cloud.firestore {
                                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
                               </div>
                               <div>
-                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league || '-'}</span>
-                                <p className="font-bold text-slate-900 text-sm leading-tight">{game.away || '-'} @ {game.home || '-'}</p>
+                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                                <p className="font-bold text-slate-900 text-sm leading-tight">{game.away} @ {game.home}</p>
                                 <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" /> {game.time || '-'}
-                                  <MapPin className="w-3 h-3 ml-2" /> {game.location || '-'}
+                                  <Clock className="w-3 h-3" /> {game.time}
+                                  <MapPin className="w-3 h-3 ml-2" /> {game.location}
                                 </p>
                               </div>
                             </div>
@@ -1771,7 +2132,7 @@ service cloud.firestore {
                           <div className="flex items-center justify-between">
                             <div className="flex flex-col">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
+                                <span className="text-sm font-bold text-slate-700">{u.name}</span>
                                 {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
                                 {(adminUmpireIds || []).includes(u.id) && (
                                   <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5">
@@ -1849,6 +2210,12 @@ service cloud.firestore {
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
+                            <button 
+                              onClick={() => { if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
+                              className="p-2 text-slate-300 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                         
@@ -1909,7 +2276,7 @@ service cloud.firestore {
                                        onClick={() => { setSelectedProfileId(asg.userId); setView('umpire-profile'); scrollToTop(); }}
                                        className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline text-left"
                                      >
-                                       {asg.userName || '-'}
+                                       {asg.userName}
                                      </button>
                                      {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                    </div>
@@ -1930,7 +2297,7 @@ service cloud.firestore {
                                   return (
                                     <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold">{app.userName || '-'}</span>
+                                        <span className="text-xs font-bold">{app.userName}</span>
                                         {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                       </div>
                                       <button 
@@ -1991,7 +2358,7 @@ service cloud.firestore {
                     <tr key={stat.name} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{(stat.name || '?').charAt(0)}</div>
+                          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div>
                           <div className="flex flex-col">
                             <button 
                               onClick={() => { setSelectedProfileId(stat.userId); setView('umpire-profile'); scrollToTop(); }}
@@ -2053,8 +2420,8 @@ service cloud.firestore {
                       <div className="flex items-center gap-4">
                         <div className="p-3 rounded-xl bg-green-100 text-green-600"><CalendarIcon className="w-5 h-5" /></div>
                         <div>
-                          <p className="font-bold text-slate-900">{game.away || '-'} @ {game.home || '-'}</p>
-                          <p className="text-[10px] text-slate-400 font-black uppercase">{game.date || '-'} @ {game.time || '-'}</p>
+                          <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
+                          <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
                         </div>
                       </div>
                       <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</div>
@@ -2068,8 +2435,8 @@ service cloud.firestore {
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
                           <div>
-                            <p className="font-bold text-slate-900">{game.away || '-'} @ {game.home || '-'}</p>
-                            <p className="text-[10px] text-slate-400 font-black uppercase">{game.date || '-'} @ {game.time || '-'}</p>
+                            <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
+                            <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
                           </div>
                         </div>
                         <button onClick={() => toggleApplication(game.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
@@ -2103,7 +2470,7 @@ service cloud.firestore {
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
-                {(userName || '?').charAt(0)}
+                {userName ? userName.charAt(0) : '?'}
               </div>
               <div className="text-left">
                 <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{t.userSettings}</p>
@@ -2228,11 +2595,11 @@ service cloud.firestore {
                     filteredMasterUmpires.map(u => (
                       <button 
                         key={u.id} 
-                        onClick={async () => { setUserName(u.name || ''); setUmpireId(u.id); await updateProfile(u.name || '', u.id); setShowNamePrompt(false); setSearchQuery(''); }} 
+                        onClick={async () => { setUserName(u.name); setUmpireId(u.id); await updateProfile(u.name, u.id); setShowNamePrompt(false); setSearchQuery(''); }} 
                         className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-700">{u.name || '-'}</span>
+                          <span className="text-sm font-bold text-slate-700">{u.name}</span>
                           {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
