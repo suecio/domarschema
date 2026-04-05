@@ -1259,7 +1259,7 @@ service cloud.firestore {
           {[
             { id: 'schedule', label: t.schedule, icon: CalendarIcon },
             { id: 'umpire-list', label: t.umpireList, icon: Users2 },
-            { id: 'my-apps', label: t.myGames, icon: CheckCircle },
+            ...(user && user.email ? [{ id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
             ...(isAdmin ? [
                 { id: 'admin', label: t.staffing, icon: Shield }, 
                 { id: 'stats', label: t.analytics, icon: BarChart3 }
