@@ -1592,7 +1592,7 @@ service cloud.firestore {
                             </div>
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                            {/* Byt ut src mot URL:en för din första skärmavbild */}
+                            {/* Uppdaterad med din GitHub Raw URL */}
                             <img src="https://raw.githubusercontent.com/suecio/domarschema/72d9cca83a50386e09064a93afa1bc50de4d1db3/src/IMG_3614.jpeg" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
@@ -1609,7 +1609,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din andra skärmavbild */}
-                            <img src="https://raw.githubusercontent.com/suecio/domarschema/09b438482ba230232de25f244c1281b4c2c146dc/src/Ska%CC%88rmavbild%202026-04-05%20kl.%2014.24.40.png" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Sök+Profil" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
@@ -1625,7 +1625,7 @@ service cloud.firestore {
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-blue-200 shadow-sm bg-white">
                             {/* Byt ut src mot URL:en för din tredje skärmavbild */}
-                            <img src="https://placehold.co/600x400" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://placehold.co/800x400/eff6ff/1e3a8a?text=Skärmavbild:+Koppla+Konto" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
@@ -2464,7 +2464,23 @@ service cloud.firestore {
           {/* VIEW: MY GAMES */}
           {view === 'my-apps' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
+                <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-fit">
+                   <button 
+                     onClick={() => setMyGamesViewMode('list')} 
+                     className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                   >
+                     <List className="w-4 h-4" />
+                   </button>
+                   <button 
+                     onClick={() => setMyGamesViewMode('calendar')} 
+                     className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                   >
+                     <CalendarIcon className="w-4 h-4" />
+                   </button>
+                </div>
+              </div>
               
               <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex gap-3 items-start mb-6">
                 <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
@@ -2482,6 +2498,56 @@ service cloud.firestore {
                   <button onClick={() => setShowAuthModal(true)} className="bg-blue-600 text-white px-8 py-3 rounded-full font-black uppercase text-xs shadow-lg hover:bg-blue-700 transition-colors">
                     {t.login}
                   </button>
+                </div>
+              ) : myGamesViewMode === 'calendar' ? (
+                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in duration-300">
+                   <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 className="font-black text-slate-800 uppercase tracking-tight">
+                          {t.months[currentDate.getMonth()]} {currentDate.getFullYear()}
+                        </h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronLeft className="w-4 h-4"/></button>
+                            <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">IDAG</button>
+                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronRight className="w-4 h-4"/></button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-7 border-b border-slate-100">
+                        {["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map(d => (
+                          <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-7">
+                        {calendarWeeks.flatMap((week) => 
+                          week.days.map((day, idx) => {
+                            const dateStr = day ? toLocalISO(day) : null;
+                            const myMatches = dateStr ? [...myAssignedGames, ...myInterestedGames].filter(g => g.date === dateStr) : [];
+                            const isToday = dateStr === today;
+                            
+                            return (
+                              <div key={`${week.weekNumber}-${idx}`} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
+                                {day && (
+                                  <>
+                                    <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
+                                      {day.getDate()}
+                                    </span>
+                                    <div className="mt-2 space-y-1">
+                                      {myMatches.map(g => {
+                                        const isAssigned = myAssignedGames.some(ag => ag.id === g.id);
+                                        return (
+                                          <div key={g.id} className={`w-full text-left p-1 rounded border overflow-hidden ${isAssigned ? 'border-green-200 bg-green-50' : 'border-slate-100 bg-white'}`}>
+                                            <div className={`w-full h-1 rounded-full mb-1 ${isAssigned ? 'bg-green-500' : getLeagueStyles(g.league).split(' ')[0]}`} />
+                                            <p className={`text-[8px] font-bold truncate leading-none uppercase ${isAssigned ? 'text-green-800' : 'text-slate-700'}`}>{g.away} @ {g.home}</p>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                    </div>
                 </div>
               ) : (
                 <>
