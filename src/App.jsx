@@ -1581,43 +1581,67 @@ service cloud.firestore {
                       </div>
 
                       <div className="grid gap-6">
-                        <div className="flex gap-4 sm:gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 items-start">
-                          <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
-                            <UserPlus className="w-6 h-6 text-blue-600" />
+                        <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                          <div className="flex gap-4 sm:gap-6 items-start">
+                            <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
+                              <UserPlus className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-bold text-slate-800">{t.guideStep1Title}</h3>
+                              <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep1Desc}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-slate-800">{t.guideStep1Title}</h3>
-                            <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep1Desc}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-4 sm:gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 items-start">
-                          <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
-                            <Search className="w-6 h-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-slate-800">{t.guideStep2Title}</h3>
-                            <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep2Desc}</p>
+                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+                            {/* Byt ut src mot URL:en för din första skärmavbild */}
+                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Skapa+Konto" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
-                        <div className="flex gap-4 sm:gap-6 bg-blue-50 p-6 rounded-2xl border border-blue-100 items-start shadow-sm">
-                          <div className="bg-blue-600 p-3 rounded-xl shadow-md shrink-0">
-                            <CheckCircle className="w-6 h-6 text-white" />
+                        <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                          <div className="flex gap-4 sm:gap-6 items-start">
+                            <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
+                              <Search className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-bold text-slate-800">{t.guideStep2Title}</h3>
+                              <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep2Desc}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-blue-900">{t.guideStep3Title}</h3>
-                            <p className="text-blue-800 font-medium leading-relaxed mt-1">{t.guideStep3Desc}</p>
+                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+                            {/* Byt ut src mot URL:en för din andra skärmavbild */}
+                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Sök+Profil" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
-                        <div className="flex gap-4 sm:gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 items-start mt-4">
-                          <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
-                            <Info className="w-6 h-6 text-slate-400" />
+                        <div className="flex flex-col gap-4 bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm">
+                          <div className="flex gap-4 sm:gap-6 items-start">
+                            <div className="bg-blue-600 p-3 rounded-xl shadow-md shrink-0">
+                              <CheckCircle className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-bold text-blue-900">{t.guideStep3Title}</h3>
+                              <p className="text-blue-800 font-medium leading-relaxed mt-1">{t.guideStep3Desc}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-slate-800">{t.guideStep4Title}</h3>
-                            <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep4Desc}</p>
+                          <div className="mt-2 rounded-xl overflow-hidden border border-blue-200 shadow-sm bg-white">
+                            {/* Byt ut src mot URL:en för din tredje skärmavbild */}
+                            <img src="https://placehold.co/800x400/eff6ff/1e3a8a?text=Skärmavbild:+Koppla+Konto" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100 mt-4">
+                          <div className="flex gap-4 sm:gap-6 items-start">
+                            <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
+                              <Info className="w-6 h-6 text-slate-400" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-bold text-slate-800">{t.guideStep4Title}</h3>
+                              <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep4Desc}</p>
+                            </div>
+                          </div>
+                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+                            {/* Byt ut src mot URL:en för din fjärde skärmavbild */}
+                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Lägg+Till+Ny" alt="Steg 4" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
                       </div>
