@@ -73,7 +73,8 @@ import {
   Send,
   Share2,
   SendCheck,
-  Map
+  Map,
+  ArrowRightLeft
 } from 'lucide-react';
 
 /**
@@ -247,6 +248,8 @@ const translations = {
     faq3A: "Du anmäler intresse, men det är Elitdomargruppen/Administratörerna som gör den slutgiltiga schemaläggningen och tillsättningen.",
     faq4Q: "Varför är min statistiksida tom?",
     faq4A: "Statistiken uppdateras och visas så fort du anmäler intresse för en match eller blir tilldelad ett uppdrag.",
+    faq5Q: "Hur fungerar marknaden (Byt bort match)?",
+    faq5A: "Om du inte kan döma en match klickar du på 'Byt bort' under Mina Matcher. Den hamnar då på Marknaden. Du ansvarar för matchen tills någon annan klickar på 'Ta match'.",
     loadingReadme: "Hämtar README från GitHub...",
     contactUs: "Kontakta oss",
     contactDesc: "Behöver du hjälp eller har du en fråga? Skicka ett meddelande till oss så hjälper vi dig.",
@@ -279,7 +282,16 @@ const translations = {
     supervisor: "Supervisor",
     techComm: "Technical Commissioner",
     notAssigned: "Ej tillsatt",
-    yourGame: "Din match"
+    yourGame: "Din match",
+    marketplace: "Marknad",
+    marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare. När du tar en match tilldelas du den omedelbart.",
+    tradeGame: "Byt bort",
+    cancelTrade: "Ångra byte",
+    takeGame: "Ta match",
+    gamesForTrade: "Matcher som bytes bort",
+    noMarketplaceGames: "Inga matcher bytes bort just nu.",
+    tradeSuccess: "Du har tagit över matchen! Ditt schema har uppdaterats.",
+    tradeConfirm: "Är du säker på att du vill ta över denna match?"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -429,6 +441,8 @@ const translations = {
     faq3A: "You mark your interest, but the Elite Umpire Group/Administrators make the final staffing assignments.",
     faq4Q: "Why is my stats page empty?",
     faq4A: "Your statistics will be generated as soon as you mark interest for a game or receive an assignment.",
+    faq5Q: "How does the marketplace work?",
+    faq5A: "If you cannot umpire a game, click 'Give Away' under My Games. It will be listed on the Marketplace. You are responsible for the game until someone else clicks 'Take Game'.",
     loadingReadme: "Fetching README from GitHub...",
     contactUs: "Contact Us",
     contactDesc: "Need help or have a question? Send us a message and we'll assist you.",
@@ -461,7 +475,16 @@ const translations = {
     supervisor: "Supervisor",
     techComm: "Technical Commissioner",
     notAssigned: "Not Assigned",
-    yourGame: "Your Game"
+    yourGame: "Your Game",
+    marketplace: "Marketplace",
+    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires. Taking a game immediately assigns it to you.",
+    tradeGame: "Give Away",
+    cancelTrade: "Cancel Give Away",
+    takeGame: "Take Game",
+    gamesForTrade: "Games Up For Trade",
+    noMarketplaceGames: "No games are up for trade right now.",
+    tradeSuccess: "You have taken over the game! Your schedule is updated.",
+    tradeConfirm: "Are you sure you want to take over this game?"
   }
 };
 
@@ -1143,6 +1166,58 @@ function MainApp() {
     const asgId = `${gameId}_${uId}`;
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
   };
+  
+  // --- MARKETPLACE ACTIONS ---
+  const toggleTradeStatus = async (asgId, status) => {
+    if (!umpireId && !isAdmin) return; 
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
+      forTrade: status
+    }).catch(e => console.error("Toggle trade error:", e));
+  };
+
+  const takeTrade = async (oldAsg, game) => {
+    if (!user || !user.email) { setShowAuthModal(true); return; }
+    if (!umpireId) { setShowNamePrompt(true); return; }
+    if (oldAsg.userId === umpireId) return; 
+    
+    // Check conflicts
+    const umpireAssignedGamesToday = assignments
+      .filter(asg => asg.userId === umpireId)
+      .map(asg => games.find(g => g.id === asg.gameId))
+      .filter(g => g && g.date === game.date && g.id !== game.id);
+    
+    const conflictGame = umpireAssignedGamesToday.find(g => 
+      (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
+    );
+    
+    if (conflictGame) {
+      if(typeof window !== 'undefined') alert(`${t.bookedIn} ${conflictGame.location}. Du kan inte ta denna match.`);
+      return;
+    }
+
+    if (typeof window !== 'undefined' && !window.confirm(t.tradeConfirm)) return;
+    
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
+      
+      const newAsgId = `${game.id}_${umpireId}`;
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', newAsgId), {
+        gameId: game.id,
+        userId: umpireId,
+        userName: userName,
+        assignedAt: Date.now(),
+        forTrade: false 
+      });
+      await batch.commit();
+      if (typeof window !== 'undefined') alert(t.tradeSuccess);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleBulkImport = async () => {
     if (!isAdmin || !bulkInput.trim()) return;
@@ -1648,9 +1723,10 @@ service cloud.firestore {
         
         {/* Navigation Tabs */}
         {view !== 'help' && (
-          <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar whitespace-nowrap">
             {[
               { id: 'schedule', label: t.schedule, icon: CalendarIcon },
+              { id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft },
               { id: 'umpire-list', label: t.umpireList, icon: Users2 },
               ...(user && user.email ? [{ id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
               ...(isAdmin ? [
@@ -1661,10 +1737,10 @@ service cloud.firestore {
               <button 
                 key={tab.id} 
                 onClick={() => { setView(tab.id); scrollToTop(); }} 
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`flex-1 min-w-[110px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
               >
-                <tab.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <tab.icon className="w-4 h-4 shrink-0" />
+                <span className="inline">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -1679,9 +1755,9 @@ service cloud.firestore {
         )}
 
         {/* Global Filters */}
-        {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
+        {(view === 'schedule' || view === 'admin' || view === 'umpire-list' || view === 'marketplace') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            {(view === 'schedule' || view === 'admin') && (
+            {(view === 'schedule' || view === 'admin' || view === 'marketplace') && (
               <div className="flex flex-wrap gap-2 mb-4">
                 <button 
                   onClick={() => setFilterStatus('')} 
@@ -1716,7 +1792,7 @@ service cloud.firestore {
                 />
               </div>
               
-              {(view === 'schedule' || view === 'admin') && (
+              {(view === 'schedule' || view === 'admin' || view === 'marketplace') && (
                 <>
                   <select 
                     value={filterLeague} 
@@ -1877,7 +1953,8 @@ service cloud.firestore {
                           { q: t.faq1Q, a: t.faq1A },
                           { q: t.faq2Q, a: t.faq2A },
                           { q: t.faq3Q, a: t.faq3A },
-                          { q: t.faq4Q, a: t.faq4A }
+                          { q: t.faq4Q, a: t.faq4A },
+                          { q: t.faq5Q, a: t.faq5A }
                         ].map((faq, idx) => (
                           <div key={idx} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                             <h3 className="text-sm font-black uppercase text-slate-800 mb-2">{faq.q}</h3>
@@ -2163,6 +2240,141 @@ service cloud.firestore {
                 )
               )}
             </>
+          )}
+          
+          {/* VIEW: MARKETPLACE */}
+          {view === 'marketplace' && (
+            <div className="space-y-8">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
+                   <ArrowRightLeft className="w-5 h-5 text-blue-600" /> {t.marketplace}
+                 </h2>
+               </div>
+
+               {/* Section 1: Up for trade */}
+               <div className="space-y-4">
+                 <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 p-4 rounded-2xl">
+                    <Info className="w-6 h-6 text-orange-600 shrink-0" />
+                    <p className="text-sm font-medium text-orange-800">{t.marketplaceDesc}</p>
+                 </div>
+                 
+                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t.gamesForTrade}</h3>
+                 
+                 {(() => {
+                   const tradedAssignments = assignments.filter(asg => asg.forTrade);
+                   const tradedGames = tradedAssignments.map(asg => ({ asg, game: games.find(g => g.id === asg.gameId) })).filter(item => item.game && item.game.date >= today);
+                   
+                   if (tradedGames.length === 0) return <div className="bg-slate-50 border border-slate-100 p-8 rounded-2xl text-center text-slate-400 font-medium">{t.noMarketplaceGames}</div>;
+                   
+                   return (
+                     <div className="grid gap-4">
+                       {tradedGames.map(({asg, game}) => (
+                          <div key={asg.id} className="bg-white p-4 rounded-2xl border border-orange-200 shadow-sm flex flex-col sm:flex-row justify-between gap-4 group">
+                            {/* Game info */}
+                            <div className="flex gap-4">
+                               {/* date block */}
+                               <div className="bg-orange-50 p-3 rounded-xl text-center min-w-[75px] border border-orange-100 flex flex-col justify-center">
+                                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">{safeDateDay(game.date)}</p>
+                                  <p className="text-2xl font-black text-orange-700 leading-none">{safeDateNum(game.date)}</p>
+                                  <p className="text-[9px] font-black text-orange-600 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
+                                </div>
+                                <div>
+                                   <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                                   <h3 className="font-bold text-slate-900 text-sm leading-tight">{game.away} @ {game.home}</h3>
+                                   <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time} <MapPin className="w-3.5 h-3.5 ml-2" /> {game.location}</p>
+                                   <div className="mt-2 bg-orange-100/50 border border-orange-100 rounded-lg px-2.5 py-1.5 w-fit flex items-center gap-2">
+                                     <UserMinus className="w-3 h-3 text-orange-600"/>
+                                     <span className="text-[10px] font-black uppercase text-orange-800">Bytes bort av: {asg.userName}</span>
+                                   </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center">
+                               <button 
+                                 onClick={() => takeTrade(asg, game)} 
+                                 disabled={asg.userId === umpireId}
+                                 className="w-full sm:w-auto px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase rounded-xl transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                               >
+                                 <ArrowRightLeft className="w-4 h-4" />
+                                 {asg.userId === umpireId ? t.yourGame : t.takeGame}
+                               </button>
+                            </div>
+                          </div>
+                       ))}
+                     </div>
+                   );
+                 })()}
+               </div>
+
+               {/* Section 2: Missing Umpires */}
+               <div className="space-y-4 pt-6 border-t border-slate-200">
+                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t.needsUmpire}</h3>
+                 {(() => {
+                    const unstaffedGames = filteredGames.filter(g => (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2) && g.date >= today);
+                    if (unstaffedGames.length === 0) return <div className="bg-slate-50 border border-slate-100 p-8 rounded-2xl text-center text-slate-400 font-medium">Inga matcher saknar domare just nu.</div>;
+                    
+                    return (
+                      <div className="grid gap-4">
+                        {unstaffedGames.map(game => {
+                           const appsCount = applications.filter(a => a.gameId === game.id).length;
+                           const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
+                           const gameAssignments = groupedAssignments[game.id] || [];
+                           const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
+                           const required = game.requiredUmpires || 2;
+                           
+                           return (
+                             <div 
+                               key={game.id} 
+                               onClick={() => setSelectedGameDetails(game)}
+                               className="bg-white rounded-2xl shadow-sm border border-yellow-200 overflow-hidden transition-all cursor-pointer hover:border-blue-300 group"
+                             >
+                                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                  <div className="flex gap-4">
+                                    <div className="bg-yellow-50 p-3 rounded-xl text-center min-w-[75px] border border-yellow-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
+                                      <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">{safeDateDay(game.date)}</p>
+                                      <p className="text-2xl font-black text-yellow-700 leading-none">{safeDateNum(game.date)}</p>
+                                      <p className="text-[9px] font-black text-yellow-600 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                                      </div>
+                                      <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</h3>
+                                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
+                                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
+                                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</span>
+                                      <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mt-0.5">
+                                        {gameAssignments.length}/{required} {t.assignedTo}
+                                      </span>
+                                    </div>
+                                    {isAssignedToThisGame ? (
+                                      <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5">
+                                        <CheckCircle className="w-4 h-4" /> {t.yourGame}
+                                      </div>
+                                    ) : (
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} 
+                                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 hover:bg-blue-700'}`}
+                                      >
+                                        {isApplied ? t.withdraw : t.interested}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                             </div>
+                           );
+                        })}
+                      </div>
+                    );
+                 })()}
+               </div>
+            </div>
           )}
 
           {/* VIEW: UMPIRE LIST */}
@@ -2841,6 +3053,7 @@ service cloud.firestore {
                   {myAssignedGames.map(game => {
                     const gameAssignments = groupedAssignments[game.id] || [];
                     const coUmpires = gameAssignments.filter(asg => asg.userId !== umpireId);
+                    const myAsg = gameAssignments.find(a => a.userId === umpireId);
 
                     return (
                       <div 
@@ -2856,7 +3069,22 @@ service cloud.firestore {
                               <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
                             </div>
                           </div>
-                          <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start w-fit">{t.confirmed}</div>
+                          
+                          <div className="flex flex-col items-end gap-2">
+                             <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.confirmed}</div>
+                             
+                             {myAsg && (
+                               myAsg.forTrade ? (
+                                  <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, false); }} className="text-[10px] font-black uppercase bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg border border-orange-200 hover:bg-orange-200 transition-colors w-fit">
+                                    {t.cancelTrade}
+                                  </button>
+                               ) : (
+                                  <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, true); }} className="text-[10px] font-black uppercase bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors flex items-center gap-1 w-fit">
+                                    <ArrowRightLeft className="w-3 h-3" /> {t.tradeGame}
+                                  </button>
+                               )
+                             )}
+                          </div>
                         </div>
 
                         {/* Co-umpires section */}
@@ -3363,7 +3591,7 @@ service cloud.firestore {
                 <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
                   <Shield className="w-5 h-5 text-blue-600" />
                   <div>
-                    <p className="text-xs font-black text-blue-800 uppercase tracking-widest">{t.adminActive}</p>
+                    <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Admin</p>
                     <p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p>
                   </div>
                 </div>
