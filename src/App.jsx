@@ -75,7 +75,8 @@ import {
   SendCheck,
   Map,
   ArrowRightLeft,
-  Star
+  Star,
+  Navigation
 } from 'lucide-react';
 
 /**
@@ -275,7 +276,7 @@ const translations = {
     filterStatusAll: "Alla statusar",
     noInterests: "Inga anmälningar",
     coUmpires: "Dömer med:",
-    noCoUmpires: "Inga meddomare (ännu)",
+    noCoUmpires: "Inga meddomare",
     calendarColumn: "Kalender",
     gameDetails: "Matchinformation",
     mapDirections: "Öppna Karta",
@@ -306,7 +307,17 @@ const translations = {
     yourEval: "Utvärdering",
     selectAdmin: "Välj Admin...",
     selectUmpire: "Välj Domare...",
-    enterTCName: "Ange namn på TC..."
+    enterTCName: "Ange namn på TC...",
+    umpireShort: "DOMARE",
+    supShort: "SUP",
+    tcShort: "TC",
+    locations: "Platser",
+    address: "Adress",
+    facilities: "Faciliteter",
+    noFacilities: "Inga faciliteter angivna",
+    addFacility: "Lägg till facilitet...",
+    editLocation: "Redigera plats",
+    noLocationsInfo: "Klicka på en plats för att se detaljer eller lägga till en adress och faciliteter."
   },
   en: {
     appTitle: "Umpire Portal",
@@ -482,7 +493,7 @@ const translations = {
     filterStatusAll: "All Statuses",
     noInterests: "No Interests",
     coUmpires: "Co-umpires:",
-    noCoUmpires: "No co-umpires (yet)",
+    noCoUmpires: "No co-umpires",
     calendarColumn: "Calendar",
     gameDetails: "Game Details",
     mapDirections: "Open Map",
@@ -513,7 +524,17 @@ const translations = {
     yourEval: "Evaluation",
     selectAdmin: "Select Admin...",
     selectUmpire: "Select Umpire...",
-    enterTCName: "Enter TC name..."
+    enterTCName: "Enter TC name...",
+    umpireShort: "UMP",
+    supShort: "SUP",
+    tcShort: "TC",
+    locations: "Locations",
+    address: "Address",
+    facilities: "Facilities",
+    noFacilities: "No facilities listed",
+    addFacility: "Add facility...",
+    editLocation: "Edit Location",
+    noLocationsInfo: "Click on a location to view details or add an address and facilities."
   }
 };
 
@@ -658,7 +679,7 @@ function MainApp() {
   const [contactEmail, setContactEmail] = useState('');
   const [contactSubject, setContactSubject] = useState('');
   const [contactMessage, setContactMessage] = useState('');
-  const [contactStatus, setContactStatus] = useState('idle'); // idle, sending, success, error
+  const [contactStatus, setContactStatus] = useState('idle');
 
   // Email Module State
   const [showEmailPreview, setShowEmailPreview] = useState(false);
@@ -676,6 +697,7 @@ function MainApp() {
   const [masterUmpires, setMasterUmpires] = useState([]);
   const [registeredEmails, setRegisteredEmails] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
+  const [locationsData, setLocationsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
@@ -690,11 +712,16 @@ function MainApp() {
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [selectedGameDetails, setSelectedGameDetails] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
   
   // Evaluation Forms State
   const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
   const [evalGrade, setEvalGrade] = useState(0);
   const [evalComment, setEvalComment] = useState('');
+
+  // Location Editing State
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [newFacility, setNewFacility] = useState('');
   
   // Changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
@@ -826,6 +853,37 @@ function MainApp() {
     return 'bg-green-100 text-green-700 border-green-200';
   };
 
+  // --- REUSABLE CREW RENDERING ---
+  // A helper component to render the Umpire, Supervisor, and TC clearly on cards
+  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
+    const hasOfficials = gameAssignments.length > 0 || game.supervisorName || game.tcName;
+    if (!hasOfficials) return null;
+
+    return (
+      <div className="flex flex-wrap gap-1 mt-3 items-center">
+        {gameAssignments.map(asg => {
+            const m = masterUmpires.find(mu => mu.id === asg.userId);
+            return (
+              <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> {t.umpireShort}: {asg.userName} 
+                  {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+              </div>
+            );
+        })}
+        {game.supervisorName && (
+          <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1">
+              <Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}
+          </div>
+        )}
+        {game.tcName && (
+          <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1">
+              <FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 1. Authentication Configuration
   useEffect(() => {
     const initAuth = async () => {
@@ -894,6 +952,11 @@ function MainApp() {
       setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, handleDbError);
 
+    const locCol = collection(db, 'artifacts', appId, 'public', 'data', 'locations');
+    const unsubscribeLocations = onSnapshot(locCol, (snapshot) => {
+      setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
+
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
@@ -910,6 +973,7 @@ function MainApp() {
       unsubscribeUmpires();
       unsubscribeRegUsers();
       unsubscribeEvals();
+      unsubscribeLocations();
       unsubscribeSettings();
     };
   }, [user, appId]);
@@ -1364,6 +1428,23 @@ function MainApp() {
     }
   };
 
+  const saveLocation = async () => {
+    if (!isAdmin || !editingLocation) return;
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', editingLocation.id), {
+        address: editingLocation.address || '',
+        facilities: editingLocation.facilities || []
+      }, { merge: true });
+      setEditingLocation(null);
+      // Auto-update details view if we have it open
+      if (selectedLocation === editingLocation.id) {
+         // It will auto update via the onSnapshot listener mapped in render
+      }
+    } catch (e) {
+      console.error("Error saving location:", e);
+    }
+  };
+
   const deleteAllGames = async () => {
     if (!isAdmin) return;
     if (typeof window !== 'undefined' && !window.confirm(t.deleteAllConfirm)) return;
@@ -1467,7 +1548,8 @@ function MainApp() {
         assignments,
         umpires: masterUmpires,
         adminUmpireIds,
-        evaluations
+        evaluations,
+        locations: locationsData
       }
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -1694,6 +1776,14 @@ function MainApp() {
   }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))], [games]);
+  
+  // Extract unique locations from games to populate the new Locations tab
+  const allLocationNames = useMemo(() => {
+    const fromGames = games.map(g => g.location);
+    const fromData = locationsData.map(l => l.id);
+    return [...new Set([...fromGames, ...fromData])].filter(Boolean).sort();
+  }, [games, locationsData]);
+
   const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))], [games]);
 
   const uiDays = useMemo(() => {
@@ -1850,6 +1940,7 @@ service cloud.firestore {
             {[
               { id: 'schedule', label: t.schedule, icon: CalendarIcon },
               { id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft },
+              { id: 'locations', label: t.locations, icon: MapPin },
               { id: 'umpire-list', label: t.umpireList, icon: Users2 },
               ...(user && user.email ? [{ id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
               ...(isAdmin ? [
@@ -1878,7 +1969,7 @@ service cloud.firestore {
         )}
 
         {/* Global Filters */}
-        {(view === 'schedule' || view === 'admin' || view === 'umpire-list' || view === 'marketplace') && (
+        {(view === 'schedule' || view === 'admin' || view === 'umpire-list' || view === 'marketplace' || view === 'locations') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             {(view === 'schedule' || view === 'admin' || view === 'marketplace') && (
               <div className="flex flex-wrap gap-2 mb-4">
@@ -1904,7 +1995,7 @@ service cloud.firestore {
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="relative sm:col-span-2 lg:col-span-2">
+              <div className={`relative sm:col-span-2 ${view === 'locations' ? 'lg:col-span-4' : 'lg:col-span-2'}`}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
@@ -2181,6 +2272,57 @@ service cloud.firestore {
             </div>
           )}
 
+          {/* VIEW: LOCATIONS DIRECTORY */}
+          {view === 'locations' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-blue-600" /> {t.locations}
+                </h2>
+              </div>
+
+              {allLocationNames.length === 0 ? (
+                <div className="bg-slate-50 border border-slate-100 p-8 rounded-2xl text-center text-slate-400 font-medium">
+                  {t.noLocationsInfo}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {allLocationNames.filter(name => name.toLowerCase().includes(searchQuery.toLowerCase())).map(locName => {
+                    const locData = locationsData.find(l => l.id === locName);
+                    return (
+                      <button 
+                        key={locName} 
+                        onClick={() => setSelectedLocation(locName)}
+                        className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all text-left group flex flex-col justify-between min-h-[120px]"
+                      >
+                        <div>
+                          <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-700 transition-colors">{locName}</h3>
+                          {locData?.address && (
+                            <p className="text-xs text-slate-500 mt-1 flex items-start gap-1">
+                              <Navigation className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                              <span className="line-clamp-2">{locData.address}</span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-1">
+                           {locData?.facilities && locData.facilities.length > 0 ? (
+                             <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                               {locData.facilities.length} {t.facilities}
+                             </span>
+                           ) : (
+                             <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                               {t.noFacilities}
+                             </span>
+                           )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* VIEW: SCHEDULE */}
           {view === 'schedule' && (
             <>
@@ -2328,19 +2470,8 @@ service cloud.firestore {
                                 <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
                               </div>
                               
-                              {gameAssignments.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-3 items-center">
-                                  {gameAssignments.map(asg => {
-                                      const m = masterUmpires.find(mu => mu.id === asg.userId);
-                                      return (
-                                        <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
-                                            <CheckCircle className="w-3 h-3" /> {asg.userName} 
-                                            {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                                        </div>
-                                      );
-                                  })}
-                                </div>
-                              )}
+                              {/* Centralized Officials Output */}
+                              {renderOfficialsRow(game, gameAssignments, masterUmpires)}
                             </div>
                           </div>
                           
@@ -2406,7 +2537,11 @@ service cloud.firestore {
                    return (
                      <div className="grid gap-4">
                        {tradedGames.map(({asg, game}) => (
-                          <div key={asg.id} className="bg-white p-4 rounded-2xl border border-orange-200 shadow-sm flex flex-col sm:flex-row justify-between gap-4 group">
+                          <div 
+                            key={asg.id} 
+                            onClick={() => setSelectedGameDetails(game)}
+                            className="bg-white p-4 rounded-2xl border border-orange-200 shadow-sm flex flex-col sm:flex-row justify-between gap-4 group cursor-pointer hover:border-orange-400 transition-colors"
+                          >
                             {/* Game info */}
                             <div className="flex gap-4">
                                {/* date block */}
@@ -2419,15 +2554,19 @@ service cloud.firestore {
                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
                                    <h3 className="font-bold text-slate-900 text-sm leading-tight">{game.away} @ {game.home}</h3>
                                    <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time} <MapPin className="w-3.5 h-3.5 ml-2" /> {game.location}</p>
-                                   <div className="mt-2 bg-orange-100/50 border border-orange-100 rounded-lg px-2.5 py-1.5 w-fit flex items-center gap-2">
-                                     <UserMinus className="w-3 h-3 text-orange-600"/>
+                                   
+                                   {/* Officials Render */}
+                                   {renderOfficialsRow(game, groupedAssignments[game.id] || [], masterUmpires)}
+
+                                   <div className="mt-3 bg-orange-100 border border-orange-200 rounded-lg px-3 py-2 w-fit flex items-center gap-2">
+                                     <UserMinus className="w-3.5 h-3.5 text-orange-600"/>
                                      <span className="text-[10px] font-black uppercase text-orange-800">Bytes bort av: {asg.userName}</span>
                                    </div>
                                 </div>
                             </div>
                             <div className="flex items-center">
                                <button 
-                                 onClick={() => takeTrade(asg, game)} 
+                                 onClick={(e) => { e.stopPropagation(); takeTrade(asg, game); }} 
                                  disabled={asg.userId === umpireId}
                                  className="w-full sm:w-auto px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase rounded-xl transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                >
@@ -2480,6 +2619,9 @@ service cloud.firestore {
                                         <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
                                         <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
                                       </div>
+
+                                      {/* Officials Render */}
+                                      {renderOfficialsRow(game, gameAssignments, masterUmpires)}
                                     </div>
                                   </div>
                                   
@@ -2631,27 +2773,32 @@ service cloud.firestore {
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {profileGames.map(game => (
-                            <div 
-                              key={game.id} 
-                              onClick={() => setSelectedGameDetails(game)}
-                              className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-200 cursor-pointer transition-colors group"
-                            >
-                              <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[65px] border border-slate-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
-                                <p className="text-xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
+                          {profileGames.map(game => {
+                            const gameAssignments = groupedAssignments[game.id] || [];
+                            return (
+                              <div 
+                                key={game.id} 
+                                onClick={() => setSelectedGameDetails(game)}
+                                className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-200 cursor-pointer transition-colors group"
+                              >
+                                <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[65px] border border-slate-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
+                                  <p className="text-xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
+                                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
+                                </div>
+                                <div>
+                                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                                  <p className="font-bold text-slate-900 text-sm leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</p>
+                                  <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
+                                    <Clock className="w-3 h-3" /> {game.time}
+                                    <MapPin className="w-3 h-3 ml-2" /> {game.location}
+                                  </p>
+                                  {/* Officials Render */}
+                                  {renderOfficialsRow(game, gameAssignments, masterUmpires)}
+                                </div>
                               </div>
-                              <div>
-                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                <p className="font-bold text-slate-900 text-sm leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</p>
-                                <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" /> {game.time}
-                                  <MapPin className="w-3 h-3 ml-2" /> {game.location}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -3243,11 +3390,18 @@ service cloud.firestore {
 
                         {/* Co-umpires section */}
                         <div className="pt-3 border-t border-slate-50 mt-1">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.coUmpires}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.officials}</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {coUmpires.length > 0 ? coUmpires.map(u => (
-                               <span key={u.userId} className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">{u.userName}</span>
-                            )) : (
+                            {coUmpires.map(u => (
+                               <span key={u.userId} className="text-xs font-bold text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-md flex items-center gap-1"><CheckCircle className="w-3 h-3"/> {u.userName}</span>
+                            ))}
+                            {game.supervisorName && (
+                               <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-md flex items-center gap-1"><Star className="w-3 h-3"/> SUP: {game.supervisorName}</span>
+                            )}
+                            {game.tcName && (
+                               <span className="text-xs font-bold text-orange-700 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-md flex items-center gap-1"><FileText className="w-3 h-3"/> TC: {game.tcName}</span>
+                            )}
+                            {coUmpires.length === 0 && !game.supervisorName && !game.tcName && (
                                <span className="text-xs font-medium text-slate-400 italic">{t.noCoUmpires}</span>
                             )}
                           </div>
@@ -3337,12 +3491,147 @@ service cloud.firestore {
       )}
 
       {/* Modals */}
+
+      {/* Location Details Modal */}
+      {selectedLocation && (() => {
+        const locDetail = locationsData.find(l => l.id === selectedLocation) || { id: selectedLocation, address: '', facilities: [] };
+        const mapQuery = locDetail.address ? locDetail.address : locDetail.id;
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-end sm:justify-center z-[90] p-0 sm:p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <button 
+                onClick={() => setSelectedLocation(null)} 
+                className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors z-10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              {editingLocation?.id === selectedLocation ? (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-black text-slate-800">{t.editLocation}: {locDetail.id}</h3>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.address}</label>
+                    <input 
+                      type="text" 
+                      value={editingLocation.address} 
+                      onChange={(e) => setEditingLocation({...editingLocation, address: e.target.value})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.facilities}</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={newFacility} 
+                        onChange={(e) => setNewFacility(e.target.value)}
+                        placeholder={t.addFacility}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if(newFacility.trim()){
+                              setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
+                              setNewFacility('');
+                            }
+                          }
+                        }}
+                        className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" 
+                      />
+                      <button 
+                        onClick={() => {
+                          if(newFacility.trim()){
+                            setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
+                            setNewFacility('');
+                          }
+                        }}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xl hover:bg-blue-700"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(editingLocation.facilities || []).map((fac, idx) => (
+                        <div key={idx} className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium text-slate-700">
+                          {fac}
+                          <button onClick={() => {
+                            const newFacs = [...editingLocation.facilities];
+                            newFacs.splice(idx, 1);
+                            setEditingLocation({...editingLocation, facilities: newFacs});
+                          }} className="text-slate-400 hover:text-red-500"><X className="w-3.5 h-3.5"/></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-4 border-t border-slate-100">
+                    <button onClick={saveLocation} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-xs hover:bg-green-700">{t.saveChanges}</button>
+                    <button onClick={() => setEditingLocation(null)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-black uppercase text-xs hover:bg-slate-200">{t.cancel}</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2 pr-8">{locDetail.id}</h3>
+                    {locDetail.address && (
+                      <p className="text-sm font-medium text-slate-500 flex items-start gap-1.5">
+                        <Navigation className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+                        {locDetail.address}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex flex-col items-center justify-center">
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="bg-blue-600 text-white text-sm font-black uppercase px-6 py-3 rounded-xl shadow-md hover:bg-blue-700 transition-all flex items-center gap-2"
+                    >
+                      <Map className="w-4 h-4" /> {t.mapDirections}
+                    </a>
+                  </div>
+
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t.facilities}</h4>
+                    {locDetail.facilities && locDetail.facilities.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {locDetail.facilities.map((fac, idx) => (
+                          <span key={idx} className="bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm">
+                            {fac}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium text-slate-400 italic">{t.noFacilities}</p>
+                    )}
+                  </div>
+
+                  {isAdmin && (
+                    <div className="pt-4 border-t border-slate-100">
+                      <button 
+                        onClick={() => setEditingLocation({ ...locDetail, facilities: locDetail.facilities || [] })}
+                        className="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-black uppercase text-xs hover:bg-slate-200 flex items-center justify-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" /> {t.editLocation}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       
       {/* Game Details Modal (Phase 2 UI Preview) */}
       {selectedGameDetails && (() => {
         const game = selectedGameDetails;
         const gameAssignments = groupedAssignments[game.id] || [];
         const required = game.requiredUmpires || 2;
+        
+        // Find if this location has an address in our directory for a better map link
+        const locDetail = locationsData.find(l => l.id === game.location);
+        const mapQuery = locDetail?.address ? locDetail.address : game.location;
         
         return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-end sm:justify-center z-[90] p-0 sm:p-4 animate-in fade-in duration-200">
@@ -3374,7 +3663,7 @@ service cloud.firestore {
                    </div>
                  </div>
                  <a 
-                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.location)}`} 
+                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`} 
                    target="_blank" 
                    rel="noreferrer"
                    className="bg-white text-blue-600 text-[10px] font-black uppercase px-4 py-2 rounded-xl shadow-sm hover:shadow border border-blue-200 transition-all flex items-center gap-2"
