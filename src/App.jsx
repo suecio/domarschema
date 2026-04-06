@@ -256,7 +256,15 @@ const translations = {
     msgSentDesc: "Tack för ditt meddelande. Vi återkommer till dig så snart som möjligt på den angivna e-postadressen.",
     sendAnother: "Skicka ett nytt meddelande",
     shareGuide: "Dela guide",
-    linkCopied: "Länk kopierad till urklipp!"
+    linkCopied: "Länk kopierad till urklipp!",
+    sendSchedules: "Skicka spelschema",
+    reviewEmails: "Granska Utskick",
+    customEmailMessage: "Personligt meddelande (Frivilligt)",
+    customEmailPlaceholder: "Skriv ett meddelande som visas högst upp i e-postmeddelandet till alla...",
+    sendAllEmails: "Skicka till {count} domare",
+    missingEmailWarning: "{count} domare har matcher men saknar e-postadress:",
+    emailPreview: "Förhandsgranskning av E-post",
+    emailsSentSuccess: "Alla spelscheman har skickats!"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -417,7 +425,15 @@ const translations = {
     msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
     sendAnother: "Send another message",
     shareGuide: "Share Guide",
-    linkCopied: "Link copied to clipboard!"
+    linkCopied: "Link copied to clipboard!",
+    sendSchedules: "Send Schedules",
+    reviewEmails: "Review Emails",
+    customEmailMessage: "Custom Message (Optional)",
+    customEmailPlaceholder: "Type a message to appear at the top of the email for everyone...",
+    sendAllEmails: "Send to {count} umpires",
+    missingEmailWarning: "{count} umpires have assignments but no email linked:",
+    emailPreview: "Email Preview",
+    emailsSentSuccess: "All schedules have been sent successfully!"
   }
 };
 
@@ -535,6 +551,11 @@ function MainApp() {
   const [contactMessage, setContactMessage] = useState('');
   const [contactStatus, setContactStatus] = useState('idle'); // idle, sending, success, error
 
+  // Email Module State
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [customEmailMessage, setCustomEmailMessage] = useState('');
+  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
+
   // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -602,7 +623,6 @@ function MainApp() {
         .then(res => res.json())
         .then(data => {
           if (data.content) {
-            // Decode Base64 containing UTF-8 characters safely
             const text = decodeURIComponent(escape(atob(data.content)));
             setReadmeContent(text);
           } else {
@@ -957,7 +977,6 @@ function MainApp() {
       navigator.clipboard.writeText(link).then(() => {
         alert(t.linkCopied);
       }).catch(() => {
-        // Fallback for older browsers
         const textArea = document.createElement("textarea");
         textArea.value = link;
         document.body.appendChild(textArea);
@@ -1204,6 +1223,98 @@ function MainApp() {
     document.body.removeChild(link);
     if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
   };
+
+  // --- EMAIL BULK SENDING LOGIC ---
+  const umpiresWithAssignmentsMap = useMemo(() => {
+    const map = {};
+    assignments.forEach(asg => {
+      if (!map[asg.userId]) {
+        map[asg.userId] = { 
+          umpire: masterUmpires.find(u => u.id === asg.userId), 
+          assignedGames: [] 
+        };
+      }
+      const game = games.find(g => g.id === asg.gameId);
+      if (game) map[asg.userId].assignedGames.push(game);
+    });
+    // Sort games by date inside the map
+    Object.values(map).forEach(obj => {
+      obj.assignedGames.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    });
+    return map;
+  }, [assignments, masterUmpires, games]);
+
+  const emailCandidates = useMemo(() => {
+    const list = Object.values(umpiresWithAssignmentsMap).filter(obj => obj.umpire !== undefined);
+    const ready = list.filter(obj => obj.umpire.linkedEmail);
+    const missing = list.filter(obj => !obj.umpire.linkedEmail);
+    return { ready, missing };
+  }, [umpiresWithAssignmentsMap]);
+
+  const generateEmailHtml = (umpireName, umpireGames) => {
+    const customHtml = customEmailMessage ? `<p style="font-size: 14px; line-height: 1.5; color: #475569; background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">${customEmailMessage.replace(/\n/g, '<br/>')}</p>` : '';
+    
+    const rows = umpireGames.map(g => `
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 12px 8px; font-size: 14px; color: #334155; white-space: nowrap;"><strong>${g.date}</strong><br/><span style="font-size: 12px; color: #64748b;">${g.time}</span></td>
+        <td style="padding: 12px 8px; font-size: 14px; color: #0f172a;"><strong>${g.away} @ ${g.home}</strong><br/><span style="font-size: 12px; color: #64748b;">${g.league} • ${g.location}</span></td>
+      </tr>
+    `).join('');
+
+    return `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; max-width: 600px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <h2 style="color: #1e3a8a; margin-top: 0;">Domaruppdrag / Umpire Assignments ${selectedYear}</h2>
+        <p style="font-size: 16px;">Hej / Hello <strong>${umpireName}</strong>,</p>
+        ${customHtml}
+        <p style="font-size: 15px; color: #334155; margin-top: 20px;">Här är dina tilldelade matcher för säsongen / Here are your assigned matches for the season:</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 16px; margin-bottom: 32px;">
+          <tr style="background-color: #f1f5f9; text-align: left;">
+            <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Datum / Date</th>
+            <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Match / Game</th>
+          </tr>
+          ${rows}
+        </table>
+        
+        <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+           <a href="https://schema.domarweb.se/?view=my-apps" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
+             Se ditt schema & Ladda ner kalender (.ics)<br/>
+             <span style="font-size: 12px; font-weight: normal; opacity: 0.9;">View schedule & Download calendar</span>
+           </a>
+        </div>
+      </div>
+    `;
+  };
+
+  const handleSendAllSchedules = async () => {
+    if (!isAdmin) return;
+    setSendingBulkEmails(true);
+    
+    try {
+      const promises = emailCandidates.ready.map(candidate => {
+        return addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+          to: candidate.umpire.linkedEmail,
+          message: {
+            subject: `Domaruppdrag ${selectedYear} / Umpire Assignments`,
+            html: generateEmailHtml(candidate.umpire.name, candidate.assignedGames)
+          },
+          createdAt: Date.now()
+        });
+      });
+      
+      await Promise.all(promises);
+      
+      if (typeof window !== 'undefined') alert(t.emailsSentSuccess);
+      setShowEmailPreview(false);
+      setCustomEmailMessage('');
+    } catch (error) {
+      console.error("Error sending bulk emails:", error);
+      if (typeof window !== 'undefined') alert("Ett fel uppstod när mejlen skulle skickas.");
+    } finally {
+      setSendingBulkEmails(false);
+    }
+  };
+
 
   // --- DERIVED DATA ---
 
@@ -1593,7 +1704,6 @@ service cloud.firestore {
                             </div>
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                            {/* Uppdaterad med din GitHub Raw URL */}
                             <img src="https://raw.githubusercontent.com/suecio/domarschema/72d9cca83a50386e09064a93afa1bc50de4d1db3/src/IMG_3614.jpeg" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
@@ -1609,8 +1719,7 @@ service cloud.firestore {
                             </div>
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                            {/* Byt ut src mot URL:en för din andra skärmavbild */}
-                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Sök+Profil" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
+                            <img src="https://raw.githubusercontent.com/suecio/domarschema/09b438482ba230232de25f244c1281b4c2c146dc/src/Ska%CC%88rmavbild%202026-04-05%20kl.%2014.24.40.png" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
 
@@ -1625,7 +1734,6 @@ service cloud.firestore {
                             </div>
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-blue-200 shadow-sm bg-white">
-                            {/* Byt ut src mot URL:en för din tredje skärmavbild */}
                             <img src="https://placehold.co/800x400/eff6ff/1e3a8a?text=Skärmavbild:+Koppla+Konto" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
@@ -1641,7 +1749,6 @@ service cloud.firestore {
                             </div>
                           </div>
                           <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                            {/* Byt ut src mot URL:en för din fjärde skärmavbild */}
                             <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Lägg+Till+Ny" alt="Steg 4" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
                           </div>
                         </div>
@@ -2084,8 +2191,10 @@ service cloud.firestore {
                     <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 border border-slate-200 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2 shadow-sm">
                       <Download className="w-4 h-4" /> {t.downloadBackup}
                     </button>
-                    <button onClick={deleteAllGames} className="bg-red-50 text-red-600 border border-red-100 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-red-100 transition-all active:scale-95">{t.deleteAllGames}</button>
-                    <button onClick={() => setShowImportTool(!showImportTool)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
+                    <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-all shadow-sm text-xs uppercase"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
+                    <button onClick={() => setShowEmailPreview(true)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg text-xs uppercase">
+                      <Mail className="w-4 h-4" /> {t.sendSchedules}
+                    </button>
                   </div>
                 </div>
 
@@ -2259,6 +2368,19 @@ service cloud.firestore {
                 
                 {/* Staffing Desk Section */}
                 <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                      <CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}
+                    </h3>
+                    <button 
+                      onClick={() => setShowStaffed(!showStaffed)} 
+                      className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white shadow-md hover:bg-black' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      {showStaffed ? t.hideStaffed : t.showAll}
+                    </button>
+                  </div>
+                  
                   {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
                     const applicants = applications.filter(a => a.gameId === game.id);
                     const gameAssignments = groupedAssignments[game.id] || [];
@@ -2467,19 +2589,29 @@ service cloud.firestore {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
-                <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-fit">
-                   <button 
-                     onClick={() => setMyGamesViewMode('list')} 
-                     className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                   >
-                     <List className="w-4 h-4" />
-                   </button>
-                   <button 
-                     onClick={() => setMyGamesViewMode('calendar')} 
-                     className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                   >
-                     <CalendarIcon className="w-4 h-4" />
-                   </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  {myAssignedGames.length > 0 && (
+                    <button 
+                      onClick={() => generateICS(myAssignedGames)} 
+                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                    >
+                      <CalendarPlus className="w-4 h-4" /> Ladda ner (.ics)
+                    </button>
+                  )}
+                  <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-fit">
+                     <button 
+                       onClick={() => setMyGamesViewMode('list')} 
+                       className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                     >
+                       <List className="w-4 h-4" />
+                     </button>
+                     <button 
+                       onClick={() => setMyGamesViewMode('calendar')} 
+                       className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                     >
+                       <CalendarIcon className="w-4 h-4" />
+                     </button>
+                  </div>
                 </div>
               </div>
               
@@ -2826,6 +2958,89 @@ service cloud.firestore {
             <button onClick={() => setShowChangelogModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">
               {t.close}
             </button>
+          </div>
+        </div>
+      )}
+
+      {showEmailPreview && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-2xl w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[95vh] relative">
+            <button onClick={() => setShowEmailPreview(false)} className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                <Mail className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800 leading-tight">{t.reviewEmails}</h3>
+                <p className="text-xs text-slate-400 font-medium">Utskick av spelschema</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex justify-between items-center">
+                <p className="text-sm font-bold text-blue-900">
+                  Redo att skickas till <span className="px-2 py-0.5 bg-blue-600 text-white rounded-full mx-1">{emailCandidates.ready.length}</span> domare.
+                </p>
+              </div>
+
+              {emailCandidates.missing.length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl">
+                  <p className="text-xs font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" /> 
+                    {t.missingEmailWarning.replace('{count}', emailCandidates.missing.length)}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {emailCandidates.missing.map(obj => (
+                      <span key={obj.umpire.id} className="text-[10px] bg-white border border-yellow-200 text-yellow-700 px-2 py-1 rounded-md font-bold">
+                        {obj.umpire.name} ({obj.assignedGames.length} matcher)
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.customEmailMessage}</label>
+                <textarea
+                  value={customEmailMessage}
+                  onChange={(e) => setCustomEmailMessage(e.target.value)}
+                  placeholder={t.customEmailPlaceholder}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[80px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.emailPreview}</label>
+                <div className="bg-slate-100 rounded-2xl p-4 sm:p-6 border border-slate-200 overflow-x-auto">
+                  {emailCandidates.ready.length > 0 ? (
+                    <div 
+                      dangerouslySetInnerHTML={{ 
+                        __html: generateEmailHtml(emailCandidates.ready[0].umpire.name, emailCandidates.ready[0].assignedGames) 
+                      }} 
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-500 italic text-center py-8">Inga domare redo för utskick.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="pt-4 flex gap-3">
+              <button 
+                onClick={handleSendAllSchedules}
+                disabled={sendingBulkEmails || emailCandidates.ready.length === 0}
+                className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {sendingBulkEmails ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                {t.sendAllEmails.replace('{count}', emailCandidates.ready.length)}
+              </button>
+              <button onClick={() => setShowEmailPreview(false)} className="px-6 py-4 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">
+                {t.cancel}
+              </button>
+            </div>
           </div>
         </div>
       )}
