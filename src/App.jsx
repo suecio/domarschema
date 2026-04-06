@@ -1939,10 +1939,12 @@ service cloud.firestore {
           <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar whitespace-nowrap">
             {[
               { id: 'schedule', label: t.schedule, icon: CalendarIcon },
-              { id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft },
               { id: 'locations', label: t.locations, icon: MapPin },
               { id: 'umpire-list', label: t.umpireList, icon: Users2 },
-              ...(user && user.email ? [{ id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
+              ...(user && user.email ? [
+                  { id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft },
+                  { id: 'my-apps', label: t.myGames, icon: CheckCircle }
+                ] : []),
               ...(isAdmin ? [
                   { id: 'admin', label: t.staffing, icon: Shield }, 
                   { id: 'stats', label: t.analytics, icon: BarChart3 }
