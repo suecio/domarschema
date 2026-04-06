@@ -265,7 +265,12 @@ const translations = {
     missingEmailWarning: "{count} domare har matcher men saknar e-postadress:",
     emailPreview: "Förhandsgranskning av E-post",
     emailsSentSuccess: "Alla spelscheman har skickats!",
-    bookedIn: "Bokad i"
+    bookedIn: "Bokad i",
+    filterStatusAll: "Alla statusar",
+    noInterests: "Inga anmälningar",
+    coUmpires: "Dömer med:",
+    noCoUmpires: "Inga meddomare (ännu)",
+    calendarColumn: "Kalender"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -435,7 +440,12 @@ const translations = {
     missingEmailWarning: "{count} umpires have assignments but no email linked:",
     emailPreview: "Email Preview",
     emailsSentSuccess: "All schedules have been sent successfully!",
-    bookedIn: "Booked in"
+    bookedIn: "Booked in",
+    filterStatusAll: "All Statuses",
+    noInterests: "No Interests",
+    coUmpires: "Co-umpires:",
+    noCoUmpires: "No co-umpires (yet)",
+    calendarColumn: "Calendar"
   }
 };
 
@@ -445,6 +455,35 @@ const getISOWeekNumber = (date) => {
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+};
+
+// --- CALENDAR LINK GENERATORS ---
+const formatCalendarDate = (dateStr, timeStr, addHours = 3) => {
+  const cleanDate = (dateStr || '').replace(/-/g, '');
+  const cleanTime = (timeStr || '00:00').replace(/:/g, '');
+  const start = `${cleanDate}T${cleanTime}00`;
+  const [hours, mins] = (timeStr || '00:00').split(':');
+  const endHours = (parseInt(hours || '0') + addHours).toString().padStart(2, '0');
+  const end = `${cleanDate}T${endHours}${mins || '00'}00`;
+  return { start, end };
+};
+
+const getGoogleCalendarLink = (game) => {
+  if (!game.date || !game.time) return '#';
+  const { start, end } = formatCalendarDate(game.date, game.time);
+  const title = encodeURIComponent(`${game.away} @ ${game.home} (${game.league})`);
+  const details = encodeURIComponent(`League: ${game.league}\nLocation: ${game.location}`);
+  const location = encodeURIComponent(game.location);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
+};
+
+const getOutlookCalendarLink = (game) => {
+  if (!game.date || !game.time) return '#';
+  const { start, end } = formatCalendarDate(game.date, game.time);
+  const title = encodeURIComponent(`${game.away} @ ${game.home} (${game.league})`);
+  const details = encodeURIComponent(`League: ${game.league}\nLocation: ${game.location}`);
+  const location = encodeURIComponent(game.location);
+  return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${title}&startdt=${start}&enddt=${end}&body=${details}&location=${location}`;
 };
 
 // --- MARKDOWN PARSER FOR README ---
@@ -603,6 +642,7 @@ function MainApp() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : `baseball-umpire-scheduler-${selectedYear}`;
   
@@ -1256,12 +1296,26 @@ function MainApp() {
   const generateEmailHtml = (umpireName, umpireGames) => {
     const customHtml = customEmailMessage ? `<p style="font-size: 14px; line-height: 1.5; color: #475569; background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">${customEmailMessage.replace(/\n/g, '<br/>')}</p>` : '';
     
-    const rows = umpireGames.map(g => `
-      <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 12px 8px; font-size: 14px; color: #334155; white-space: nowrap;"><strong>${g.date}</strong><br/><span style="font-size: 12px; color: #64748b;">${g.time}</span></td>
-        <td style="padding: 12px 8px; font-size: 14px; color: #0f172a;"><strong>${g.away} @ ${g.home}</strong><br/><span style="font-size: 12px; color: #64748b;">${g.league} • ${g.location}</span></td>
-      </tr>
-    `).join('');
+    const rows = umpireGames.map(g => {
+      const googleLnk = getGoogleCalendarLink(g);
+      const outlookLnk = getOutlookCalendarLink(g);
+      return `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 12px 8px; font-size: 14px; color: #334155; white-space: nowrap;">
+            <strong>${g.date}</strong><br/>
+            <span style="font-size: 12px; color: #64748b;">${g.time}</span>
+          </td>
+          <td style="padding: 12px 8px; font-size: 14px; color: #0f172a;">
+            <strong>${g.away} @ ${g.home}</strong><br/>
+            <span style="font-size: 12px; color: #64748b;">${g.league} • ${g.location}</span>
+          </td>
+          <td style="padding: 12px 8px; font-size: 12px; text-align: right; white-space: nowrap;">
+            <a href="${googleLnk}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: bold; display: block; margin-bottom: 6px;">+ Google</a>
+            <a href="${outlookLnk}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: bold; display: block;">+ Outlook</a>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
     return `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; max-width: 600px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
@@ -1274,14 +1328,15 @@ function MainApp() {
           <tr style="background-color: #f1f5f9; text-align: left;">
             <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Datum / Date</th>
             <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Match / Game</th>
+            <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; text-align: right;">${t.calendarColumn}</th>
           </tr>
           ${rows}
         </table>
         
         <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
            <a href="https://schema.domarweb.se/?view=my-apps" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
-             Se ditt schema & Ladda ner kalender (.ics)<br/>
-             <span style="font-size: 12px; font-weight: normal; opacity: 0.9;">View schedule & Download calendar</span>
+             Se ditt schema & Ladda ner alla matcher (.ics)<br/>
+             <span style="font-size: 12px; font-weight: normal; opacity: 0.9;">View schedule & Download all matches</span>
            </a>
         </div>
       </div>
@@ -1410,9 +1465,18 @@ function MainApp() {
       const matchesLocation = !filterLocation || game.location === filterLocation;
       const isHistorical = (game.date || '') < today;
       
-      return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation : !isHistorical && matchesSearch && matchesLeague && matchesLocation;
+      let statusMatch = true;
+      if (filterStatus === 'needs_umpire') {
+          const gameAssignments = groupedAssignments[game.id] || [];
+          statusMatch = gameAssignments.length < (game.requiredUmpires || 2);
+      } else if (filterStatus === 'no_interests') {
+          const applicants = applications.filter(a => a.gameId === game.id);
+          statusMatch = applicants.length === 0;
+      }
+      
+      return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch : !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
     });
-  }, [games, searchQuery, filterLeague, filterLocation, showHistory, today]);
+  }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))], [games]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))], [games]);
@@ -1599,8 +1663,8 @@ service cloud.firestore {
         {/* Global Filters */}
         {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="relative md:col-span-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative sm:col-span-2 lg:col-span-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
@@ -1613,6 +1677,16 @@ service cloud.firestore {
               
               {(view === 'schedule' || view === 'admin') && (
                 <>
+                  <select 
+                    value={filterStatus} 
+                    onChange={(e) => setFilterStatus(e.target.value)} 
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none font-medium"
+                  >
+                    <option value="">{t.filterStatusAll}</option>
+                    <option value="needs_umpire">{t.needsUmpire}</option>
+                    <option value="no_interests">{t.noInterests}</option>
+                  </select>
+
                   <select 
                     value={filterLeague} 
                     onChange={(e) => setFilterLeague(e.target.value)} 
@@ -2703,18 +2777,44 @@ service cloud.firestore {
                 </div>
               ) : (
                 <>
-                  {myAssignedGames.map(game => (
-                    <div key={game.id} className="bg-white p-4 rounded-2xl border border-green-200 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-green-100 text-green-600"><CalendarIcon className="w-5 h-5" /></div>
-                        <div>
-                          <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
-                          <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
+                  {myAssignedGames.map(game => {
+                    const gameAssignments = groupedAssignments[game.id] || [];
+                    const coUmpires = gameAssignments.filter(asg => asg.userId !== umpireId);
+
+                    return (
+                      <div key={game.id} className="bg-white p-4 sm:p-5 rounded-2xl border border-green-200 flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="flex items-start gap-4">
+                            <div className="p-3 rounded-xl bg-green-100 text-green-600 shrink-0"><CalendarIcon className="w-5 h-5" /></div>
+                            <div>
+                              <p className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</p>
+                              <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
+                            </div>
+                          </div>
+                          <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start w-fit">{t.confirmed}</div>
+                        </div>
+
+                        {/* Co-umpires section */}
+                        <div className="pt-3 border-t border-slate-50 mt-1">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.coUmpires}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {coUmpires.length > 0 ? coUmpires.map(u => (
+                               <span key={u.userId} className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">{u.userName}</span>
+                            )) : (
+                               <span className="text-xs font-medium text-slate-400 italic">{t.noCoUmpires}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Calendar links */}
+                        <div className="pt-3 border-t border-slate-50 flex flex-wrap gap-2">
+                           <a href={getGoogleCalendarLink(game)} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Google</a>
+                           <a href={getOutlookCalendarLink(game)} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Outlook</a>
+                           <button onClick={() => handleCalendarExport(game)} className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">.ICS</button>
                         </div>
                       </div>
-                      <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   <div className="pt-4 border-t border-slate-100">
                     <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
