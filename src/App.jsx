@@ -3693,9 +3693,9 @@ service cloud.firestore {
                     {gameAssignments.map(asg => {
                       const m = masterUmpires.find(mu => mu.id === asg.userId);
                       const evaluation = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
-                      const isAssignedSupervisor = game.supervisorId === umpireId;
+                      const isAssignedSupervisor = Boolean(umpireId && game.supervisorId === umpireId);
                       const canEvaluate = isAdmin || isAssignedSupervisor;
-                      const canViewEval = isAdmin || isAssignedSupervisor || asg.userId === umpireId;
+                      const canViewEval = isAdmin || isAssignedSupervisor || Boolean(umpireId && asg.userId === umpireId);
                       const isEvaluatingThisUser = evaluatingUmpire === asg.userId;
 
                       return (
