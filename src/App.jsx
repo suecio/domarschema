@@ -264,7 +264,8 @@ const translations = {
     sendAllEmails: "Skicka till {count} domare",
     missingEmailWarning: "{count} domare har matcher men saknar e-postadress:",
     emailPreview: "Förhandsgranskning av E-post",
-    emailsSentSuccess: "Alla spelscheman har skickats!"
+    emailsSentSuccess: "Alla spelscheman har skickats!",
+    bookedIn: "Bokad i"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -433,7 +434,8 @@ const translations = {
     sendAllEmails: "Send to {count} umpires",
     missingEmailWarning: "{count} umpires have assignments but no email linked:",
     emailPreview: "Email Preview",
-    emailsSentSuccess: "All schedules have been sent successfully!"
+    emailsSentSuccess: "All schedules have been sent successfully!",
+    bookedIn: "Booked in"
   }
 };
 
@@ -2487,18 +2489,35 @@ service cloud.firestore {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
                                   const m = masterUmpires.find(mu => mu.id === app.userId); 
+                                  
+                                  // Conflict Detection Logic
+                                  const umpireAssignedGamesToday = assignments
+                                    .filter(asg => asg.userId === app.userId)
+                                    .map(asg => games.find(g => g.id === asg.gameId))
+                                    .filter(g => g && g.date === game.date && g.id !== game.id);
+                                  
+                                  const conflictGame = umpireAssignedGamesToday.find(g => 
+                                    (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
+                                  );
+                                  const isConflict = !!conflictGame;
+
                                   return (
-                                    <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                    <div key={app.userId} className={`flex items-center justify-between p-2 rounded-xl border ${isConflict ? 'border-red-100 bg-red-50/30' : 'border-slate-100 bg-white hover:border-blue-300'} transition-all`}>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold">{app.userName}</span>
+                                        <span className={`text-xs font-bold ${isConflict ? 'text-red-700' : ''}`}>{app.userName}</span>
                                         {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                       </div>
                                       <button 
-                                        disabled={isFullyStaffed} 
+                                        disabled={isFullyStaffed || isConflict} 
                                         onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
-                                        className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                                        className={`${isConflict ? 'bg-red-100 text-red-700' : 'bg-blue-600 text-white hover:bg-blue-700'} text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${isFullyStaffed && !isConflict ? 'opacity-50' : ''} transition-colors`}
+                                        title={isConflict ? `${t.bookedIn} ${conflictGame.location}` : ''}
                                       >
-                                        <UserPlus className="w-3 h-3" /> Assign
+                                        {isConflict ? (
+                                          <><AlertTriangle className="w-3 h-3" /> {conflictGame.location}</>
+                                        ) : (
+                                          <><UserPlus className="w-3 h-3" /> Assign</>
+                                        )}
                                       </button>
                                     </div>
                                   ); 
