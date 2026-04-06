@@ -71,7 +71,9 @@ import {
   Code,
   Mail,
   Send,
-  Share2
+  Share2,
+  SendCheck,
+  Map
 } from 'lucide-react';
 
 /**
@@ -270,7 +272,13 @@ const translations = {
     noInterests: "Inga anmälningar",
     coUmpires: "Dömer med:",
     noCoUmpires: "Inga meddomare (ännu)",
-    calendarColumn: "Kalender"
+    calendarColumn: "Kalender",
+    gameDetails: "Matchinformation",
+    mapDirections: "Öppna Karta",
+    officials: "Funktionärer",
+    supervisor: "Supervisor",
+    techComm: "Technical Commissioner",
+    notAssigned: "Ej tillsatt"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -445,7 +453,13 @@ const translations = {
     noInterests: "No Interests",
     coUmpires: "Co-umpires:",
     noCoUmpires: "No co-umpires (yet)",
-    calendarColumn: "Calendar"
+    calendarColumn: "Calendar",
+    gameDetails: "Game Details",
+    mapDirections: "Open Map",
+    officials: "Officials",
+    supervisor: "Supervisor",
+    techComm: "Technical Commissioner",
+    notAssigned: "Not Assigned"
   }
 };
 
@@ -616,6 +630,7 @@ function MainApp() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(null);
+  const [selectedGameDetails, setSelectedGameDetails] = useState(null);
   
   // Changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
@@ -1571,6 +1586,7 @@ service cloud.firestore {
           setSearchQuery(''); 
           setFilterLeague(''); 
           setFilterLocation(''); 
+          setFilterStatus('');
           setShowHistory(false); 
           scrollToTop(); 
         }} 
@@ -1663,8 +1679,31 @@ service cloud.firestore {
         {/* Global Filters */}
         {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            {(view === 'schedule' || view === 'admin') && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button 
+                  onClick={() => setFilterStatus('')} 
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-colors ${filterStatus === '' ? 'bg-blue-900 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                >
+                  {t.filterStatusAll}
+                </button>
+                <button 
+                  onClick={() => setFilterStatus('needs_umpire')} 
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-colors ${filterStatus === 'needs_umpire' ? 'bg-yellow-500 text-white shadow-sm' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200'}`}
+                >
+                  {t.needsUmpire}
+                </button>
+                <button 
+                  onClick={() => setFilterStatus('no_interests')} 
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-colors ${filterStatus === 'no_interests' ? 'bg-red-500 text-white shadow-sm' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'}`}
+                >
+                  {t.noInterests}
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="relative sm:col-span-2 lg:col-span-1">
+              <div className="relative sm:col-span-2 lg:col-span-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
@@ -1677,16 +1716,6 @@ service cloud.firestore {
               
               {(view === 'schedule' || view === 'admin') && (
                 <>
-                  <select 
-                    value={filterStatus} 
-                    onChange={(e) => setFilterStatus(e.target.value)} 
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none font-medium"
-                  >
-                    <option value="">{t.filterStatusAll}</option>
-                    <option value="needs_umpire">{t.needsUmpire}</option>
-                    <option value="no_interests">{t.noInterests}</option>
-                  </select>
-
                   <select 
                     value={filterLeague} 
                     onChange={(e) => setFilterLeague(e.target.value)} 
@@ -1957,28 +1986,38 @@ service cloud.firestore {
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">
                   {showHistory ? t.archived : t.activeSchedule}
                 </h2>
-                <div className="flex items-center gap-2">
-                  <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                     <button 
-                       onClick={() => setScheduleViewMode('list')} 
-                       className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                     >
-                       <List className="w-4 h-4" />
-                     </button>
-                     <button 
-                       onClick={() => setScheduleViewMode('calendar')} 
-                       className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                     >
-                       <CalendarIcon className="w-4 h-4" />
-                     </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  {filteredGames.length > 0 && (
+                    <button 
+                      onClick={() => generateICS(filteredGames)} 
+                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                    >
+                      <CalendarPlus className="w-4 h-4" /> Ladda ner (.ics)
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                       <button 
+                         onClick={() => setScheduleViewMode('list')} 
+                         className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                       >
+                         <List className="w-4 h-4" />
+                       </button>
+                       <button 
+                         onClick={() => setScheduleViewMode('calendar')} 
+                         className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                       >
+                         <CalendarIcon className="w-4 h-4" />
+                       </button>
+                    </div>
+                    <button 
+                      onClick={() => setShowHistory(!showHistory)} 
+                      className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                    >
+                      <HistoryIcon className="w-3.5 h-3.5" />
+                      {showHistory ? t.upcoming : t.history}
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => setShowHistory(!showHistory)} 
-                    className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                  >
-                    <HistoryIcon className="w-3.5 h-3.5" />
-                    {showHistory ? t.upcoming : t.history}
-                  </button>
                 </div>
               </div>
 
@@ -2017,7 +2056,7 @@ service cloud.firestore {
                                       {matches.map(g => (
                                         <button 
                                           key={g.id} 
-                                          onClick={() => { setSearchQuery(g.home); setScheduleViewMode('list'); }} 
+                                          onClick={(e) => { e.stopPropagation(); setSelectedGameDetails(g); }} 
                                           className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
                                         >
                                           <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
@@ -2048,10 +2087,14 @@ service cloud.firestore {
                     const required = game.requiredUmpires || 2;
                     
                     return (
-                      <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
+                      <div 
+                        key={game.id} 
+                        onClick={() => setSelectedGameDetails(game)}
+                        className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all cursor-pointer hover:border-blue-300 group ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}
+                      >
                         <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex gap-4">
-                            <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100 flex flex-col justify-center">
+                            <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
                               <p className="text-2xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
@@ -2059,11 +2102,11 @@ service cloud.firestore {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                <button onClick={() => handleCalendarExport(game)} className="text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}>
+                                <button onClick={(e) => { e.stopPropagation(); handleCalendarExport(game); }} className="text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}>
                                   <CalendarPlus className="w-4 h-4" />
                                 </button>
                               </div>
-                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away} @ {game.home}</h3>
+                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</h3>
                               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
                                 <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
                                 <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
@@ -2097,7 +2140,7 @@ service cloud.firestore {
                                   )}
                                 </div>
                                 <button 
-                                  onClick={() => toggleApplication(game.id)} 
+                                  onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} 
                                   disabled={isAssignedToThisGame} 
                                   className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}
                                 >
@@ -2233,15 +2276,19 @@ service cloud.firestore {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {profileGames.map(game => (
-                            <div key={game.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-200 transition-colors">
-                              <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[65px] border border-slate-100 flex flex-col justify-center">
+                            <div 
+                              key={game.id} 
+                              onClick={() => setSelectedGameDetails(game)}
+                              className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-200 cursor-pointer transition-colors group"
+                            >
+                              <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[65px] border border-slate-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
                                 <p className="text-xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
                                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
                               </div>
                               <div>
                                 <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                <p className="font-bold text-slate-900 text-sm leading-tight">{game.away} @ {game.home}</p>
+                                <p className="font-bold text-slate-900 text-sm leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</p>
                                 <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
                                   <Clock className="w-3 h-3" /> {game.time}
                                   <MapPin className="w-3 h-3 ml-2" /> {game.location}
@@ -2465,8 +2512,11 @@ service cloud.firestore {
                     const isFullyStaffed = gameAssignments.length >= required;
 
                     return (
-                      <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
-                        <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
+                      <div 
+                        key={game.id} 
+                        className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}
+                      >
+                        <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer transition-colors" onClick={() => setSelectedGameDetails(game)}>
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
                             <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
@@ -2474,13 +2524,13 @@ service cloud.firestore {
                           </div>
                           <div className="flex items-center gap-1">
                             <button 
-                              onClick={() => setEditingGameData(isEditingThisGame ? null : { ...game })} 
+                              onClick={(e) => { e.stopPropagation(); setEditingGameData(isEditingThisGame ? null : { ...game }); }} 
                               className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button 
-                              onClick={() => { if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
+                              onClick={(e) => { e.stopPropagation(); if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
                               className="p-2 text-slate-300 hover:text-red-500"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -2760,7 +2810,11 @@ service cloud.firestore {
                                       {myMatches.map(g => {
                                         const isAssigned = myAssignedGames.some(ag => ag.id === g.id);
                                         return (
-                                          <div key={g.id} className={`w-full text-left p-1 rounded border overflow-hidden ${isAssigned ? 'border-green-200 bg-green-50' : 'border-slate-100 bg-white'}`}>
+                                          <div 
+                                            key={g.id} 
+                                            onClick={() => setSelectedGameDetails(g)}
+                                            className={`w-full text-left p-1 rounded border overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${isAssigned ? 'border-green-200 bg-green-50' : 'border-slate-100 bg-white'}`}
+                                          >
                                             <div className={`w-full h-1 rounded-full mb-1 ${isAssigned ? 'bg-green-500' : getLeagueStyles(g.league).split(' ')[0]}`} />
                                             <p className={`text-[8px] font-bold truncate leading-none uppercase ${isAssigned ? 'text-green-800' : 'text-slate-700'}`}>{g.away} @ {g.home}</p>
                                           </div>
@@ -2782,10 +2836,14 @@ service cloud.firestore {
                     const coUmpires = gameAssignments.filter(asg => asg.userId !== umpireId);
 
                     return (
-                      <div key={game.id} className="bg-white p-4 sm:p-5 rounded-2xl border border-green-200 flex flex-col gap-3">
+                      <div 
+                        key={game.id} 
+                        onClick={() => setSelectedGameDetails(game)}
+                        className="bg-white p-4 sm:p-5 rounded-2xl border border-green-200 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-shadow group"
+                      >
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                           <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-green-100 text-green-600 shrink-0"><CalendarIcon className="w-5 h-5" /></div>
+                            <div className="p-3 rounded-xl bg-green-100 text-green-600 shrink-0 group-hover:bg-green-600 group-hover:text-white transition-colors"><CalendarIcon className="w-5 h-5" /></div>
                             <div>
                               <p className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</p>
                               <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
@@ -2808,9 +2866,9 @@ service cloud.firestore {
 
                         {/* Calendar links */}
                         <div className="pt-3 border-t border-slate-50 flex flex-wrap gap-2">
-                           <a href={getGoogleCalendarLink(game)} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Google</a>
-                           <a href={getOutlookCalendarLink(game)} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Outlook</a>
-                           <button onClick={() => handleCalendarExport(game)} className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">.ICS</button>
+                           <a href={getGoogleCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Google</a>
+                           <a href={getOutlookCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Outlook</a>
+                           <button onClick={(e) => { e.stopPropagation(); handleCalendarExport(game); }} className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">.ICS</button>
                         </div>
                       </div>
                     );
@@ -2819,7 +2877,11 @@ service cloud.firestore {
                   <div className="pt-4 border-t border-slate-100">
                     <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
                     {myInterestedGames.map(game => (
-                      <div key={game.id} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between mb-2">
+                      <div 
+                        key={game.id} 
+                        onClick={() => setSelectedGameDetails(game)}
+                        className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between mb-2 cursor-pointer hover:border-blue-300 transition-colors"
+                      >
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
                           <div>
@@ -2827,7 +2889,7 @@ service cloud.firestore {
                             <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
                           </div>
                         </div>
-                        <button onClick={() => toggleApplication(game.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -2887,6 +2949,113 @@ service cloud.firestore {
 
       {/* Modals */}
       
+      {/* Game Details Modal (Phase 2 UI Preview) */}
+      {selectedGameDetails && (() => {
+        const game = selectedGameDetails;
+        const gameAssignments = groupedAssignments[game.id] || [];
+        const required = game.requiredUmpires || 2;
+        
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-end sm:justify-center z-[90] p-0 sm:p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 space-y-6 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <button 
+                onClick={() => setSelectedGameDetails(null)} 
+                className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors z-10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="pt-2">
+                <span className={`text-[10px] font-black px-2.5 py-1 rounded border uppercase tracking-widest mb-3 inline-block ${getLeagueStyles(game.league)}`}>
+                  {game.league}
+                </span>
+                <h3 className="text-2xl font-black text-slate-800 leading-tight mb-1">{game.away} @ {game.home}</h3>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">
+                  <span className="flex items-center gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> {safeDateDay(game.date)} {game.date}</span>
+                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                   <div className="bg-blue-600 text-white p-2.5 rounded-xl"><MapPin className="w-5 h-5" /></div>
+                   <div>
+                     <p className="text-[10px] font-black uppercase text-blue-800 tracking-widest mb-0.5">{t.location}</p>
+                     <p className="text-sm font-bold text-blue-900">{game.location}</p>
+                   </div>
+                 </div>
+                 <a 
+                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.location)}`} 
+                   target="_blank" 
+                   rel="noreferrer"
+                   className="bg-white text-blue-600 text-[10px] font-black uppercase px-4 py-2 rounded-xl shadow-sm hover:shadow border border-blue-200 transition-all flex items-center gap-2"
+                 >
+                   <Map className="w-3.5 h-3.5" /> {t.mapDirections}
+                 </a>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Users2 className="w-4 h-4" /> {t.crew}
+                  </h4>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>
+                    {gameAssignments.length} / {required} {t.assignedTo}
+                  </span>
+                </div>
+                
+                {gameAssignments.length === 0 ? (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                     <p className="text-sm font-medium text-slate-400 italic">{t.notAssigned}</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    {gameAssignments.map(asg => {
+                      const m = masterUmpires.find(mu => mu.id === asg.userId);
+                      return (
+                        <div key={asg.userId} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-slate-600 shadow-sm">
+                              {asg.userName.charAt(0)}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-slate-800">{asg.userName}</span>
+                              {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-0.5 ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
+                  <Shield className="w-4 h-4" /> {t.officials}
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center">
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.supervisor}</p>
+                     <p className="text-sm font-medium text-slate-500 italic">{t.notAssigned}</p>
+                   </div>
+                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center">
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.techComm}</p>
+                     <p className="text-sm font-medium text-slate-500 italic">{t.notAssigned}</p>
+                   </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
+                 <button onClick={() => setSelectedGameDetails(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">
+                   {t.close}
+                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 relative">
