@@ -278,7 +278,8 @@ const translations = {
     officials: "Funktionärer",
     supervisor: "Supervisor",
     techComm: "Technical Commissioner",
-    notAssigned: "Ej tillsatt"
+    notAssigned: "Ej tillsatt",
+    yourGame: "Din match"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -459,7 +460,8 @@ const translations = {
     officials: "Officials",
     supervisor: "Supervisor",
     techComm: "Technical Commissioner",
-    notAssigned: "Not Assigned"
+    notAssigned: "Not Assigned",
+    yourGame: "Your Game"
   }
 };
 
@@ -2139,13 +2141,18 @@ service cloud.firestore {
                                     </span>
                                   )}
                                 </div>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} 
-                                  disabled={isAssignedToThisGame} 
-                                  className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}
-                                >
-                                  {isApplied ? t.withdraw : t.interested}
-                                </button>
+                                {isAssignedToThisGame ? (
+                                  <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5">
+                                    <CheckCircle className="w-4 h-4" /> {t.yourGame}
+                                  </div>
+                                ) : (
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} 
+                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 hover:bg-blue-700'}`}
+                                  >
+                                    {isApplied ? t.withdraw : t.interested}
+                                  </button>
+                                )}
                               </>
                             )}
                           </div>
