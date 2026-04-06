@@ -280,7 +280,7 @@ const translations = {
     calendarColumn: "Kalender",
     gameDetails: "Matchinformation",
     mapDirections: "Öppna Karta",
-    officials: "Funktionärer",
+    officials: "Domarteam",
     supervisor: "Supervisor",
     techComm: "Technical Commissioner",
     notAssigned: "Ej tillsatt",
