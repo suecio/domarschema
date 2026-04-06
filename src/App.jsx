@@ -74,7 +74,8 @@ import {
   Share2,
   SendCheck,
   Map,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Star
 } from 'lucide-react';
 
 /**
@@ -291,7 +292,21 @@ const translations = {
     gamesForTrade: "Matcher som bytes bort",
     noMarketplaceGames: "Inga matcher bytes bort just nu.",
     tradeSuccess: "Du har tagit över matchen! Ditt schema har uppdaterats.",
-    tradeConfirm: "Är du säker på att du vill ta över denna match?"
+    tradeConfirm: "Är du säker på att du vill ta över denna match?",
+    downloadCalendar: "Ladda ner",
+    formatICS: ".ICS Fil",
+    subtextICS: "För Apple & Outlook",
+    formatCSV: ".CSV Fil",
+    subtextCSV: "För Google Kalender",
+    evaluate: "Utvärdera",
+    grade: "Betyg",
+    feedback: "Feedback / Kommentar",
+    saveEval: "Spara utvärdering",
+    evalSaved: "Utvärdering sparad",
+    yourEval: "Utvärdering",
+    selectAdmin: "Välj Admin...",
+    selectUmpire: "Välj Domare...",
+    enterTCName: "Ange namn på TC..."
   },
   en: {
     appTitle: "Umpire Portal",
@@ -484,7 +499,21 @@ const translations = {
     gamesForTrade: "Games Up For Trade",
     noMarketplaceGames: "No games are up for trade right now.",
     tradeSuccess: "You have taken over the game! Your schedule is updated.",
-    tradeConfirm: "Are you sure you want to take over this game?"
+    tradeConfirm: "Are you sure you want to take over this game?",
+    downloadCalendar: "Download",
+    formatICS: ".ICS File",
+    subtextICS: "For Apple & Outlook",
+    formatCSV: ".CSV File",
+    subtextCSV: "For Google Calendar",
+    evaluate: "Evaluate",
+    grade: "Grade",
+    feedback: "Feedback / Comment",
+    saveEval: "Save Evaluation",
+    evalSaved: "Evaluation Saved",
+    yourEval: "Evaluation",
+    selectAdmin: "Select Admin...",
+    selectUmpire: "Select Umpire...",
+    enterTCName: "Enter TC name..."
   }
 };
 
@@ -636,12 +665,17 @@ function MainApp() {
   const [customEmailMessage, setCustomEmailMessage] = useState('');
   const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
 
+  // Calendar Dropdown States
+  const [showScheduleExport, setShowScheduleExport] = useState(false);
+  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
+
   // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [masterUmpires, setMasterUmpires] = useState([]);
   const [registeredEmails, setRegisteredEmails] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
@@ -656,6 +690,11 @@ function MainApp() {
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [selectedGameDetails, setSelectedGameDetails] = useState(null);
+  
+  // Evaluation Forms State
+  const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
+  const [evalGrade, setEvalGrade] = useState(0);
+  const [evalComment, setEvalComment] = useState('');
   
   // Changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
@@ -718,6 +757,13 @@ function MainApp() {
         .finally(() => setReadmeLoading(false));
     }
   }, [view, helpTab, readmeContent, t.fetchError]);
+
+  // Reset Evaluation State when modal closes or changes
+  useEffect(() => {
+    setEvaluatingUmpire(null);
+    setEvalGrade(0);
+    setEvalComment('');
+  }, [selectedGameDetails]);
 
   // --- DEFENSIVE UI HELPERS ---
   const safeDateMonth = (dateString) => {
@@ -842,6 +888,11 @@ function MainApp() {
       const emails = snapshot.docs.map(doc => doc.data().email).filter(Boolean);
       setRegisteredEmails([...new Set(emails)]);
     }, handleDbError);
+    
+    const evalsCol = collection(db, 'artifacts', appId, 'public', 'data', 'evaluations');
+    const unsubscribeEvals = onSnapshot(evalsCol, (snapshot) => {
+      setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
 
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
@@ -858,6 +909,7 @@ function MainApp() {
       unsubscribeAssign(); 
       unsubscribeUmpires();
       unsubscribeRegUsers();
+      unsubscribeEvals();
       unsubscribeSettings();
     };
   }, [user, appId]);
@@ -1273,6 +1325,45 @@ function MainApp() {
     }
   };
 
+  const assignOfficial = async (gameId, role, value) => {
+    if (!isAdmin) return;
+    const updateObj = {};
+    if (role === 'supervisor') {
+        const uName = value ? masterUmpires.find(u => u.id === value)?.name : '';
+        updateObj.supervisorId = value;
+        updateObj.supervisorName = uName;
+    } else {
+        // For Technical Commissioner, it's just a free-text name
+        updateObj.tcName = value;
+    }
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), updateObj);
+      if (selectedGameDetails?.id === gameId) {
+        setSelectedGameDetails(prev => ({ ...prev, ...updateObj }));
+      }
+    } catch (e) {
+      console.error("Error assigning official", e);
+    }
+  };
+
+  const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
+    if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
+    const evalId = `${gameId}_${targetUmpireId}`;
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', evalId), {
+          gameId,
+          umpireId: targetUmpireId,
+          evaluatorId: umpireId,
+          grade,
+          comment,
+          timestamp: Date.now()
+      });
+      if (typeof window !== 'undefined') alert(t.evalSaved);
+    } catch (e) {
+      console.error("Error saving evaluation", e);
+    }
+  };
+
   const deleteAllGames = async () => {
     if (!isAdmin) return;
     if (typeof window !== 'undefined' && !window.confirm(t.deleteAllConfirm)) return;
@@ -1282,6 +1373,7 @@ function MainApp() {
       games.forEach(game => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)));
       assignments.forEach(asg => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`)));
       applications.forEach(app => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`)));
+      evaluations.forEach(ev => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', ev.id)));
       await batch.commit();
       if (typeof window !== 'undefined') alert(t.deleteAllSuccess);
     } catch (e) { 
@@ -1327,6 +1419,36 @@ function MainApp() {
     document.body.removeChild(link);
   };
 
+  const generateCSV = (gamesToExport) => {
+    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
+    if (analytics) logEvent(analytics, 'calendar_bulk_csv_export', { count: gamesToExport.length });
+
+    const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location\n";
+    const rows = gamesToExport.map(game => {
+      const [hours, mins] = (game.time || '00:00').split(':');
+      const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
+      const endTime = `${endHours}:${mins || '00'}`;
+
+      const subject = `"${game.away || 'TBA'} @ ${game.home || 'TBA'} (${game.league || 'Unknown'})"`;
+      const startDate = game.date;
+      const startTime = game.time;
+      const endDate = game.date;
+      const description = `"League: ${game.league || ''}"`;
+      const location = `"${game.location || ''}"`;
+
+      return `${subject},${startDate},${startTime},${endDate},${endTime},${description},${location}`;
+    }).join('\n');
+
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `schedule-${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleCalendarExport = (game) => {
     if (!game.date || !game.time) return;
     if (analytics) logEvent(analytics, 'calendar_single_export', { game_id: game.id });
@@ -1344,7 +1466,8 @@ function MainApp() {
         applications,
         assignments,
         umpires: masterUmpires,
-        adminUmpireIds
+        adminUmpireIds,
+        evaluations
       }
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -2067,12 +2190,29 @@ service cloud.firestore {
                 </h2>
                 <div className="flex flex-wrap items-center gap-3">
                   {filteredGames.length > 0 && (
-                    <button 
-                      onClick={() => generateICS(filteredGames)} 
-                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
-                    >
-                      <CalendarPlus className="w-4 h-4" /> Ladda ner (.ics)
-                    </button>
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowScheduleExport(!showScheduleExport)} 
+                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                      >
+                        <CalendarPlus className="w-4 h-4" /> {t.downloadCalendar} <ChevronDown className="w-3 h-3" />
+                      </button>
+                      {showScheduleExport && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setShowScheduleExport(false)}></div>
+                          <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            <button onClick={() => { generateICS(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex flex-col gap-0.5">
+                              <span className="text-xs font-black text-slate-700">{t.formatICS}</span>
+                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextICS}</span>
+                            </button>
+                            <button onClick={() => { generateCSV(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex flex-col gap-0.5">
+                              <span className="text-xs font-black text-slate-700">{t.formatCSV}</span>
+                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextCSV}</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                   <div className="flex items-center gap-2">
                     <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
@@ -2181,9 +2321,6 @@ service cloud.firestore {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                <button onClick={(e) => { e.stopPropagation(); handleCalendarExport(game); }} className="text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}>
-                                  <CalendarPlus className="w-4 h-4" />
-                                </button>
                               </div>
                               <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</h3>
                               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
@@ -2811,14 +2948,14 @@ service cloud.firestore {
                                    <div className="flex items-center gap-2">
                                      <Users2 className="w-3 h-3 text-green-600" />
                                      <button 
-                                       onClick={() => { setSelectedProfileId(asg.userId); setView('umpire-profile'); scrollToTop(); }}
+                                       onClick={(e) => { e.stopPropagation(); setSelectedProfileId(asg.userId); setView('umpire-profile'); scrollToTop(); }}
                                        className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline text-left"
                                      >
                                        {asg.userName}
                                      </button>
                                      {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                    </div>
-                                   <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg">
+                                   <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg">
                                      <UserMinus className="w-3.5 h-3.5" />
                                    </button>
                                  </div>
@@ -2852,7 +2989,7 @@ service cloud.firestore {
                                       </div>
                                       <button 
                                         disabled={isFullyStaffed || isConflict} 
-                                        onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
+                                        onClick={(e) => { e.stopPropagation(); assignUmpire(game.id, app.userId, app.userName); }} 
                                         className={`${isConflict ? 'bg-red-100 text-red-700' : 'bg-blue-600 text-white hover:bg-blue-700'} text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${isFullyStaffed && !isConflict ? 'opacity-50' : ''} transition-colors`}
                                         title={isConflict ? `${t.bookedIn} ${conflictGame.location}` : ''}
                                       >
@@ -2953,12 +3090,29 @@ service cloud.firestore {
                 <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
                 <div className="flex flex-wrap items-center gap-3">
                   {myAssignedGames.length > 0 && (
-                    <button 
-                      onClick={() => generateICS(myAssignedGames)} 
-                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
-                    >
-                      <CalendarPlus className="w-4 h-4" /> Ladda ner (.ics)
-                    </button>
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowMyGamesExport(!showMyGamesExport)} 
+                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                      >
+                        <CalendarPlus className="w-4 h-4" /> {t.downloadCalendar} <ChevronDown className="w-3 h-3" />
+                      </button>
+                      {showMyGamesExport && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setShowMyGamesExport(false)}></div>
+                          <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            <button onClick={() => { generateICS(myAssignedGames); setShowMyGamesExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex flex-col gap-0.5">
+                              <span className="text-xs font-black text-slate-700">{t.formatICS}</span>
+                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextICS}</span>
+                            </button>
+                            <button onClick={() => { generateCSV(myAssignedGames); setShowMyGamesExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex flex-col gap-0.5">
+                              <span className="text-xs font-black text-slate-700">{t.formatCSV}</span>
+                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextCSV}</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                   <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-fit">
                      <button 
@@ -3247,17 +3401,88 @@ service cloud.firestore {
                   <div className="grid gap-2">
                     {gameAssignments.map(asg => {
                       const m = masterUmpires.find(mu => mu.id === asg.userId);
+                      const evaluation = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
+                      const isAssignedSupervisor = game.supervisorId === umpireId;
+                      const canEvaluate = isAdmin || isAssignedSupervisor;
+                      const canViewEval = isAdmin || isAssignedSupervisor || asg.userId === umpireId;
+                      const isEvaluatingThisUser = evaluatingUmpire === asg.userId;
+
                       return (
-                        <div key={asg.userId} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-slate-600 shadow-sm">
-                              {asg.userName.charAt(0)}
+                        <div key={asg.userId} className="flex flex-col p-3 rounded-xl border border-slate-100 bg-slate-50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-slate-600 shadow-sm">
+                                {asg.userName.charAt(0)}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-bold text-slate-800">{asg.userName}</span>
+                                {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-0.5 ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                              </div>
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-slate-800">{asg.userName}</span>
-                              {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-0.5 ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                            </div>
+                            
+                            {!evaluation && canEvaluate && !isEvaluatingThisUser && (
+                              <button 
+                                onClick={() => setEvaluatingUmpire(asg.userId)}
+                                className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors"
+                              >
+                                {t.evaluate}
+                              </button>
+                            )}
                           </div>
+
+                          {/* Evaluation Sub-Form */}
+                          {isEvaluatingThisUser && (
+                            <div className="mt-3 p-3 bg-white border border-blue-200 rounded-xl shadow-sm animate-in fade-in zoom-in-95 duration-200">
+                              <p className="text-[10px] font-black text-blue-800 uppercase mb-2">{t.grade}</p>
+                              <div className="flex gap-1 mb-3">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <button 
+                                    key={star} 
+                                    onClick={() => setEvalGrade(star)} 
+                                    className={`p-1 transition-colors ${evalGrade >= star ? 'text-yellow-400' : 'text-slate-200 hover:text-yellow-200'}`}
+                                  >
+                                    <Star className="w-6 h-6 fill-current" />
+                                  </button>
+                                ))}
+                              </div>
+                              <textarea 
+                                value={evalComment} 
+                                onChange={e => setEvalComment(e.target.value)} 
+                                placeholder={t.feedback} 
+                                className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[60px] mb-3 font-medium" 
+                              />
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => { submitEvaluation(game.id, asg.userId, evalGrade, evalComment); }} 
+                                  disabled={evalGrade === 0}
+                                  className="flex-1 bg-blue-600 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {t.saveEval}
+                                </button>
+                                <button 
+                                  onClick={() => setEvaluatingUmpire(null)} 
+                                  className="flex-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase py-2 rounded-lg hover:bg-slate-200 transition-colors"
+                                >
+                                  {t.cancel}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Display Existing Evaluation */}
+                          {evaluation && canViewEval && !isEvaluatingThisUser && (
+                            <div className="mt-3 p-3 bg-slate-100 border border-slate-200 rounded-xl animate-in fade-in duration-300">
+                               <div className="flex justify-between items-center mb-1.5">
+                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.yourEval}</p>
+                                 <div className="flex gap-0.5">
+                                   {[1, 2, 3, 4, 5].map(star => (
+                                     <Star key={star} className={`w-3.5 h-3.5 ${evaluation.grade >= star ? 'text-yellow-500 fill-current' : 'text-slate-300'}`} />
+                                   ))}
+                                 </div>
+                               </div>
+                               {evaluation.comment && <p className="text-xs text-slate-700 italic font-medium">"{evaluation.comment}"</p>}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -3271,12 +3496,35 @@ service cloud.firestore {
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.supervisor}</p>
-                     <p className="text-sm font-medium text-slate-500 italic">{t.notAssigned}</p>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.supervisor}</p>
+                     {isAdmin ? (
+                       <select 
+                         value={game.supervisorId || ''} 
+                         onChange={(e) => assignOfficial(game.id, 'supervisor', e.target.value)}
+                         className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none text-slate-700 focus:ring-2 focus:ring-blue-500/20"
+                       >
+                         <option value="">{t.selectAdmin}</option>
+                         {masterUmpires.filter(u => adminUmpireIds.includes(u.id)).map(a => (
+                           <option key={a.id} value={a.id}>{a.name}</option>
+                         ))}
+                       </select>
+                     ) : (
+                       <p className="text-sm font-medium text-slate-700">{game.supervisorName || <span className="italic text-slate-400">{t.notAssigned}</span>}</p>
+                     )}
                    </div>
                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.techComm}</p>
-                     <p className="text-sm font-medium text-slate-500 italic">{t.notAssigned}</p>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.techComm}</p>
+                     {isAdmin ? (
+                       <input 
+                         type="text"
+                         defaultValue={game.tcName || ''} 
+                         onBlur={(e) => assignOfficial(game.id, 'tc', e.target.value)}
+                         placeholder={t.enterTCName}
+                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none text-slate-700 focus:ring-2 focus:ring-blue-500/20"
+                       />
+                     ) : (
+                       <p className="text-sm font-medium text-slate-700">{game.tcName || <span className="italic text-slate-400">{t.notAssigned}</span>}</p>
+                     )}
                    </div>
                 </div>
               </div>
@@ -3424,146 +3672,6 @@ service cloud.firestore {
             <button onClick={() => setShowNamePrompt(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">
               {t.cancel}
             </button>
-          </div>
-        </div>
-      )}
-
-      {showChangelogModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-md w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="bg-blue-50 p-3 rounded-full text-blue-600">
-                <Github className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-800 leading-tight">{t.systemUpdates}</h3>
-                <p className="text-xs text-slate-400 font-medium">Senaste ändringarna</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4 min-h-[150px]">
-              {loadingChangelog ? (
-                <div className="py-8 flex justify-center"><RefreshCw className="animate-spin text-blue-500 w-6 h-6" /></div>
-              ) : changelog.length > 0 ? (
-                <div className="space-y-3">
-                  {changelog.map((commitData) => {
-                    const dateObj = new Date(commitData.commit.author.date);
-                    const isValidDate = !isNaN(dateObj.getTime());
-                    return (
-                      <div key={commitData.sha} className="flex gap-4 items-start p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors">
-                        <div className="mt-0.5 bg-blue-100 text-blue-600 p-1.5 rounded-lg">
-                          <GitCommit className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-800 text-sm mb-1">{commitData?.commit?.message || 'Update'}</p>
-                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            <span>{isValidDate ? dateObj.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US') : '-'}</span>
-                            <span>•</span>
-                            <span>{commitData?.commit?.author?.name || 'Admin'}</span>
-                          </div>
-                        </div>
-                        <a href={commitData.html_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">
-                          {commitData.sha.substring(0, 7)}
-                        </a>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-xs text-slate-400 italic">
-                  {GITHUB_REPO.includes("your-github-username") ? 
-                    "Configure GITHUB_REPO constant to view updates." : 
-                    t.fetchError}
-                </div>
-              )}
-            </div>
-            
-            <button onClick={() => setShowChangelogModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">
-              {t.close}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showEmailPreview && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-2xl w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[95vh] relative">
-            <button onClick={() => setShowEmailPreview(false)} className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="bg-blue-50 p-3 rounded-full text-blue-600">
-                <Mail className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-800 leading-tight">{t.reviewEmails}</h3>
-                <p className="text-xs text-slate-400 font-medium">Utskick av spelschema</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex justify-between items-center">
-                <p className="text-sm font-bold text-blue-900">
-                  Redo att skickas till <span className="px-2 py-0.5 bg-blue-600 text-white rounded-full mx-1">{emailCandidates.ready.length}</span> domare.
-                </p>
-              </div>
-
-              {emailCandidates.missing.length > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl">
-                  <p className="text-xs font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4" /> 
-                    {t.missingEmailWarning.replace('{count}', emailCandidates.missing.length)}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {emailCandidates.missing.map(obj => (
-                      <span key={obj.umpire.id} className="text-[10px] bg-white border border-yellow-200 text-yellow-700 px-2 py-1 rounded-md font-bold">
-                        {obj.umpire.name} ({obj.assignedGames.length} matcher)
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.customEmailMessage}</label>
-                <textarea
-                  value={customEmailMessage}
-                  onChange={(e) => setCustomEmailMessage(e.target.value)}
-                  placeholder={t.customEmailPlaceholder}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.emailPreview}</label>
-                <div className="bg-slate-100 rounded-2xl p-4 sm:p-6 border border-slate-200 overflow-x-auto">
-                  {emailCandidates.ready.length > 0 ? (
-                    <div 
-                      dangerouslySetInnerHTML={{ 
-                        __html: generateEmailHtml(emailCandidates.ready[0].umpire.name, emailCandidates.ready[0].assignedGames) 
-                      }} 
-                    />
-                  ) : (
-                    <p className="text-sm text-slate-500 italic text-center py-8">Inga domare redo för utskick.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <div className="pt-4 flex gap-3">
-              <button 
-                onClick={handleSendAllSchedules}
-                disabled={sendingBulkEmails || emailCandidates.ready.length === 0}
-                className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {sendingBulkEmails ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                {t.sendAllEmails.replace('{count}', emailCandidates.ready.length)}
-              </button>
-              <button onClick={() => setShowEmailPreview(false)} className="px-6 py-4 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">
-                {t.cancel}
-              </button>
-            </div>
           </div>
         </div>
       )}
