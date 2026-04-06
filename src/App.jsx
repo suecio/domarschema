@@ -2393,7 +2393,7 @@ service cloud.firestore {
                         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                            <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
+                            <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date} @ {game.time}</p>
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
                           </div>
                           <div className="flex items-center gap-1">
