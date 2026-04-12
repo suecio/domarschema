@@ -769,7 +769,14 @@ function MainApp() {
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
-  const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : `baseball-umpire-scheduler-${selectedYear}`;
+  // Robust parsing of appId to fix Firebase collection path validation
+  const getAppId = (year) => {
+    const base = typeof window !== 'undefined' && window.__app_id 
+      ? String(window.__app_id).replace(/[\/\\]/g, '-') 
+      : 'baseball-umpire-scheduler';
+    return `${base}-${year}`;
+  };
+  const appId = getAppId(selectedYear);
   
   // Localized today
   const today = (() => {
@@ -1005,6 +1012,99 @@ function MainApp() {
   }, [user, appId]);
 
   // 3. User Profile & Role Evaluation
+  useEffect(() => {
+    let unsubscribeProfile = () => {};
+
+    if (user && user.email) {
+      const isMaster = user.email === 'suecio@tryempire.com';
+      setContactEmail(user.email);
+      
+      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
+        email: user.email.toLowerCase(),
+        lastSeen: Date.now()
+      }, { merge: true }).catch(err => console.warn("Failed to register email:", err));
+
+      const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+      unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
+        if (snapshot.exists() && snapshot.data().umpireId) {
+          const data = snapshot.data();
+          setUserName(data.name || '');
+          setContactName(data.name || '');
+          setUmpireId(data.umpireId || '');
+          
+          const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
+          setIsAdmin(isMaster || isStandardAdmin);
+        } else {
+          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
+          if (preLinkedUmpire) {
+             setDoc(profileDoc, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
+          } else {
+             setUserName('');
+             setUmpireId('');
+             setIsAdmin(isMaster);
+          }
+        }
+      }, (err) => console.error(err));
+    } else {
+      setIsAdmin(false);
+      setUserName('');
+      setUmpireId('');
+    }
+
+    return () => unsubscribeProfile();
+  }, [user, appId, adminUmpireIds, masterUmpires]);
+
+  // 3.5 Auto-link email to public umpire profile
+  useEffect(() => {
+    if (user && user.email && umpireId && masterUmpires.length > 0) {
+      const myUmpire = masterUmpires.find(u => u.id === umpireId);
+      if (myUmpire && myUmpire.linkedEmail !== user.email) {
+        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
+          linkedUserId: user.uid,
+          linkedEmail: user.email
+        }).catch(e => console.warn("Background email sync failed", e));
+      }
+    }
+  }, [user, umpireId, masterUmpires, appId]);
+
+  // 4. Scroll & Analytics
+  useEffect(() => {
+    if (analytics) {
+      logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
+    }
+    const handleScroll = () => { 
+      if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); 
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [view, selectedYear, lang]);
+
+  // 5. Fetch GitHub Changelog
+  useEffect(() => {
+    const fetchChangelog = async () => {
+      if (!GITHUB_REPO || GITHUB_REPO.includes("your-github-username")) return;
+      setLoadingChangelog(true);
+      try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=5`);
+        if (res.ok) {
+          const data = await res.json();
+          setChangelog(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch changelog:", err);
+      } finally {
+        setLoadingChangelog(false);
+      }
+    };
+
+    if (showChangelogModal && changelog.length === 0) {
+      fetchChangelog();
+    }
+  }, [showChangelogModal, changelog.length]);
+
+  // 6. Background Queue Processor
   useEffect(() => {
     if (!isAdmin || mailQueue.length === 0) return;
     
@@ -3169,14 +3269,15 @@ service cloud.firestore {
                              {gameAssignments.map(asg => {
                                const m = masterUmpires.find(mu => mu.id === asg.userId);
                                return (
-                                 <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                                 <div key={asg.userId} className={`flex items-center justify-between p-2 rounded-xl border ${asg.pendingChange ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 bg-green-50/30'}`}>
                                    <div className="flex items-center gap-2">
-                                     <Users2 className="w-3 h-3 text-green-600" />
+                                     {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <Users2 className="w-3 h-3 text-green-600" />}
                                      <button 
                                        onClick={(e) => { e.stopPropagation(); setSelectedProfileId(asg.userId); setView('umpire-profile'); scrollToTop(); }}
-                                       className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline text-left"
+                                       className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline text-left flex items-center"
                                      >
                                        {asg.userName}
+                                       {asg.pendingChange && <span className="ml-2 text-[9px] text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded-md uppercase tracking-widest">{t.pendingReply}</span>}
                                      </button>
                                      {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                    </div>
