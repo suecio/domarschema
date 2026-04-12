@@ -323,8 +323,10 @@ const translations = {
     declineTime: "Kan inte (Avboka)",
     timeChangedBadge: "Tid Ändrad",
     pendingReply: "Väntar på svar",
-    emailMatchMovedSubject: "Spelschema uppdaterat / Game Rescheduled: {away} @ {home}",
-    emailMatchMovedBody: "Hej {name},\n\nEn match du är tillsatt på har bytt datum eller tid.\n\nTidigare: {oldDate} kl {oldTime}\nNy tid: {newDate} kl {newTime}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma matchen eller om du måste lämna återbud.\n\n---\n\nHello {name},\n\nA game you are assigned to has been rescheduled.\n\nOld time: {oldDate} at {oldTime}\nNew time: {newDate} at {newTime}\n\nPlease log in to the portal to confirm if you can still make it, or withdraw if you cannot."
+    emailMatchMovedSubject: "Spelschema uppdaterat ({count} st) / Schedule Updated",
+    emailMatchMovedBody: "Hej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.\n\n---\n\nHello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.",
+    pendingEmailsQueued: "⏳ {count} e-postmeddelanden väntar på att skickas till domare om ändrade matcher. De pausas i 15 minuter för att gruppera dubbelmatcher.",
+    sendQueuedNow: "Skicka direkt"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -547,8 +549,10 @@ const translations = {
     declineTime: "Cannot Make It",
     timeChangedBadge: "Time Changed",
     pendingReply: "Pending Reply",
-    emailMatchMovedSubject: "Game Rescheduled / Spelschema uppdaterat: {away} @ {home}",
-    emailMatchMovedBody: "Hello {name},\n\nA game you are assigned to has been rescheduled.\n\nOld time: {oldDate} at {oldTime}\nNew time: {newDate} at {newTime}\n\nPlease log in to the portal to confirm if you can still make it, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nEn match du är tillsatt på har bytt datum eller tid.\n\nTidigare: {oldDate} kl {oldTime}\nNy tid: {newDate} kl {newTime}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma matchen eller om du måste lämna återbud."
+    emailMatchMovedSubject: "Schedule Updated ({count} games) / Spelschema uppdaterat",
+    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.",
+    pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games. Paused for 15 mins to batch double-headers.",
+    sendQueuedNow: "Send Now"
   }
 };
 
@@ -712,6 +716,7 @@ function MainApp() {
   const [registeredEmails, setRegisteredEmails] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
   const [locationsData, setLocationsData] = useState([]);
+  const [mailQueue, setMailQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
@@ -972,6 +977,11 @@ function MainApp() {
       setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, handleDbError);
 
+    const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'mail_queue');
+    const unsubscribeQueue = onSnapshot(queueCol, (snapshot) => {
+      setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
+
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
@@ -989,102 +999,46 @@ function MainApp() {
       unsubscribeRegUsers();
       unsubscribeEvals();
       unsubscribeLocations();
+      unsubscribeQueue();
       unsubscribeSettings();
     };
   }, [user, appId]);
 
   // 3. User Profile & Role Evaluation
   useEffect(() => {
-    let unsubscribeProfile = () => {};
-
-    if (user && user.email) {
-      const isMaster = user.email === 'suecio@tryempire.com';
-      setContactEmail(user.email);
-      
-      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
-        email: user.email.toLowerCase(),
-        lastSeen: Date.now()
-      }, { merge: true }).catch(err => console.warn("Failed to register email:", err));
-
-      const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
-        if (snapshot.exists() && snapshot.data().umpireId) {
-          const data = snapshot.data();
-          setUserName(data.name || '');
-          setContactName(data.name || '');
-          setUmpireId(data.umpireId || '');
-          
-          const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
-          setIsAdmin(isMaster || isStandardAdmin);
-        } else {
-          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
-          if (preLinkedUmpire) {
-             setDoc(profileDoc, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
-          } else {
-             setUserName('');
-             setUmpireId('');
-             setIsAdmin(isMaster);
-          }
-        }
-      }, (err) => console.error(err));
-    } else {
-      setIsAdmin(false);
-      setUserName('');
-      setUmpireId('');
-    }
-
-    return () => unsubscribeProfile();
-  }, [user, appId, adminUmpireIds, masterUmpires]);
-
-  // 3.5 Auto-link email to public umpire profile
-  useEffect(() => {
-    if (user && user.email && umpireId && masterUmpires.length > 0) {
-      const myUmpire = masterUmpires.find(u => u.id === umpireId);
-      if (myUmpire && myUmpire.linkedEmail !== user.email) {
-        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
-          linkedUserId: user.uid,
-          linkedEmail: user.email
-        }).catch(e => console.warn("Background email sync failed", e));
-      }
-    }
-  }, [user, umpireId, masterUmpires, appId]);
-
-  // 4. Scroll & Analytics
-  useEffect(() => {
-    if (analytics) {
-      logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
-    }
-    const handleScroll = () => { 
-      if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); 
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, [view, selectedYear, lang]);
-
-  // 5. Fetch GitHub Changelog
-  useEffect(() => {
-    const fetchChangelog = async () => {
-      if (!GITHUB_REPO || GITHUB_REPO.includes("your-github-username")) return;
-      setLoadingChangelog(true);
-      try {
-        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=5`);
-        if (res.ok) {
-          const data = await res.json();
-          setChangelog(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch changelog:", err);
-      } finally {
-        setLoadingChangelog(false);
-      }
-    };
-
-    if (showChangelogModal && changelog.length === 0) {
-      fetchChangelog();
-    }
-  }, [showChangelogModal, changelog.length]);
+    if (!isAdmin || mailQueue.length === 0) return;
+    
+    const interval = setInterval(() => {
+       const now = Date.now();
+       const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
+       
+       if (readyToProcess.length > 0) {
+           readyToProcess.forEach(async (queueItem) => {
+              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
+              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
+              
+              const emailBody = t.emailMatchMovedBody
+                 .replace(/\{name\}/g, queueItem.userName)
+                 .replace(/\{changesListSv\}/g, changesTextSv)
+                 .replace(/\{changesListEn\}/g, changesTextEn);
+                 
+              try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+                   to: queueItem.email,
+                   message: {
+                     subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
+                     text: emailBody
+                   },
+                   createdAt: Date.now()
+                });
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
+              } catch(e) { console.error("Auto-process queue error", e); }
+           });
+       }
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [isAdmin, mailQueue, appId, t]);
 
   // --- ACTIONS ---
 
@@ -1408,39 +1362,80 @@ function MainApp() {
       if (isTimeChanged) {
         const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
         affectedAssignments.forEach((asg) => {
-          // Set assignment to pending
           const asgRef = doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id);
           batch.update(asgRef, { pendingChange: true });
-
-          // Queue the email if they have an account
-          const ump = masterUmpires.find(u => u.id === asg.userId);
-          if (ump && ump.linkedEmail) {
-             const emailBody = t.emailMatchMovedBody
-               .replace(/\{name\}/g, asg.userName)
-               .replace(/\{oldDate\}/g, originalGame.date)
-               .replace(/\{oldTime\}/g, originalGame.time)
-               .replace(/\{newDate\}/g, editingGameData.date)
-               .replace(/\{newTime\}/g, editingGameData.time);
-
-             const mailRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'));
-             batch.set(mailRef, {
-               to: ump.linkedEmail,
-               message: {
-                 subject: t.emailMatchMovedSubject.replace('{away}', editingGameData.away).replace('{home}', editingGameData.home),
-                 text: emailBody
-               },
-               createdAt: Date.now()
-             });
-          }
         });
       }
 
       await batch.commit();
+
+      // Queue emails outside the main transaction to utilize existing state gracefully
+      if (isTimeChanged) {
+        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
+        for (const asg of affectedAssignments) {
+          const ump = masterUmpires.find(u => u.id === asg.userId);
+          if (ump && ump.linkedEmail) {
+             const existingQueue = mailQueue.find(q => q.id === asg.userId);
+             const gameChangeInfo = {
+                gameId: editingGameData.id,
+                away: editingGameData.away,
+                home: editingGameData.home,
+                oldDate: originalGame.date,
+                oldTime: originalGame.time,
+                newDate: editingGameData.date,
+                newTime: editingGameData.time
+             };
+
+             const currentChanges = existingQueue ? existingQueue.changes : [];
+             const updatedChanges = [...currentChanges.filter(c => c.gameId !== editingGameData.id), gameChangeInfo];
+
+             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', asg.userId), {
+                userId: asg.userId,
+                email: ump.linkedEmail,
+                userName: asg.userName,
+                changes: updatedChanges,
+                processAfter: Date.now() + 15 * 60 * 1000 // Exact 15 min wait time
+             });
+          }
+        }
+      }
+
       setEditingGameData(null);
     } catch (e) { 
       console.error(e); 
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const forceSendQueue = async () => {
+    if (!isAdmin) return;
+    setSyncing(true);
+    try {
+       const promises = mailQueue.map(async (queueItem) => {
+          const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
+          const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
+          
+          const emailBody = t.emailMatchMovedBody
+             .replace(/\{name\}/g, queueItem.userName)
+             .replace(/\{changesListSv\}/g, changesTextSv)
+             .replace(/\{changesListEn\}/g, changesTextEn);
+             
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+             to: queueItem.email,
+             message: {
+               subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
+               text: emailBody
+             },
+             createdAt: Date.now()
+          });
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
+       });
+       await Promise.all(promises);
+    } catch(e) {
+       console.error(e);
+    } finally {
+       setSyncing(false);
     }
   };
 
@@ -3062,6 +3057,21 @@ service cloud.firestore {
                 
                 {/* Staffing Desk Section */}
                 <div className="space-y-4">
+                  {mailQueue.length > 0 && isAdmin && (
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-4">
+                      <p className="text-sm font-bold text-yellow-800 flex-1 leading-relaxed">
+                         {t.pendingEmailsQueued.replace('{count}', mailQueue.length)}
+                      </p>
+                      <button 
+                        onClick={forceSendQueue} 
+                        disabled={syncing}
+                        className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-colors flex items-center justify-center whitespace-nowrap disabled:opacity-50"
+                      >
+                         {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : t.sendQueuedNow}
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}
