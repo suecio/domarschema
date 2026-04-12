@@ -317,7 +317,14 @@ const translations = {
     noFacilities: "Inga faciliteter angivna",
     addFacility: "Lägg till facilitet...",
     editLocation: "Redigera plats",
-    noLocationsInfo: "Klicka på en plats för att se detaljer eller lägga till en adress och faciliteter."
+    noLocationsInfo: "Klicka på en plats för att se detaljer eller lägga till en adress och faciliteter.",
+    matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.",
+    acceptTime: "Acceptera ny tid",
+    declineTime: "Kan inte (Avboka)",
+    timeChangedBadge: "Tid Ändrad",
+    pendingReply: "Väntar på svar",
+    emailMatchMovedSubject: "Spelschema uppdaterat / Game Rescheduled: {away} @ {home}",
+    emailMatchMovedBody: "Hej {name},\n\nEn match du är tillsatt på har bytt datum eller tid.\n\nTidigare: {oldDate} kl {oldTime}\nNy tid: {newDate} kl {newTime}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma matchen eller om du måste lämna återbud.\n\n---\n\nHello {name},\n\nA game you are assigned to has been rescheduled.\n\nOld time: {oldDate} at {oldTime}\nNew time: {newDate} at {newTime}\n\nPlease log in to the portal to confirm if you can still make it, or withdraw if you cannot."
   },
   en: {
     appTitle: "Umpire Portal",
@@ -534,7 +541,14 @@ const translations = {
     noFacilities: "No facilities listed",
     addFacility: "Add facility...",
     editLocation: "Edit Location",
-    noLocationsInfo: "Click on a location to view details or add an address and facilities."
+    noLocationsInfo: "Click on a location to view details or add an address and facilities.",
+    matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
+    acceptTime: "Accept New Time",
+    declineTime: "Cannot Make It",
+    timeChangedBadge: "Time Changed",
+    pendingReply: "Pending Reply",
+    emailMatchMovedSubject: "Game Rescheduled / Spelschema uppdaterat: {away} @ {home}",
+    emailMatchMovedBody: "Hello {name},\n\nA game you are assigned to has been rescheduled.\n\nOld time: {oldDate} at {oldTime}\nNew time: {newDate} at {newTime}\n\nPlease log in to the portal to confirm if you can still make it, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nEn match du är tillsatt på har bytt datum eller tid.\n\nTidigare: {oldDate} kl {oldTime}\nNy tid: {newDate} kl {newTime}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma matchen eller om du måste lämna återbud."
   }
 };
 
@@ -864,8 +878,9 @@ function MainApp() {
         {gameAssignments.map(asg => {
             const m = masterUmpires.find(mu => mu.id === asg.userId);
             return (
-              <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" /> {t.umpireShort}: {asg.userName} 
+              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
+                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} 
+                  {t.umpireShort}: {asg.userName} 
                   {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
               </div>
             );
@@ -1372,9 +1387,15 @@ function MainApp() {
 
   const saveEditedGame = async () => {
     if (!isAdmin || !editingGameData) return;
+    setSyncing(true);
     try {
+      const originalGame = games.find(g => g.id === editingGameData.id);
+      const isTimeChanged = originalGame && (originalGame.date !== editingGameData.date || originalGame.time !== editingGameData.time);
+
+      const batch = writeBatch(db);
       const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id);
-      await updateDoc(gameRef, { 
+      
+      batch.update(gameRef, { 
         date: editingGameData.date, 
         time: editingGameData.time, 
         league: editingGameData.league, 
@@ -1383,10 +1404,55 @@ function MainApp() {
         location: editingGameData.location, 
         requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 
       });
+
+      if (isTimeChanged) {
+        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
+        affectedAssignments.forEach((asg) => {
+          // Set assignment to pending
+          const asgRef = doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id);
+          batch.update(asgRef, { pendingChange: true });
+
+          // Queue the email if they have an account
+          const ump = masterUmpires.find(u => u.id === asg.userId);
+          if (ump && ump.linkedEmail) {
+             const emailBody = t.emailMatchMovedBody
+               .replace(/\{name\}/g, asg.userName)
+               .replace(/\{oldDate\}/g, originalGame.date)
+               .replace(/\{oldTime\}/g, originalGame.time)
+               .replace(/\{newDate\}/g, editingGameData.date)
+               .replace(/\{newTime\}/g, editingGameData.time);
+
+             const mailRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'));
+             batch.set(mailRef, {
+               to: ump.linkedEmail,
+               message: {
+                 subject: t.emailMatchMovedSubject.replace('{away}', editingGameData.away).replace('{home}', editingGameData.home),
+                 text: emailBody
+               },
+               createdAt: Date.now()
+             });
+          }
+        });
+      }
+
+      await batch.commit();
       setEditingGameData(null);
     } catch (e) { 
       console.error(e); 
+    } finally {
+      setSyncing(false);
     }
+  };
+
+  const confirmScheduleChange = async (asgId) => {
+     if (!umpireId) return;
+     try {
+       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
+          pendingChange: false
+       });
+     } catch (e) {
+       console.error("Error confirming schedule change:", e);
+     }
   };
 
   const assignOfficial = async (gameId, role, value) => {
@@ -3374,9 +3440,13 @@ service cloud.firestore {
                           </div>
                           
                           <div className="flex flex-col items-end gap-2">
-                             <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.confirmed}</div>
+                             {myAsg?.pendingChange ? (
+                               <div className="bg-yellow-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.timeChangedBadge}</div>
+                             ) : (
+                               <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.confirmed}</div>
+                             )}
                              
-                             {myAsg && (
+                             {myAsg && !myAsg.pendingChange && (
                                myAsg.forTrade ? (
                                   <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, false); }} className="text-[10px] font-black uppercase bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg border border-orange-200 hover:bg-orange-200 transition-colors w-fit">
                                     {t.cancelTrade}
@@ -3389,6 +3459,19 @@ service cloud.firestore {
                              )}
                           </div>
                         </div>
+
+                        {/* Pending Change Warning Block */}
+                        {myAsg?.pendingChange && (
+                          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mt-2 flex flex-col gap-3">
+                            <p className="text-xs font-bold text-yellow-800 flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4" /> {t.matchMovedWarning}
+                            </p>
+                            <div className="flex gap-2 flex-wrap">
+                              <button onClick={(e) => { e.stopPropagation(); confirmScheduleChange(myAsg.id); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.acceptTime}</button>
+                              <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, umpireId); }} className="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.declineTime}</button>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Co-umpires section */}
                         <div className="pt-3 border-t border-slate-50 mt-1">
