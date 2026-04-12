@@ -326,7 +326,8 @@ const translations = {
     emailMatchMovedSubject: "Spelschema uppdaterat ({count} st) / Schedule Updated",
     emailMatchMovedBody: "Hej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.\n\n---\n\nHello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.",
     pendingEmailsQueued: "⏳ {count} e-postmeddelanden väntar på att skickas till domare om ändrade matcher. De pausas i 15 minuter för att gruppera dubbelmatcher.",
-    sendQueuedNow: "Skicka direkt"
+    sendQueuedNow: "Skicka direkt",
+    actionRequired: "Kräver åtgärd"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -552,7 +553,8 @@ const translations = {
     emailMatchMovedSubject: "Schedule Updated ({count} games) / Spelschema uppdaterat",
     emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.",
     pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games. Paused for 15 mins to batch double-headers.",
-    sendQueuedNow: "Send Now"
+    sendQueuedNow: "Send Now",
+    actionRequired: "Action Required"
   }
 };
 
@@ -3515,15 +3517,18 @@ service cloud.firestore {
                                     </span>
                                     <div className="mt-2 space-y-1">
                                       {myMatches.map(g => {
-                                        const isAssigned = myAssignedGames.some(ag => ag.id === g.id);
+                                        const myAsg = groupedAssignments[g.id]?.find(a => a.userId === umpireId);
+                                        const isAssigned = myAsg !== undefined;
+                                        const isPending = myAsg?.pendingChange;
+                                        
                                         return (
                                           <div 
                                             key={g.id} 
                                             onClick={() => setSelectedGameDetails(g)}
-                                            className={`w-full text-left p-1 rounded border overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${isAssigned ? 'border-green-200 bg-green-50' : 'border-slate-100 bg-white'}`}
+                                            className={`w-full text-left p-1 rounded border overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${isPending ? 'border-yellow-300 bg-yellow-50' : isAssigned ? 'border-green-200 bg-green-50' : 'border-slate-100 bg-white'}`}
                                           >
-                                            <div className={`w-full h-1 rounded-full mb-1 ${isAssigned ? 'bg-green-500' : getLeagueStyles(g.league).split(' ')[0]}`} />
-                                            <p className={`text-[8px] font-bold truncate leading-none uppercase ${isAssigned ? 'text-green-800' : 'text-slate-700'}`}>{g.away} @ {g.home}</p>
+                                            <div className={`w-full h-1 rounded-full mb-1 ${isPending ? 'bg-yellow-500' : isAssigned ? 'bg-green-500' : getLeagueStyles(g.league).split(' ')[0]}`} />
+                                            <p className={`text-[8px] font-bold truncate leading-none uppercase ${isPending ? 'text-yellow-800' : isAssigned ? 'text-green-800' : 'text-slate-700'}`}>{g.away} @ {g.home}</p>
                                           </div>
                                         );
                                       })}
@@ -3538,88 +3543,123 @@ service cloud.firestore {
                 </div>
               ) : (
                 <>
-                  {myAssignedGames.map(game => {
-                    const gameAssignments = groupedAssignments[game.id] || [];
-                    const coUmpires = gameAssignments.filter(asg => asg.userId !== umpireId);
-                    const myAsg = gameAssignments.find(a => a.userId === umpireId);
+                  {(() => {
+                    const pendingAssignedGames = myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange);
+                    const confirmedAssignedGames = myAssignedGames.filter(g => !groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange);
 
-                    return (
-                      <div 
-                        key={game.id} 
-                        onClick={() => setSelectedGameDetails(game)}
-                        className="bg-white p-4 sm:p-5 rounded-2xl border border-green-200 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-shadow group"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                          <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-green-100 text-green-600 shrink-0 group-hover:bg-green-600 group-hover:text-white transition-colors"><CalendarIcon className="w-5 h-5" /></div>
-                            <div>
-                              <p className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</p>
-                              <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
+                    const renderGameCard = (game) => {
+                      const gameAssignments = groupedAssignments[game.id] || [];
+                      const coUmpires = gameAssignments.filter(asg => asg.userId !== umpireId);
+                      const myAsg = gameAssignments.find(a => a.userId === umpireId);
+
+                      return (
+                        <div 
+                          key={game.id} 
+                          onClick={() => setSelectedGameDetails(game)}
+                          className={`bg-white p-4 sm:p-5 rounded-2xl border ${myAsg?.pendingChange ? 'border-yellow-400 shadow-sm shadow-yellow-100 ring-2 ring-yellow-400/20' : 'border-green-200 hover:shadow-md'} flex flex-col gap-3 cursor-pointer transition-all group`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div className="flex items-start gap-4">
+                              <div className={`p-3 rounded-xl ${myAsg?.pendingChange ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'} shrink-0 transition-colors`}>
+                                <CalendarIcon className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</p>
+                                <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col items-end gap-2">
+                               {myAsg?.pendingChange ? (
+                                 <div className="bg-yellow-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit shadow-sm">{t.timeChangedBadge}</div>
+                               ) : (
+                                 <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.confirmed}</div>
+                               )}
+                               
+                               {myAsg && !myAsg.pendingChange && (
+                                 myAsg.forTrade ? (
+                                    <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, false); }} className="text-[10px] font-black uppercase bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg border border-orange-200 hover:bg-orange-200 transition-colors w-fit">
+                                      {t.cancelTrade}
+                                    </button>
+                                 ) : (
+                                    <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, true); }} className="text-[10px] font-black uppercase bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors flex items-center gap-1 w-fit">
+                                      <ArrowRightLeft className="w-3 h-3" /> {t.tradeGame}
+                                    </button>
+                                 )
+                               )}
                             </div>
                           </div>
-                          
-                          <div className="flex flex-col items-end gap-2">
-                             {myAsg?.pendingChange ? (
-                               <div className="bg-yellow-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.timeChangedBadge}</div>
-                             ) : (
-                               <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.confirmed}</div>
-                             )}
-                             
-                             {myAsg && !myAsg.pendingChange && (
-                               myAsg.forTrade ? (
-                                  <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, false); }} className="text-[10px] font-black uppercase bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg border border-orange-200 hover:bg-orange-200 transition-colors w-fit">
-                                    {t.cancelTrade}
-                                  </button>
-                               ) : (
-                                  <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, true); }} className="text-[10px] font-black uppercase bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors flex items-center gap-1 w-fit">
-                                    <ArrowRightLeft className="w-3 h-3" /> {t.tradeGame}
-                                  </button>
-                               )
-                             )}
+
+                          {/* Pending Change Warning Block */}
+                          {myAsg?.pendingChange && (
+                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mt-2 flex flex-col gap-3">
+                              <p className="text-xs font-bold text-yellow-800 flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" /> {t.matchMovedWarning}
+                              </p>
+                              <div className="flex gap-2 flex-wrap">
+                                <button onClick={(e) => { e.stopPropagation(); confirmScheduleChange(myAsg.id); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.acceptTime}</button>
+                                <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, umpireId); }} className="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.declineTime}</button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Co-umpires section */}
+                          <div className="pt-3 border-t border-slate-50 mt-1">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.officials}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {coUmpires.map(u => (
+                                 <span key={u.userId} className="text-xs font-bold text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-md flex items-center gap-1"><CheckCircle className="w-3 h-3"/> {u.userName}</span>
+                              ))}
+                              {game.supervisorName && (
+                                 <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-md flex items-center gap-1"><Star className="w-3 h-3"/> SUP: {game.supervisorName}</span>
+                              )}
+                              {game.tcName && (
+                                 <span className="text-xs font-bold text-orange-700 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-md flex items-center gap-1"><FileText className="w-3 h-3"/> TC: {game.tcName}</span>
+                              )}
+                              {coUmpires.length === 0 && !game.supervisorName && !game.tcName && (
+                                 <span className="text-xs font-medium text-slate-400 italic">{t.noCoUmpires}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Calendar links */}
+                          <div className="pt-3 border-t border-slate-50 flex flex-wrap gap-2">
+                             <a href={getGoogleCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Google</a>
+                             <a href={getOutlookCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Outlook</a>
+                             <button onClick={(e) => { e.stopPropagation(); handleCalendarExport(game); }} className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">.ICS</button>
                           </div>
                         </div>
+                      );
+                    };
 
-                        {/* Pending Change Warning Block */}
-                        {myAsg?.pendingChange && (
-                          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mt-2 flex flex-col gap-3">
-                            <p className="text-xs font-bold text-yellow-800 flex items-center gap-2">
-                              <AlertTriangle className="w-4 h-4" /> {t.matchMovedWarning}
-                            </p>
-                            <div className="flex gap-2 flex-wrap">
-                              <button onClick={(e) => { e.stopPropagation(); confirmScheduleChange(myAsg.id); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.acceptTime}</button>
-                              <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, umpireId); }} className="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.declineTime}</button>
+                    return (
+                      <div className="space-y-6">
+                        {pendingAssignedGames.length > 0 && (
+                          <div className="bg-yellow-50/50 p-4 rounded-3xl border border-yellow-200 shadow-inner">
+                            <h3 className="text-sm font-black text-yellow-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                              <AlertTriangle className="w-5 h-5" /> {t.actionRequired}
+                            </h3>
+                            <div className="space-y-4">
+                              {pendingAssignedGames.map(renderGameCard)}
                             </div>
                           </div>
                         )}
 
-                        {/* Co-umpires section */}
-                        <div className="pt-3 border-t border-slate-50 mt-1">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.officials}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {coUmpires.map(u => (
-                               <span key={u.userId} className="text-xs font-bold text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-md flex items-center gap-1"><CheckCircle className="w-3 h-3"/> {u.userName}</span>
-                            ))}
-                            {game.supervisorName && (
-                               <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-md flex items-center gap-1"><Star className="w-3 h-3"/> SUP: {game.supervisorName}</span>
+                        {confirmedAssignedGames.length > 0 && (
+                          <div>
+                            {pendingAssignedGames.length > 0 && (
+                              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 mt-2 flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4" /> {t.confirmedGames}
+                              </h3>
                             )}
-                            {game.tcName && (
-                               <span className="text-xs font-bold text-orange-700 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-md flex items-center gap-1"><FileText className="w-3 h-3"/> TC: {game.tcName}</span>
-                            )}
-                            {coUmpires.length === 0 && !game.supervisorName && !game.tcName && (
-                               <span className="text-xs font-medium text-slate-400 italic">{t.noCoUmpires}</span>
-                            )}
+                            <div className="space-y-4">
+                              {confirmedAssignedGames.map(renderGameCard)}
+                            </div>
                           </div>
-                        </div>
-
-                        {/* Calendar links */}
-                        <div className="pt-3 border-t border-slate-50 flex flex-wrap gap-2">
-                           <a href={getGoogleCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Google</a>
-                           <a href={getOutlookCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Outlook</a>
-                           <button onClick={(e) => { e.stopPropagation(); handleCalendarExport(game); }} className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">.ICS</button>
-                        </div>
+                        )}
                       </div>
                     );
-                  })}
+                  })()}
                   
                   <div className="pt-4 border-t border-slate-100">
                     <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
