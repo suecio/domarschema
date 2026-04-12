@@ -1460,10 +1460,18 @@ function MainApp() {
       });
 
       if (isTimeChanged) {
+        // 1. Markera tillsatta domare med "Tid ändrad" (Pending change)
         const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
         affectedAssignments.forEach((asg) => {
           const asgRef = doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id);
           batch.update(asgRef, { pendingChange: true });
+        });
+
+        // 2. NYTT: Ta bort alla intresseanmälningar för matchen eftersom tiden ändrats
+        const affectedApplications = applications.filter(a => a.gameId === editingGameData.id);
+        affectedApplications.forEach((app) => {
+          const appRef = doc(db, 'artifacts', appId, 'public', 'data', 'applications', app.id);
+          batch.delete(appRef);
         });
       }
 
