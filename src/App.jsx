@@ -18,7 +18,7 @@ import {
   User, UserMinus, ArrowUp, Users, Megaphone, HelpCircle, ArrowRightLeft, 
   ChevronRight, AlertTriangle, Star, FileText, ArrowLeft, BookOpen, MessageCircle,
   Mail, Code, Share2, UserPlus, Send, Navigation, X, ChevronUp, ChevronDown,
-  ArrowUpDown, CalendarPlus, ChevronLeft, List, Edit2, Check, LogOut, Bell, BellOff, Sliders, Download, Plus
+  ArrowUpDown, CalendarPlus, ChevronLeft, List, Edit2, Check, LogOut, Bell, BellOff, Sliders, Download, Plus, UserCheck
 } from 'lucide-react';
 
 /**
