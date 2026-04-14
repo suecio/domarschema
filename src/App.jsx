@@ -18,7 +18,7 @@ import {
   User, UserMinus, ArrowUp, Users, Megaphone, HelpCircle, ArrowRightLeft, 
   ChevronRight, AlertTriangle, Star, FileText, ArrowLeft, BookOpen, MessageCircle,
   Mail, Code, Share2, UserPlus, Send, Navigation, X, ChevronUp, ChevronDown,
-  ArrowUpDown, CalendarPlus, ChevronLeft, List, Edit2, Check, LogOut, Bell, BellOff, Sliders
+  ArrowUpDown, CalendarPlus, ChevronLeft, List, Edit2, Check, LogOut, Bell, BellOff, Sliders, Download, Plus
 } from 'lucide-react';
 
 /**
@@ -179,7 +179,7 @@ const translations = {
     tradeGame: "Give Away", cancelTrade: "Cancel Give Away", takeGame: "Take Game", gamesForTrade: "Games Up For Trade",
     noMarketplaceGames: "No games are up for trade right now.", tradeSuccess: "You have taken over the game! Your schedule is updated.",
     tradeConfirm: "Are you sure you want to take over this game?", downloadCalendar: "Download", formatICS: ".ICS File",
-    subtextICS: "For Apple & Outlook", formatCSV: ".CSV File", subtextCSV: "For Google Calendar", evaluate: "Evaluate",
+    subtextICS: "För Apple & Outlook", formatCSV: ".CSV File", subtextCSV: "For Google Calendar", evaluate: "Evaluate",
     grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved",
     yourEval: "Evaluation", selectAdmin: "Select Admin...", selectUmpire: "Select Umpire...", enterTCName: "Enter TC name...",
     umpireShort: "UMP", supShort: "SUP", tcShort: "TC", locations: "Locations", address: "Address", facilities: "Facilities",
@@ -244,27 +244,42 @@ const renderMarkdown = (text) => {
 };
 
 // ==========================================
-// ERROR BOUNDARY
+// ERROR BOUNDARY (ENHANCED)
 // ==========================================
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, errorInfo) { console.error("Critical React Crash:", error, errorInfo); }
+  
+  static getDerivedStateFromError(error) { 
+    return { hasError: true, error }; 
+  }
+  
+  componentDidCatch(error, errorInfo) { 
+    console.error("Critical React Crash:", error, errorInfo); 
+    this.setState({ errorInfo });
+  }
+  
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full text-center border border-red-100">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-2xl w-full text-center border border-red-100">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-black text-slate-800 mb-2">Ett oväntat fel uppstod</h2>
-            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade under laddning. Felet var:</p>
+            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade. Här är detaljerna som hjälper dig att hitta felet:</p>
+            
             <div className="bg-red-50 rounded-xl p-4 text-left overflow-x-auto mb-6 border border-red-100">
-              <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap">{this.state.error?.toString()}</pre>
+              <pre className="text-red-700 text-sm font-black whitespace-pre-wrap mb-4">
+                {this.state.error && this.state.error.toString()}
+              </pre>
+              <pre className="text-red-900 text-[10px] font-mono whitespace-pre-wrap leading-relaxed opacity-80">
+                {this.state.errorInfo && this.state.errorInfo.componentStack}
+              </pre>
             </div>
-            <button onClick={() => window.location.reload()} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-colors">
+            
+            <button onClick={() => window.location.reload()} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-colors shadow-lg">
               Ladda om sidan
             </button>
           </div>
@@ -276,13 +291,461 @@ class ErrorBoundary extends Component {
 }
 
 // ==========================================
-// VIEW & MODAL COMPONENTS
+// MAIN APPLICATION COMPONENT
 // ==========================================
+function MainApp() {
+  
+  // --- 1. CORE STATE ---
+  const [user, setUser] = useState(null);
+  const [userName, setUserName] = useState('');
+  const [umpireId, setUmpireId] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [adminUmpireIds, setAdminUmpireIds] = useState([]);
+  
+  const [view, setView] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('view') || 'schedule' : 'schedule'));
+  const [scheduleViewMode, setScheduleViewMode] = useState('list');
+  const [myGamesViewMode, setMyGamesViewMode] = useState('list');
+  const [selectedYear, setSelectedYear] = useState('2026');
+  
+  const [isDemoEnv, setIsDemoEnv] = useState(true);
+  const [federation, setFederation] = useState('swe');
+  const federations = [
+    { id: 'swe', name: '🇸🇪 Sweden', defaultLang: 'sv' },
+    { id: 'fin', name: '🇫🇮 Finland', defaultLang: 'fi' },
+    { id: 'sui', name: '🇨🇭 Switzerland', defaultLang: 'de' }
+  ];
 
-function HelpView({ t, setView, helpTab, setHelpTab, copyGuideLink, contactName, setContactName, contactEmail, setContactEmail, contactSubject, setContactSubject, contactMessage, setContactMessage, contactStatus, setContactStatus, handleContactSubmit, readmeLoading, readmeContent }) {
-  return (
+  const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
+  const [lang, setLang] = useState(defaultLang);
+  const t = new Proxy(translations[lang] || translations['en'], { get: (target, prop) => target[prop] !== undefined ? target[prop] : translations['en'][prop] });
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [globalNote, setGlobalNote] = useState('');
+  const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
+  
+  const [helpTab, setHelpTab] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') || 'guide' : 'guide'));
+  const [readmeContent, setReadmeContent] = useState(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
+  
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactStatus, setContactStatus] = useState('idle');
+
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [customEmailMessage, setCustomEmailMessage] = useState('');
+  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
+  const [showScheduleExport, setShowScheduleExport] = useState(false);
+  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
+
+  const [games, setGames] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [masterUmpires, setMasterUmpires] = useState([]);
+  const [registeredEmails, setRegisteredEmails] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
+  const [locationsData, setLocationsData] = useState([]);
+  const [mailQueue, setMailQueue] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [firebaseError, setFirebaseError] = useState(null); 
+  
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [authError, setAuthError] = useState('');
+  
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState(null);
+  const [selectedGameDetails, setSelectedGameDetails] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [newFacility, setNewFacility] = useState('');
+  
+  const [bulkInput, setBulkInput] = useState('');
+  const [showImportTool, setShowImportTool] = useState(false);
+  const [showStaffed, setShowStaffed] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [editingUmpireId, setEditingUmpireId] = useState(null);
+  const [tempEditName, setTempEditName] = useState('');
+  const [tempEditLevel, setTempEditLevel] = useState('');
+  const [tempEditEmail, setTempEditEmail] = useState('');
+  const [editNoteText, setEditNoteText] = useState('');
+  const [showManualEmailInput, setShowManualEmailInput] = useState(false);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [editingGameData, setEditingGameData] = useState(null);
+  
+  const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
+  const [umpireSort, setUmpireSort] = useState('level');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterLeague, setFilterLeague] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+
+  const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+
+  // --- 2. ENVIRONMENT & APP ID ---
+  useEffect(() => {
+     if (typeof window !== 'undefined') {
+        if (window.location.hostname === 'schema.domarweb.se') {
+           setIsDemoEnv(false); setFederation('swe'); setLang('sv');
+        } else setIsDemoEnv(true);
+     }
+  }, []);
+
+  const appId = useMemo(() => {
+    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\/\\]/g, '-') : 'baseball-umpire-scheduler';
+    return federation === 'swe' ? `${base}-${selectedYear}` : `${base}-${federation}-${selectedYear}`;
+  }, [federation, selectedYear]);
+
+
+  // --- 3. DERIVED DATA (USEMEMO) ---
+  const calendarWeeks = useMemo(() => {
+    const year = currentDate.getFullYear(); const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const shiftedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+    let currentWeek = []; const weeks = [];
+    for (let i = 0; i < shiftedFirstDay; i++) currentWeek.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      currentWeek.push(new Date(year, month, d));
+      if (currentWeek.length === 7) {
+        const validDate = currentWeek.find(day => day !== null);
+        weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
+        currentWeek = [];
+      }
+    }
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 7) currentWeek.push(null);
+      const validDate = currentWeek.find(day => day !== null);
+      weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
+    }
+    return weeks;
+  }, [currentDate]);
+
+  const groupedAssignments = useMemo(() => {
+    const map = {}; assignments.forEach(asg => { if (!map[asg.gameId]) map[asg.gameId] = []; map[asg.gameId].push(asg); }); return map;
+  }, [assignments]);
+
+  const sortedStatistics = useMemo(() => {
+    const stats = {}; masterUmpires.forEach(u => { stats[u.id] = { userId: u.id, name: u.name || 'Unknown', games: 0, interest: 0 }; });
+    assignments.forEach(asg => { if (!asg.userId) return; if (!stats[asg.userId]) stats[asg.userId] = { userId: asg.userId, name: asg.userName || 'Unknown', games: 0, interest: 0 }; stats[asg.userId].games += 1; });
+    applications.forEach(app => { if (!app.userId) return; if (!stats[app.userId]) stats[app.userId] = { userId: app.userId, name: app.userName || 'Unknown', games: 0, interest: 0 }; stats[app.userId].interest += 1; });
+    const data = Object.values(stats).map(s => { const rate = s.interest > 0 ? Math.round((s.games / s.interest) * 100) : (s.games > 0 ? 100 : 0); return { ...s, rate }; });
+    return data.sort((a, b) => {
+      let valA = a[sortConfig.key]; let valB = b[sortConfig.key];
+      if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1; return 0;
+    });
+  }, [assignments, applications, masterUmpires, sortConfig]);
+
+  const filteredGames = useMemo(() => {
+    return games.filter(game => {
+      const hName = (game.home || '').toLowerCase(); const aName = (game.away || '').toLowerCase(); const search = searchQuery.toLowerCase();
+      const matchesSearch = hName.includes(search) || aName.includes(search);
+      const matchesLeague = !filterLeague || game.league === filterLeague;
+      const matchesLocation = !filterLocation || game.location === filterLocation;
+      const isHistorical = (game.date || '') < today;
+      let statusMatch = true;
+      if (filterStatus === 'needs_umpire') { const gameAssignments = groupedAssignments[game.id] || []; statusMatch = gameAssignments.length < (game.requiredUmpires || 2); }
+      else if (filterStatus === 'no_interests') { const applicants = applications.filter(a => a.gameId === game.id); statusMatch = applicants.length === 0; }
+      return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch : !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
+    });
+  }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
+
+  const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
+  const allLocationNames = useMemo(() => [...new Set([...games.map(g => g.location), ...locationsData.map(l => l.id)])].filter(Boolean).sort((a, b) => a.localeCompare(b, lang)), [games, locationsData, lang]);
+  const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
+
+  const sortedUmpireList = useMemo(() => {
+    const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
+    let umps = masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+    if (umpireSort === 'level') umps.sort((a, b) => { const orderA = levelOrder[(a.level || '').toLowerCase()] || 99; const orderB = levelOrder[(b.level || '').toLowerCase()] || 99; if (orderA !== orderB) return orderA - orderB; return (a.name || '').localeCompare(b.name || ''); });
+    else umps.sort((a, b) => (a.name || '').localeCompare(b.name || '')); return umps;
+  }, [masterUmpires, searchQuery, umpireSort]);
+
+  const filteredMasterUmpires = useMemo(() => masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase())), [masterUmpires, searchQuery]);
+  const myAssignedGames = useMemo(() => umpireId ? games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId)) : [], [games, groupedAssignments, umpireId]);
+  const myInterestedGames = useMemo(() => umpireId ? games.filter(game => applications.some(app => app.gameId === game.id && app.userId === umpireId) && !groupedAssignments[game.id]?.some(asg => asg.userId === umpireId)) : [], [games, applications, groupedAssignments, umpireId]);
+
+  const umpiresWithAssignmentsMap = useMemo(() => {
+    const map = {};
+    assignments.forEach(asg => {
+      if (!map[asg.userId]) map[asg.userId] = { umpire: masterUmpires.find(u => u.id === asg.userId), assignedGames: [] };
+      const game = games.find(g => g.id === asg.gameId); if (game) map[asg.userId].assignedGames.push(game);
+    });
+    Object.values(map).forEach(obj => obj.assignedGames.sort((a, b) => (a.date || '').localeCompare(b.date || ''))); return map;
+  }, [assignments, masterUmpires, games]);
+
+  const emailCandidates = useMemo(() => {
+    const list = Object.values(umpiresWithAssignmentsMap).filter(obj => obj.umpire !== undefined);
+    return { ready: list.filter(obj => obj.umpire.linkedEmail), missing: list.filter(obj => !obj.umpire.linkedEmail) };
+  }, [umpiresWithAssignmentsMap]);
+
+  const unconnectedEmails = useMemo(() => {
+    const linked = masterUmpires.map(u => (u.linkedEmail || '').toLowerCase()).filter(Boolean);
+    return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
+  }, [registeredEmails, masterUmpires]);
+
+
+  // --- 4. HELPER UTILS ---
+  const safeDateMonth = (dateString) => { if (!dateString) return ''; const d = new Date(dateString); if (isNaN(d.getTime())) return dateString; return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' }); };
+  const safeDateDay = (dateString) => { if (!dateString) return '-'; const d = new Date(dateString); if (isNaN(d.getTime())) return '-'; const dayIndex = d.getDay(); return (t.days && t.days[dayIndex]) ? t.days[dayIndex] : '-'; };
+  const safeDateNum = (dateString) => { if (!dateString) return '-'; const d = new Date(dateString); if (isNaN(d.getTime())) return '-'; return d.getDate(); };
+  const toLocalISO = (date) => { if (!date || isNaN(date.getTime())) return ""; const y = date.getFullYear(); const m = String(date.getMonth() + 1).padStart(2, '0'); const d = String(date.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; };
+  const scrollToTop = () => { if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  
+  const getLeagueStyles = (league) => { const l = (league || '').toLowerCase(); if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200'; if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200'; if (l.includes('pre') || l.includes('off')) return 'bg-red-100 text-red-700 border-red-200'; if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200'; return 'bg-slate-100 text-slate-700 border-slate-200'; };
+  const getLevelStyles = (level) => { const l = (level || '').toLowerCase(); if (l.includes('internationell')) return 'bg-[#204d99] text-white border-[#1a3d7a]'; if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]'; if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]'; if (l.includes('region')) return 'bg-[#cfe2f3] text-[#3d85c6] border-[#a2c4c9]'; if (l.includes('förening')) return 'bg-[#efefef] text-[#666666] border-[#cccccc]'; return 'bg-slate-200 text-slate-500 border-slate-300'; };
+  const getAssignmentStatusStyles = (count, required) => { const req = required || 2; if (count === 0) return 'bg-red-100 text-red-700 border-red-200'; if (count < req) return 'bg-yellow-100 text-yellow-700 border-yellow-200'; return 'bg-green-100 text-green-700 border-green-200'; };
+
+  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
+    if (gameAssignments.length === 0 && !game.supervisorName && !game.tcName) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-3 items-center">
+        {gameAssignments.map(asg => {
+            const m = masterUmpires.find(mu => mu.id === asg.userId);
+            return (
+              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
+                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} 
+                  {t.umpireShort}: {asg.userName} 
+                  {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+              </div>
+            );
+        })}
+        {game.supervisorName && <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1"><Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}</div>}
+        {game.tcName && <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1"><FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}</div>}
+      </div>
+    );
+  };
+
+
+  // --- 5. EFFECTS ---
+  useEffect(() => { setEditNoteText(globalNote); }, [globalNote]);
+
+  useEffect(() => {
+    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
+      setReadmeLoading(true);
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`).then(res => res.json())
+        .then(data => { if (data.content) { setReadmeContent(decodeURIComponent(escape(atob(data.content)))); } else { setReadmeContent(t.fetchError); }})
+        .catch(err => { setReadmeContent(t.fetchError); }).finally(() => setReadmeLoading(false));
+    }
+  }, [view, helpTab, readmeContent, t.fetchError]);
+
+  useEffect(() => { const initAuth = async () => { try { if (typeof window !== 'undefined' && window.__initial_auth_token) { try { await signInWithCustomToken(auth, window.__initial_auth_token); } catch (customErr) { await signInAnonymously(auth); } } else { await signInAnonymously(auth); } } catch (err) { } }; initAuth(); const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); }); return () => unsubscribe(); }, []);
+
+  useEffect(() => {
+    const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null; if (isCanvas && !user) return; 
+    const handleDbError = (err) => { if (err.code === 'permission-denied') setFirebaseError('permission-denied'); };
+    const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games'); const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => { setGames(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.date || '').localeCompare(b.date || ''))); setFirebaseError(null); }, handleDbError);
+    const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications'); const unsubscribeApps = onSnapshot(appsCol, (snapshot) => { setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments'); const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => { setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires'); const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => { setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || ''))); }, handleDbError);
+    const regUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'registered_users'); const unsubscribeRegUsers = onSnapshot(regUsersCol, (snapshot) => { setRegisteredEmails([...new Set(snapshot.docs.map(doc => doc.data().email).filter(Boolean))]); }, handleDbError);
+    const evalsCol = collection(db, 'artifacts', appId, 'public', 'data', 'evaluations'); const unsubscribeEvals = onSnapshot(evalsCol, (snapshot) => { setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    const locCol = collection(db, 'artifacts', appId, 'public', 'data', 'locations'); const unsubscribeLocations = onSnapshot(locCol, (snapshot) => { setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'mail_queue'); const unsubscribeQueue = onSnapshot(queueCol, (snapshot) => { setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'); const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => { if (snapshot.exists()) { const data = snapshot.data(); setAdminUmpireIds(data.adminUmpireIds || []); setGlobalNote(data.globalNote || ''); if (data.features) { setFeatures(prev => ({ ...prev, ...data.features })); } } }, handleDbError);
+    return () => { unsubscribeGames(); unsubscribeApps(); unsubscribeAssign(); unsubscribeUmpires(); unsubscribeRegUsers(); unsubscribeEvals(); unsubscribeLocations(); unsubscribeQueue(); unsubscribeSettings(); };
+  }, [user, appId]);
+
+  useEffect(() => {
+    let unsubscribeProfile = () => {};
+    if (user && user.email) {
+      const isMaster = user.email === 'suecio@tryempire.com'; setIsSuperAdmin(isMaster); setContactEmail(user.email);
+      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), { email: user.email.toLowerCase(), lastSeen: Date.now() }, { merge: true }).catch(err => { });
+      const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+      unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
+        if (snapshot.exists() && snapshot.data().umpireId) {
+          const data = snapshot.data(); setUserName(data.name || ''); setContactName(data.name || ''); setUmpireId(data.umpireId || '');
+          setIsAdmin(isMaster || (Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId)));
+        } else {
+          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
+          if (preLinkedUmpire) { setDoc(profileDoc, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true }); } 
+          else { setUserName(''); setUmpireId(''); setIsAdmin(isMaster); }
+        }
+      });
+    } else { setIsAdmin(false); setIsSuperAdmin(false); setUserName(''); setUmpireId(''); }
+    return () => unsubscribeProfile();
+  }, [user, appId, adminUmpireIds, masterUmpires]);
+
+  useEffect(() => {
+    if (user && user.email && umpireId && masterUmpires.length > 0) {
+      const myUmpire = masterUmpires.find(u => u.id === umpireId);
+      if (myUmpire && myUmpire.linkedEmail !== user.email) { updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), { linkedUserId: user.uid, linkedEmail: user.email }).catch(e => { }); }
+    }
+  }, [user, umpireId, masterUmpires, appId]);
+
+  useEffect(() => {
+    if (!isAdmin || mailQueue.length === 0) return;
+    const interval = setInterval(() => {
+       const now = Date.now(); const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
+       if (readyToProcess.length > 0) {
+           readyToProcess.forEach(async (queueItem) => {
+              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
+              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
+              const emailBody = t.emailMatchMovedBody.replace(/\{name\}/g, queueItem.userName).replace(/\{changesListSv\}/g, changesTextSv).replace(/\{changesListEn\}/g, changesTextEn);
+              try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: queueItem.email, message: { subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length), text: emailBody }, createdAt: Date.now() });
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
+              } catch(e) { }
+           });
+       }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isAdmin, mailQueue, appId, t]);
+
+  useEffect(() => {
+    if (analytics) logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
+    const handleScroll = () => { if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); };
+    if (typeof window !== 'undefined') { window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }
+  }, [view, selectedYear, lang]);
+
+
+  // --- 6. ACTIONS & HANDLERS ---
+  const handleAuthSubmit = async (e) => { e.preventDefault(); setAuthError(''); try { if (isLoginMode) await signInWithEmailAndPassword(auth, authEmail, authPassword); else await createUserWithEmailAndPassword(auth, authEmail, authPassword); setShowAuthModal(false); } catch (err) { setAuthError(err.message); } };
+  const handleResetPassword = async () => { if (!authEmail) { setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Please enter your email address first.'); return; } try { await sendPasswordResetEmail(auth, authEmail); if (typeof window !== 'undefined') alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!'); } catch (err) { setAuthError(err.message); } };
+  const handleSort = (key) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' }));
+  const updateProfile = async (name, id) => { if (!user || !user.email) return; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true }); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true }); };
+  const logoutUmpire = async () => { await signOut(auth); try { await signInAnonymously(auth); } catch (e) { } setShowAdminModal(false); setView('schedule'); };
+  const saveGlobalNote = async () => { if (!isAdmin) return; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: editNoteText }, { merge: true }); };
+  const clearGlobalNote = async () => { if (!isAdmin) return; setEditNoteText(''); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: '' }, { merge: true }); };
+  const toggleSystemFeature = async (featureKey) => { if (!isSuperAdmin) return; const newFeatures = { ...features, [featureKey]: !features[featureKey] }; setFeatures(newFeatures); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { features: newFeatures }, { merge: true }); };
+  const toggleUmpireReminderPref = async (uId, currentStatus) => { if (uId !== umpireId && !isAdmin) return; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', uId), { remindersEnabled: currentStatus === false ? true : false }, { merge: true }); };
+  const forceRunRemindersNow = async () => { if (!isSuperAdmin) return; try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'cron'), { lastReminderSentDate: 'FORCED' }, { merge: true }); if (typeof window !== 'undefined') alert(t.remindersSent || "Reminders queued!"); } catch (e) { console.error(e); } };
+  const copyGuideLink = () => { if (typeof window !== 'undefined') { navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?view=help&tab=guide`).then(() => { alert(t.linkCopied); }).catch(() => { }); } };
+  const toggleUmpireAdmin = async (uId) => { if (!isSuperAdmin) return; let updatedIds = [...(adminUmpireIds || [])]; if (updatedIds.includes(uId)) updatedIds = updatedIds.filter(id => id !== uId); else updatedIds.push(uId); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminUmpireIds: updatedIds }, { merge: true }); };
+  const addMasterUmpire = async (name, level = "") => { if (!name.trim()) return ""; const exists = masterUmpires.find(u => (u.name || '').toLowerCase() === name.toLowerCase()); if (exists) return exists.id; const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name, level, remindersEnabled: true }); return docRef.id; };
+  const updateMasterUmpire = async (id, newName, newLevel, newEmail) => { if (!isAdmin || !newName.trim()) return; const updateData = { name: newName, level: newLevel }; if (newEmail !== undefined) updateData.linkedEmail = newEmail.trim().toLowerCase(); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), updateData, { merge: true }); };
+  const deleteMasterUmpire = async (id, name, linkedEmail) => { if (!isAdmin) return; if (typeof window !== 'undefined' && !window.confirm(`${t.deleteUmpireConfirm} "${name}"?`)) return; await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id)); if (linkedEmail) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: linkedEmail, message: { subject: t.umpireDeletedSubject, text: t.umpireDeletedBody }, createdAt: Date.now() }); };
+  const toggleApplication = async (gameId) => { if (!user || !user.email) { setShowAuthModal(true); return; } if (!umpireId) { setShowNamePrompt(true); return; } const appIdStr = `${gameId}_${umpireId}`; const existing = applications.find(a => a.id === appIdStr); if (existing) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr)); else await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr), { gameId, userId: umpireId, userName, timestamp: Date.now() }); };
+  const assignUmpire = async (gameId, uId, name) => { if (!isAdmin) return; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${gameId}_${uId}`), { gameId, userId: uId, userName: name, assignedAt: Date.now() }); };
+  const removeAssignment = async (gameId, uId) => { if (!isAdmin) return; await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${gameId}_${uId}`)); };
+  const toggleTradeStatus = async (asgId, status) => { if (!umpireId && !isAdmin) return; await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { forTrade: status }); };
+  const handleContactSubmit = async (e) => { e.preventDefault(); setContactStatus('sending'); try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: 'admin@domarweb.se', replyTo: contactEmail, message: { subject: `[Kontaktformulär] ${contactSubject}`, text: `Avsändare: ${contactName}\nE-post: ${contactEmail}\n\nMeddelande:\n${contactMessage}` }, createdAt: Date.now() }); setContactStatus('success'); setContactSubject(''); setContactMessage(''); } catch (error) { setContactStatus('error'); } };
+  const confirmScheduleChange = async (asgId) => { if (!umpireId) return; try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { pendingChange: false }); } catch (e) { } };
+  const handleDeleteGame = async (gameId) => { if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId)); } };
+
+  const takeTrade = async (oldAsg, game) => {
+    if (!user || !user.email) { setShowAuthModal(true); return; }
+    if (!umpireId) { setShowNamePrompt(true); return; }
+    if (oldAsg.userId === umpireId) return; 
+    const umpireAssignedGamesToday = assignments.filter(asg => asg.userId === umpireId).map(asg => games.find(g => g.id === asg.gameId)).filter(g => g && g.date === game.date && g.id !== game.id);
+    const conflictGame = umpireAssignedGamesToday.find(g => (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim());
+    if (conflictGame) { if(typeof window !== 'undefined') alert(`${t.bookedIn} ${conflictGame.location}. Du kan inte ta denna match.`); return; }
+    if (typeof window !== 'undefined' && !window.confirm(t.tradeConfirm)) return;
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db); batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${game.id}_${umpireId}`), { gameId: game.id, userId: umpireId, userName: userName, assignedAt: Date.now(), forTrade: false });
+      await batch.commit(); if(typeof window !== 'undefined') alert(t.tradeSuccess);
+    } catch (e) { } finally { setSyncing(false); }
+  };
+
+  const handleBulkImport = async () => {
+    if (!isAdmin || !bulkInput.trim()) return;
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      bulkInput.trim().split('\n').forEach((row) => {
+        const columns = row.split(/\t|,/);
+        if (columns.length >= 5) {
+          const gameData = { date: columns[0].trim(), time: columns[1].trim(), league: columns[2].trim(), away: columns[3].trim(), home: columns[4].trim(), location: (columns[5] || 'Unknown').trim(), requiredUmpires: 2 };
+          const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
+          batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
+        }
+      });
+      await batch.commit(); setBulkInput(''); setShowImportTool(false); if(typeof window !== 'undefined') alert(t.importSuccess);
+    } catch (e) { } finally { setSyncing(false); }
+  };
+
+  const saveEditedGame = async () => {
+    if (!isAdmin || !editingGameData) return;
+    setSyncing(true);
+    try {
+      const originalGame = games.find(g => g.id === editingGameData.id);
+      const isTimeChanged = originalGame && (originalGame.date !== editingGameData.date || originalGame.time !== editingGameData.time);
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id), { date: editingGameData.date, time: editingGameData.time, league: editingGameData.league, home: editingGameData.home, away: editingGameData.away, location: editingGameData.location, requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 });
+      if (isTimeChanged) {
+        assignments.filter(a => a.gameId === editingGameData.id).forEach((asg) => batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id), { pendingChange: true }));
+        applications.filter(a => a.gameId === editingGameData.id).forEach((app) => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', app.id)));
+      }
+      await batch.commit();
+      if (isTimeChanged) {
+        for (const asg of assignments.filter(a => a.gameId === editingGameData.id)) {
+          const ump = masterUmpires.find(u => u.id === asg.userId);
+          if (ump && ump.linkedEmail) {
+             const existingQueue = mailQueue.find(q => q.id === asg.userId);
+             const gameChangeInfo = { gameId: editingGameData.id, away: editingGameData.away, home: editingGameData.home, oldDate: originalGame.date, oldTime: originalGame.time, newDate: editingGameData.date, newTime: editingGameData.time };
+             const updatedChanges = [...(existingQueue ? existingQueue.changes : []).filter(c => c.gameId !== editingGameData.id), gameChangeInfo];
+             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', asg.userId), { userId: asg.userId, email: ump.linkedEmail, userName: asg.userName, changes: updatedChanges, processAfter: Date.now() + 15 * 60 * 1000 });
+          }
+        }
+      }
+      setEditingGameData(null);
+    } catch (e) { } finally { setSyncing(false); }
+  };
+
+  const forceSendQueue = async () => {
+    if (!isAdmin) return;
+    setSyncing(true);
+    try {
+       await Promise.all(mailQueue.map(async (queueItem) => {
+          const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
+          const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
+          const emailBody = t.emailMatchMovedBody.replace(/\{name\}/g, queueItem.userName).replace(/\{changesListSv\}/g, changesTextSv).replace(/\{changesListEn\}/g, changesTextEn);
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: queueItem.email, message: { subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length), text: emailBody }, createdAt: Date.now() });
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
+       }));
+    } catch(e) { } finally { setSyncing(false); }
+  };
+
+  const saveLocation = async () => {
+    if (!isAdmin || !editingLocation) return;
+    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', editingLocation.id), { address: editingLocation.address || '', facilities: editingLocation.facilities || [] }, { merge: true }); setEditingLocation(null); } catch (e) { }
+  };
+
+  const generateCSV = (gamesToExport) => {
+    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
+    const rows = gamesToExport.map(game => {
+      const [hours, mins] = (game.time || '00:00').split(':');
+      return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${(parseInt(hours || '0') + 3).toString().padStart(2, '0')}:${mins || '00'},"${game.league}","${game.location}"`;
+    }).join('\n');
+    const blob = new Blob(["Subject,Start Date,Start Time,End Date,End Time,Description,Location\n" + rows], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `schedule-${selectedYear}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  };
+
+  const generateICS = (gamesToExport) => {
+    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
+    if (analytics) logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
+    const events = gamesToExport.map(game => {
+      const [hours, mins] = (game.time || '00:00').split(':');
+      return ['BEGIN:VEVENT', `UID:${game.id}@domartillsattning.portal`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`, `DTSTART:${(game.date || '').replace(/-/g, '')}T${(game.time || '00:00').replace(/:/g, '')}00`, `DTEND:${(game.date || '').replace(/-/g, '')}T${(parseInt(hours || '0') + 3).toString().padStart(2, '0')}${mins || '00'}00`, `SUMMARY:${game.away || 'TBA'} @ ${game.home || 'TBA'} (${game.league || 'Unknown'})`, `DESCRIPTION:League: ${game.league || ''}\\nLocation: ${game.location || ''}`, `LOCATION:${game.location || ''}`, 'END:VEVENT'].join('\n');
+    }).join('\n');
+    const blob = new Blob([['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Domartillsättning//Baseball Scheduler//EN', events, 'END:VCALENDAR'].join('\n')], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `schedule-${selectedYear}.ics`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  };
+
+  const handleDownloadBackup = () => {
+    if (!isAdmin || typeof window === 'undefined') return;
+    const blob = new Blob([JSON.stringify({ timestamp: new Date().toISOString(), year: selectedYear, appId, collections: { games, applications, assignments, umpires: masterUmpires, adminUmpireIds, evaluations, locations: locationsData } }, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `umpire-backup-${selectedYear}-${new Date().toISOString().split('T')[0]}.json`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  };
+
+
+  // ==========================================
+  // RENDER FUNCTIONS (INLINE FOR SCOPE)
+  // ==========================================
+  
+  const renderHelpView = () => (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <button onClick={() => { setView('schedule'); }} className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"><ArrowLeft className="w-4 h-4" /> {t.back}</button>
+      <button onClick={() => setView('schedule')} className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"><ArrowLeft className="w-4 h-4" /> {t.back}</button>
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="flex border-b border-slate-100 bg-slate-50 overflow-x-auto custom-scrollbar">
           <button onClick={() => setHelpTab('guide')} className={`min-w-[120px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'guide' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}><BookOpen className="w-4 h-4" /> {t.guide}</button>
@@ -292,18 +755,11 @@ function HelpView({ t, setView, helpTab, setHelpTab, copyGuideLink, contactName,
         </div>
         <div className="p-6 sm:p-8">
           {helpTab === 'guide' && (
-            <div className="space-y-8 max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><BookOpen className="w-8 h-8 text-blue-600" /></div>
-                <h2 className="text-2xl font-black text-slate-800">{t.guide}</h2><p className="text-slate-500 font-medium mt-2">Hur du kopplar ditt konto till din domarprofil</p>
-                <button onClick={copyGuideLink} className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-100 text-blue-700 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-blue-200 transition-colors shadow-sm active:scale-95"><Share2 className="w-4 h-4" /> {t.shareGuide}</button>
-              </div>
-              <div className="grid gap-6">
-                <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100"><div className="flex gap-4 sm:gap-6 items-start"><div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200"><UserPlus className="w-6 h-6 text-blue-600" /></div><div><h3 className="text-lg font-bold text-slate-800">{t.guideStep1Title}</h3><p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep1Desc}</p></div></div></div>
-                <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100"><div className="flex gap-4 sm:gap-6 items-start"><div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200"><Search className="w-6 h-6 text-blue-600" /></div><div><h3 className="text-lg font-bold text-slate-800">{t.guideStep2Title}</h3><p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep2Desc}</p></div></div></div>
-                <div className="flex flex-col gap-4 bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm"><div className="flex gap-4 sm:gap-6 items-start"><div className="bg-blue-600 p-3 rounded-xl shadow-md shrink-0"><CheckCircle className="w-6 h-6 text-white" /></div><div><h3 className="text-lg font-bold text-blue-900">{t.guideStep3Title}</h3><p className="text-blue-800 font-medium leading-relaxed mt-1">{t.guideStep3Desc}</p></div></div></div>
-                <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100 mt-4"><div className="flex gap-4 sm:gap-6 items-start"><div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200"><Info className="w-6 h-6 text-slate-400" /></div><div><h3 className="text-lg font-bold text-slate-800">{t.guideStep4Title}</h3><p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep4Desc}</p></div></div></div>
-              </div>
+            <div className="space-y-8 max-w-2xl mx-auto text-center">
+              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><BookOpen className="w-8 h-8 text-blue-600" /></div>
+              <h2 className="text-2xl font-black text-slate-800">{t.guide}</h2>
+              <p className="text-slate-500 font-medium">{t.guideStep1Desc}</p>
+              <button onClick={copyGuideLink} className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-100 text-blue-700 rounded-full font-black text-[10px] uppercase shadow-sm"><Share2 className="w-4 h-4" /> {t.shareGuide}</button>
             </div>
           )}
           {helpTab === 'faq' && (
@@ -317,27 +773,20 @@ function HelpView({ t, setView, helpTab, setHelpTab, copyGuideLink, contactName,
             </div>
           )}
           {helpTab === 'contact' && (
-            <div className="max-w-2xl mx-auto">
-              <div className="text-center mb-8"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Mail className="w-8 h-8 text-blue-600" /></div><h2 className="text-2xl font-black text-slate-800">{t.contactUs}</h2><p className="text-slate-500 font-medium mt-2">{t.contactDesc}</p></div>
+            <div className="max-w-2xl mx-auto text-center">
+              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Mail className="w-8 h-8 text-blue-600" /></div>
+              <h2 className="text-2xl font-black text-slate-800 mb-6">{t.contactUs}</h2>
               {contactStatus === 'success' ? (
-                <div className="bg-green-50 border border-green-200 rounded-3xl p-8 text-center animate-in zoom-in-95 duration-300">
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-8 h-8" /></div>
-                  <h3 className="text-xl font-black text-green-800 mb-2">{t.msgSentTitle}</h3><p className="text-green-700 font-medium mb-6">{t.msgSentDesc}</p>
-                  <button onClick={() => setContactStatus('idle')} className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs hover:bg-green-700 transition-colors shadow-md">{t.sendAnother}</button>
-                </div>
+                <div className="bg-green-50 border border-green-200 rounded-3xl p-8"><CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" /><h3 className="text-xl font-black text-green-800 mb-2">{t.msgSentTitle}</h3><button onClick={() => setContactStatus('idle')} className="mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs">{t.sendAnother}</button></div>
               ) : (
-                <form onSubmit={handleContactSubmit} className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-100 space-y-4">
+                <form onSubmit={handleContactSubmit} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4 text-left">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.name}</label><input type="text" required value={contactName} onChange={e => setContactName(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-                    <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.email}</label><input type="email" required value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.name}</label><input type="text" required value={contactName} onChange={e => setContactName(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.email}</label><input type="email" required value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
                   </div>
-                  <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.subject}</label><input type="text" required value={contactSubject} onChange={e => setContactSubject(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-                  <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.message}</label><textarea required value={contactMessage} onChange={e => setContactMessage(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[150px]" /></div>
-                  <div className="pt-2">
-                    <button type="submit" disabled={contactStatus === 'sending'} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70">
-                      {contactStatus === 'sending' ? <><RefreshCw className="w-4 h-4 animate-spin" /> {t.sending}</> : <><Send className="w-4 h-4" /> {t.sendMsg}</>}
-                    </button>
-                  </div>
+                  <div><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.subject}</label><input type="text" required value={contactSubject} onChange={e => setContactSubject(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                  <div><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.message}</label><textarea required value={contactMessage} onChange={e => setContactMessage(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[150px]" /></div>
+                  <button type="submit" disabled={contactStatus === 'sending'} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] flex items-center justify-center gap-2">{contactStatus === 'sending' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}</button>
                 </form>
               )}
             </div>
@@ -345,19 +794,15 @@ function HelpView({ t, setView, helpTab, setHelpTab, copyGuideLink, contactName,
           {helpTab === 'about' && (
             <div className="max-w-3xl mx-auto">
               <div className="text-center mb-8"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Code className="w-8 h-8 text-blue-600" /></div><h2 className="text-2xl font-black text-slate-800">{t.about}</h2></div>
-              <div className="bg-slate-50 p-6 sm:p-10 rounded-3xl border border-slate-100">
-                {readmeLoading ? <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-4"><RefreshCw className="w-8 h-8 animate-spin" /><p className="text-sm font-bold">{t.loadingReadme}</p></div> : <div className="markdown-body text-sm sm:text-base">{renderMarkdown(readmeContent)}</div>}
-              </div>
+              <div className="bg-slate-50 p-6 sm:p-10 rounded-3xl border border-slate-100">{readmeLoading ? <RefreshCw className="w-8 h-8 animate-spin mx-auto text-slate-400" /> : <div className="markdown-body text-sm">{renderMarkdown(readmeContent)}</div>}</div>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-}
 
-function LocationsView({ t, allLocationNames, searchQuery, locationsData, setSelectedLocation }) {
-  return (
+  const renderLocationsView = () => (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
        {allLocationNames.filter(name => name.toLowerCase().includes(searchQuery.toLowerCase())).map(locName => {
           const locData = locationsData.find(l => l.id === locName) || { id: locName, address: '', facilities: [] };
@@ -371,53 +816,45 @@ function LocationsView({ t, allLocationNames, searchQuery, locationsData, setSel
        })}
     </div>
   );
-}
 
-function StatsView({ t, sortedStatistics, handleSort, setSelectedProfileId, setView }) {
-  return (
+  const renderStatsView = () => (
     <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
-         <table className="w-full text-left min-w-[600px]">
-           <thead className="bg-slate-50 border-b">
-             <tr>
-               <th onClick={() => handleSort('name')} className="px-6 py-4 text-[10px] font-black uppercase cursor-pointer">{t.umpire}</th>
-               <th onClick={() => handleSort('interest')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.interests}</th>
-               <th onClick={() => handleSort('games')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.gamesAssigned}</th>
-               <th onClick={() => handleSort('rate')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.assignmentRate}</th>
+       <table className="w-full text-left min-w-[600px]">
+         <thead className="bg-slate-50 border-b">
+           <tr>
+             <th onClick={() => handleSort('name')} className="px-6 py-4 text-[10px] font-black uppercase cursor-pointer">{t.umpire}</th>
+             <th onClick={() => handleSort('interest')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.interests}</th>
+             <th onClick={() => handleSort('games')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.gamesAssigned}</th>
+             <th onClick={() => handleSort('rate')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.assignmentRate}</th>
+           </tr>
+         </thead>
+         <tbody>
+           {sortedStatistics.map(stat => (
+             <tr key={stat.userId} className="border-b border-slate-50 hover:bg-slate-50">
+               <td className="px-6 py-4 font-bold"><button onClick={() => { setSelectedProfileId(stat.userId); setView('umpire-profile'); scrollToTop(); }} className="hover:underline">{stat.name}</button></td>
+               <td className="px-6 py-4 text-center">{stat.interest}</td>
+               <td className="px-6 py-4 text-center font-bold text-blue-600">{stat.games}</td>
+               <td className="px-6 py-4 text-center">{stat.rate}%</td>
              </tr>
-           </thead>
-           <tbody>
-             {sortedStatistics.map(stat => (
-               <tr key={stat.userId} className="border-b border-slate-50 hover:bg-slate-50">
-                 <td className="px-6 py-4 font-bold">
-                   <button onClick={() => { setSelectedProfileId(stat.userId); setView('umpire-profile'); }} className="hover:underline">
-                     {stat.name}
-                   </button>
-                 </td>
-                 <td className="px-6 py-4 text-center">{stat.interest}</td>
-                 <td className="px-6 py-4 text-center font-bold text-blue-600">{stat.games}</td>
-                 <td className="px-6 py-4 text-center">{stat.rate}%</td>
-               </tr>
-             ))}
-           </tbody>
-         </table>
-      </div>
+           ))}
+         </tbody>
+       </table>
+    </div>
   );
-}
 
-function ScheduleView({ t, showHistory, setShowHistory, filteredGames, showScheduleExport, setShowScheduleExport, generateICS, generateCSV, scheduleViewMode, setScheduleViewMode, currentDate, setCurrentDate, calendarWeeks, toLocalISO, today, setSelectedGameDetails, getLeagueStyles, safeDateDay, safeDateNum, safeDateMonth, groupedAssignments, masterUmpires, renderOfficialsRow, umpireId, applications, toggleApplication, lang }) {
-  return (
+  const renderScheduleView = () => (
     <div className="space-y-4 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">{showHistory ? t.archived : t.activeSchedule}</h2>
         <div className="flex flex-wrap items-center gap-3">
           {filteredGames.length > 0 && (
             <div className="relative">
-              <button onClick={() => setShowScheduleExport(!showScheduleExport)} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"><CalendarPlus className="w-4 h-4" /> {t.downloadCalendar} <ChevronDown className="w-3 h-3" /></button>
+              <button onClick={() => setShowScheduleExport(!showScheduleExport)} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase hover:bg-blue-700 flex items-center gap-2"><CalendarPlus className="w-4 h-4" /> {t.downloadCalendar}</button>
               {showScheduleExport && (
                 <><div className="fixed inset-0 z-10" onClick={() => setShowScheduleExport(false)}></div>
-                  <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                    <button onClick={() => { generateICS(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex flex-col gap-0.5"><span className="text-xs font-black text-slate-700">{t.formatICS}</span><span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextICS}</span></button>
-                    <button onClick={() => { generateCSV(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex flex-col gap-0.5"><span className="text-xs font-black text-slate-700">{t.formatCSV}</span><span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextCSV}</span></button>
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden">
+                    <button onClick={() => { generateICS(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b flex flex-col"><span className="text-xs font-black text-slate-700">{t.formatICS}</span></button>
+                    <button onClick={() => { generateCSV(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex flex-col"><span className="text-xs font-black text-slate-700">{t.formatCSV}</span></button>
                   </div>
                 </>
               )}
@@ -425,27 +862,25 @@ function ScheduleView({ t, showHistory, setShowHistory, filteredGames, showSched
           )}
           <div className="flex items-center gap-2">
             <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-               <button onClick={() => setScheduleViewMode('list')} className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><List className="w-4 h-4" /></button>
-               <button onClick={() => setScheduleViewMode('calendar')} className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><CalendarIcon className="w-4 h-4" /></button>
+               <button onClick={() => setScheduleViewMode('list')} className={`p-2 rounded-lg ${scheduleViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><List className="w-4 h-4" /></button>
+               <button onClick={() => setScheduleViewMode('calendar')} className={`p-2 rounded-lg ${scheduleViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><CalendarIcon className="w-4 h-4" /></button>
             </div>
-            <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button>
+            <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button>
           </div>
         </div>
       </div>
 
       {scheduleViewMode === 'calendar' ? (
-        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in duration-300">
-           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 className="font-black text-slate-800 uppercase tracking-tight">{t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+           <div className="p-6 border-b flex items-center justify-between bg-slate-50/50">
+                <h3 className="font-black text-slate-800 uppercase">{t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
                 <div className="flex gap-2">
-                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronLeft className="w-4 h-4"/></button>
-                    <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">IDAG</button>
-                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronRight className="w-4 h-4"/></button>
+                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white rounded-xl border"><ChevronLeft className="w-4 h-4"/></button>
+                    <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white rounded-xl border text-[10px] font-black">IDAG</button>
+                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border"><ChevronRight className="w-4 h-4"/></button>
                 </div>
             </div>
-            <div className="grid grid-cols-7 border-b border-slate-100">
-                {(t.days || []).map((d, i) => (<div key={i} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>))}
-            </div>
+            <div className="grid grid-cols-7 border-b border-slate-100">{(t.days || []).map((d, i) => (<div key={i} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase">{d}</div>))}</div>
             <div className="grid grid-cols-7">
                 {calendarWeeks.flatMap((week) => 
                   week.days.map((day, idx) => {
@@ -453,15 +888,15 @@ function ScheduleView({ t, showHistory, setShowHistory, filteredGames, showSched
                     const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
                     const isToday = dateStr === today;
                     return (
-                      <div key={`${week.weekNumber}-${idx}`} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
+                      <div key={`${week.weekNumber}-${idx}`} className={`min-h-[100px] p-2 border-r border-b relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
                         {day && (
                           <>
-                            <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>{day.getDate()}</span>
+                            <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full' : 'text-slate-400'}`}>{day.getDate()}</span>
                             <div className="mt-2 space-y-1">
                               {matches.map(g => (
-                                <button key={g.id} onClick={(e) => { e.stopPropagation(); setSelectedGameDetails(g); }} className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden">
+                                <button key={g.id} onClick={() => setSelectedGameDetails(g)} className="w-full text-left p-1 rounded border hover:border-blue-200 group overflow-hidden">
                                   <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
-                                  <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
+                                  <p className="text-[8px] font-bold text-slate-700 truncate">{g.away} @ {g.home}</p>
                                 </button>
                               ))}
                             </div>
@@ -485,28 +920,28 @@ function ScheduleView({ t, showHistory, setShowHistory, filteredGames, showSched
             const required = game.requiredUmpires || 2;
             
             return (
-              <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all cursor-pointer hover:border-blue-300 group ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
+              <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white rounded-2xl shadow-sm border overflow-hidden cursor-pointer hover:border-blue-300 group ${showHistory ? 'opacity-75 grayscale-[0.5]' : ''}`}>
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex gap-4">
-                    <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p><p className="text-2xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p><p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
+                    <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border group-hover:bg-blue-50">
+                      <p className="text-[10px] font-black text-slate-400 uppercase">{safeDateDay(game.date)}</p><p className="text-2xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p><p className="text-[9px] font-black text-slate-400 uppercase mt-0.5">{safeDateMonth(game.date)}</p>
                     </div>
                     <div>
-                      <div className="flex items-center gap-2"><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span></div>
-                      <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</h3>
-                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold"><span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span><span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span></div>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                      <h3 className="font-bold text-slate-900 mt-1 text-base group-hover:text-blue-700">{game.away} @ {game.home}</h3>
+                      <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold"><span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span><span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span></div>
                       {renderOfficialsRow(game, gameAssignments, masterUmpires)}
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0">
                     {!showHistory && (
                       <>
-                        <div className="flex flex-col items-end"><span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</span>{gameAssignments.length > 0 && (<span className="text-[10px] font-black text-green-600 uppercase tracking-widest mt-0.5">{gameAssignments.length}/{required} {t.staffed}</span>)}</div>
+                        <div className="flex flex-col items-end"><span className="text-[10px] font-black text-slate-400 uppercase">{appsCount} {t.applied}</span>{gameAssignments.length > 0 && (<span className="text-[10px] font-black text-green-600 uppercase mt-0.5">{gameAssignments.length}/{required} {t.staffed}</span>)}</div>
                         {isAssignedToThisGame ? (
                           <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> {t.yourGame}</div>
                         ) : (
-                          <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 hover:bg-blue-700'}`}>{isApplied ? t.withdraw : t.interested}</button>
+                          <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className={`px-6 py-2 rounded-xl text-xs font-black uppercase ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>{isApplied ? t.withdraw : t.interested}</button>
                         )}
                       </>
                     )}
@@ -519,184 +954,57 @@ function ScheduleView({ t, showHistory, setShowHistory, filteredGames, showSched
       )}
     </div>
   );
-}
 
-function MyGamesView({ t, user, myAssignedGames, myInterestedGames, showMyGamesExport, setShowMyGamesExport, generateICS, generateCSV, myGamesViewMode, setMyGamesViewMode, currentDate, setCurrentDate, calendarWeeks, toLocalISO, today, umpireId, groupedAssignments, setSelectedGameDetails, getLeagueStyles, confirmScheduleChange, removeAssignment, toggleTradeStatus, features, toggleApplication, safeDateDay, safeDateNum, safeDateMonth, renderOfficialsRow, masterUmpires }) {
-  return (
+  const renderMyGamesView = () => (
     <div className="space-y-4 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          {myAssignedGames.length > 0 && (
-            <div className="relative">
-              <button onClick={() => setShowMyGamesExport(!showMyGamesExport)} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"><CalendarPlus className="w-4 h-4" /> {t.downloadCalendar} <ChevronDown className="w-3 h-3" /></button>
-              {showMyGamesExport && (
-                <><div className="fixed inset-0 z-10" onClick={() => setShowMyGamesExport(false)}></div>
-                  <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                    <button onClick={() => { generateICS(myAssignedGames); setShowMyGamesExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex flex-col gap-0.5"><span className="text-xs font-black text-slate-700">{t.formatICS}</span><span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextICS}</span></button>
-                    <button onClick={() => { generateCSV(myAssignedGames); setShowMyGamesExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex flex-col gap-0.5"><span className="text-xs font-black text-slate-700">{t.formatCSV}</span><span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextCSV}</span></button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-          <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-fit">
-             <button onClick={() => setMyGamesViewMode('list')} className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><List className="w-4 h-4" /></button>
-             <button onClick={() => setMyGamesViewMode('calendar')} className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><CalendarIcon className="w-4 h-4" /></button>
-          </div>
-        </div>
       </div>
-      
       <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex gap-3 items-start mb-6">
         <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <p className="text-xs sm:text-sm font-medium text-blue-800 leading-relaxed">{t.myGamesReminder}</p>
       </div>
 
       {!user || !user.email ? (
-        <div className="bg-white p-12 rounded-3xl text-center border border-slate-200 shadow-sm"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><CalendarIcon className="w-8 h-8 text-blue-600" /></div><p className="text-slate-500 font-medium mb-6">{t.loginRequiredMsg}</p></div>
-      ) : myGamesViewMode === 'calendar' ? (
-        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in duration-300">
-           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 className="font-black text-slate-800 uppercase tracking-tight">{t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
-                <div className="flex gap-2">
-                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronLeft className="w-4 h-4"/></button>
-                    <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">IDAG</button>
-                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronRight className="w-4 h-4"/></button>
-                </div>
-            </div>
-            <div className="grid grid-cols-7 border-b border-slate-100">{(t.days || []).map((d, i) => (<div key={i} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>))}</div>
-            <div className="grid grid-cols-7">
-                {calendarWeeks.flatMap((week) => 
-                  week.days.map((day, idx) => {
-                    const dateStr = day ? toLocalISO(day) : null;
-                    const myMatches = dateStr ? [...myAssignedGames, ...myInterestedGames].filter(g => g.date === dateStr) : [];
-                    const isToday = dateStr === today;
-                    return (
-                      <div key={`${week.weekNumber}-${idx}`} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
-                        {day && (
-                          <>
-                            <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>{day.getDate()}</span>
-                            <div className="mt-2 space-y-1">
-                              {myMatches.map(g => {
-                                const myAsg = groupedAssignments[g.id]?.find(a => a.userId === umpireId);
-                                const isAssigned = myAsg !== undefined;
-                                const isPending = myAsg?.pendingChange;
-                                return (
-                                  <div key={g.id} onClick={() => setSelectedGameDetails(g)} className={`w-full text-left p-1 rounded border overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${isPending ? 'border-yellow-300 bg-yellow-50' : isAssigned ? 'border-green-200 bg-green-50' : 'border-slate-100 bg-white'}`}>
-                                    <div className={`w-full h-1 rounded-full mb-1 ${isPending ? 'bg-yellow-500' : isAssigned ? 'bg-green-500' : getLeagueStyles(g.league).split(' ')[0]}`} />
-                                    <p className={`text-[8px] font-bold truncate leading-none uppercase ${isPending ? 'text-yellow-800' : isAssigned ? 'text-green-800' : 'text-slate-700'}`}>{g.away} @ {g.home}</p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-            </div>
-        </div>
+        <div className="bg-white p-12 rounded-3xl text-center border shadow-sm"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><CalendarIcon className="w-8 h-8 text-blue-600" /></div><p className="text-slate-500 font-medium mb-6">{t.loginRequiredMsg}</p></div>
       ) : (
         <>
-          {(() => {
-            const pendingAssignedGames = myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange);
-            const confirmedAssignedGames = myAssignedGames.filter(g => !groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange);
-
-            const renderGameCard = (game) => {
-              const gameAssignments = groupedAssignments[game.id] || [];
-              const coUmpires = gameAssignments.filter(asg => asg.userId !== umpireId);
-              const myAsg = gameAssignments.find(a => a.userId === umpireId);
-
+          {myAssignedGames.map(game => {
+              const myAsg = groupedAssignments[game.id]?.find(a => a.userId === umpireId);
               return (
-                <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white p-4 sm:p-5 rounded-2xl border ${myAsg?.pendingChange ? 'border-yellow-400 shadow-sm shadow-yellow-100 ring-2 ring-yellow-400/20' : 'border-green-200 hover:shadow-md'} flex flex-col gap-3 cursor-pointer transition-all group`}>
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="flex items-start gap-4">
-                      <div className={`p-3 rounded-xl ${myAsg?.pendingChange ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'} shrink-0 transition-colors`}><CalendarIcon className="w-5 h-5" /></div>
-                      <div>
-                        <p className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</p>
-                        <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
-                      </div>
+                <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white p-4 rounded-2xl border ${myAsg?.pendingChange ? 'border-yellow-400' : 'border-green-200 hover:shadow-md'} flex flex-col gap-3 cursor-pointer`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-bold text-base">{game.away} @ {game.home}</p>
+                      <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
                     </div>
-                    
-                    <div className="flex flex-col items-end gap-2">
-                       {myAsg?.pendingChange ? (<div className="bg-yellow-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit shadow-sm">{t.timeChangedBadge}</div>) : (<div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.confirmed}</div>)}
-                       {myAsg && !myAsg.pendingChange && features.marketplace && (
-                         myAsg.forTrade ? (
-                            <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, false); }} className="text-[10px] font-black uppercase bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg border border-orange-200 hover:bg-orange-200 transition-colors w-fit">{t.cancelTrade}</button>
-                         ) : (
-                            <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, true); }} className="text-[10px] font-black uppercase bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors flex items-center gap-1 w-fit"><ArrowRightLeft className="w-3 h-3" /> {t.tradeGame}</button>
-                         )
-                       )}
-                    </div>
+                    {myAsg?.pendingChange ? <div className="bg-yellow-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.timeChangedBadge}</div> : <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</div>}
                   </div>
-
                   {myAsg?.pendingChange && (
                     <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mt-2 flex flex-col gap-3">
                       <p className="text-xs font-bold text-yellow-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {t.matchMovedWarning}</p>
-                      <div className="flex gap-2 flex-wrap">
-                        <button onClick={(e) => { e.stopPropagation(); confirmScheduleChange(myAsg.id); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.acceptTime}</button>
-                        <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, umpireId); }} className="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.declineTime}</button>
+                      <div className="flex gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); confirmScheduleChange(myAsg.id); }} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase">{t.acceptTime}</button>
+                        <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, umpireId); }} className="bg-white text-red-600 border border-red-200 px-4 py-2 rounded-lg text-[10px] font-black uppercase">{t.declineTime}</button>
                       </div>
                     </div>
                   )}
-
-                  {renderOfficialsRow(game, gameAssignments, masterUmpires)}
-
-                  <div className="pt-3 border-t border-slate-50 flex flex-wrap gap-2">
-                     <a href={getGoogleCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Google</a>
-                     <a href={getOutlookCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Outlook</a>
-                     <button onClick={(e) => { e.stopPropagation(); generateICS([game]); }} className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">.ICS</button>
-                  </div>
                 </div>
               );
-            };
-
-            return (
-              <div className="space-y-6">
-                {pendingAssignedGames.length > 0 && (
-                  <div className="bg-yellow-50/50 p-4 rounded-3xl border border-yellow-200 shadow-inner">
-                    <h3 className="text-sm font-black text-yellow-700 uppercase tracking-widest mb-4 flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> {t.actionRequired}</h3>
-                    <div className="space-y-4">{pendingAssignedGames.map(renderGameCard)}</div>
-                  </div>
-                )}
-                {confirmedAssignedGames.length > 0 && (
-                  <div>
-                    {pendingAssignedGames.length > 0 && <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 mt-2 flex items-center gap-2"><CheckCircle className="w-4 h-4" /> {t.confirmedGames}</h3>}
-                    <div className="space-y-4">{confirmedAssignedGames.map(renderGameCard)}</div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-          
-          <div className="pt-4 border-t border-slate-100">
-            <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
-            {myInterestedGames.map(game => (
-              <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between mb-2 cursor-pointer hover:border-blue-300 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
-                  <div><p className="font-bold text-slate-900">{game.away} @ {game.home}</p><p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p></div>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            ))}
-          </div>
+          })}
+          {myAssignedGames.length === 0 && <div className="p-8 text-center text-slate-400">{t.noAssignedMatches}</div>}
         </>
       )}
     </div>
   );
-}
 
-function AdminView({ t, selectedYear, handleDownloadBackup, showImportTool, setShowImportTool, bulkInput, setBulkInput, handleBulkImport, setShowEmailPreview, editNoteText, setEditNoteText, saveGlobalNote, clearGlobalNote, masterUmpires, isSuperAdmin, adminUmpireIds, toggleUmpireAdmin, deleteMasterUmpire, editingUmpireId, setEditingUmpireId, tempEditName, setTempEditName, tempEditLevel, setTempEditLevel, tempEditEmail, setTempEditEmail, showManualEmailInput, setShowManualEmailInput, unconnectedEmails, updateMasterUmpire, mailQueue, forceSendQueue, syncing, showStaffed, setShowStaffed, filteredGames, groupedAssignments, applications, editingGameData, setEditingGameData, saveEditedGame, setSelectedGameDetails, handleDeleteGame, getLeagueStyles, safeDateDay, safeDateNum, safeDateMonth, getAssignmentStatusStyles, renderOfficialsRow, removeAssignment, assignUmpire, umpireId, today }) {
-  return (
+  const renderAdminView = () => (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-center sm:text-left"><h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2><p className="text-xs text-slate-500">{selectedYear} Season</p></div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 border border-slate-200 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2 shadow-sm"><Download className="w-4 h-4" /> {t.downloadBackup}</button>
-          <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-all shadow-sm text-xs uppercase"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
-          <button onClick={() => setShowEmailPreview(true)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg text-xs uppercase"><Mail className="w-4 h-4" /> {t.sendSchedules}</button>
+          <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 flex items-center gap-2"><Download className="w-4 h-4" /> Backup</button>
+          <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-slate-200"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
         </div>
       </div>
 
@@ -710,250 +1018,127 @@ function AdminView({ t, selectedYear, handleDownloadBackup, showImportTool, setS
 
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Megaphone className="w-4 h-4" /> {t.globalAnnouncement}</h3>
-        <textarea value={editNoteText} onChange={(e) => setEditNoteText(e.target.value)} placeholder={t.announcementPlaceholder} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-h-[80px]" />
+        <textarea value={editNoteText} onChange={(e) => setEditNoteText(e.target.value)} placeholder={t.announcementPlaceholder} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none min-h-[80px]" />
         <div className="flex gap-2 mt-3"><button onClick={saveGlobalNote} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.saveAnnouncement}</button><button onClick={clearGlobalNote} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.clearAnnouncement}</button></div>
       </div>
 
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users className="w-4 h-4" /> {t.masterList}</h3>
-          {isSuperAdmin && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1"><Shield className="w-3 h-3" /> Master Admin</span>}
-        </div>
-        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-          {masterUmpires.map(u => (
-            <div key={u.id} className="flex flex-col gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
-              {editingUmpireId === u.id ? (
-                <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
-                  <input type="text" value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-bold outline-none" />
-                  <select value={tempEditLevel} onChange={(e) => setTempEditLevel(e.target.value)} className="w-32 bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none"><option value="">- {t.level} -</option>{['Internationell', 'Elit', 'Nationell', 'Region', 'Förening'].map(l => <option key={l} value={l}>{l}</option>)}</select>
-                  {!showManualEmailInput ? (
-                    <select value={tempEditEmail} onChange={(e) => { if (e.target.value === 'MANUAL_ENTRY') { setShowManualEmailInput(true); setTempEditEmail(''); } else { setTempEditEmail(e.target.value); } }} className="flex-1 min-w-[150px] bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none">
-                      <option value="">{t.selectEmail}</option>{unconnectedEmails.map(email => <option key={email} value={email}>{email}</option>)}{tempEditEmail && !unconnectedEmails.includes(tempEditEmail) && tempEditEmail !== 'MANUAL_ENTRY' && <option value={tempEditEmail}>{tempEditEmail}</option>}<option value="MANUAL_ENTRY">{t.otherEmail}</option>
-                    </select>
-                  ) : (
-                    <div className="flex-1 flex items-center min-w-[150px] relative">
-                      <input type="email" value={tempEditEmail} onChange={(e) => setTempEditEmail(e.target.value)} placeholder={t.linkEmailPlaceholder} className="w-full bg-white border border-blue-300 px-3 py-1.5 pr-8 rounded-lg text-sm font-bold outline-none" />
-                      <button onClick={() => { setShowManualEmailInput(false); setTempEditEmail(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600"><X className="w-3 h-3" /></button>
-                    </div>
-                  )}
-                  <div className="flex gap-1 items-center">
-                    <button onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel, tempEditEmail); setEditingUmpireId(null); }} className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"><Check className="w-4 h-4" /></button>
-                    <button onClick={() => setEditingUmpireId(null)} className="bg-slate-200 text-slate-600 p-2 rounded-lg hover:bg-slate-300 transition-colors"><X className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2"><span className="text-sm font-bold text-slate-700">{u.name}</span>{u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(u.level)}`}>{u.level}</span>}{(adminUmpireIds || []).includes(u.id) && <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5"><Shield className="w-2 h-2" /> Admin</span>}</div>
-                    <div className="flex items-center gap-4 mt-1">{u.linkedEmail ? <span className="text-[10px] text-green-600 font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t.linkedAccount} {u.linkedEmail}</span> : <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1"><Info className="w-3 h-3" /> {t.notLinked}</span>}</div>
-                  </div>
-                  <div className="flex gap-1 items-start">
-                    {isSuperAdmin && <button onClick={() => toggleUmpireAdmin(u.id)} className={`p-1.5 rounded-lg transition-colors ${(adminUmpireIds || []).includes(u.id) ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-blue-600'}`}><Shield className="w-4 h-4" /></button>}
-                    <button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); setTempEditEmail(u.linkedEmail || ''); setShowManualEmailInput(false); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => deleteMasterUmpire(u.id, u.name, u.linkedEmail)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+      <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+        <h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}</h3>
+        <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
       </div>
       
-      <div className="space-y-4">
-        {mailQueue.length > 0 && isSuperAdmin && (
-          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-4">
-            <p className="text-sm font-bold text-yellow-800 flex-1 leading-relaxed">{t.pendingEmailsQueued.replace('{count}', mailQueue.length)}</p>
-            <button onClick={forceSendQueue} disabled={syncing} className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-colors flex items-center justify-center whitespace-nowrap disabled:opacity-50">{syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : t.sendQueuedNow}</button>
-          </div>
-        )}
+      {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
+        const gameAssignments = groupedAssignments[game.id] || [];
+        const required = game.requiredUmpires || 2;
+        const isFullyStaffed = gameAssignments.length >= required;
 
-        <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}</h3>
-          <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white shadow-md hover:bg-black' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
-        </div>
-        
-        {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
-          const applicants = applications.filter(a => a.gameId === game.id);
-          const gameAssignments = groupedAssignments[game.id] || [];
-          const required = game.requiredUmpires || 2;
-          const isEditingThisGame = editingGameData?.id === game.id;
-          const isFullyStaffed = gameAssignments.length >= required;
-
-          return (
-            <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
-              <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer transition-colors" onClick={() => setSelectedGameDetails(game)}>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                  <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); setEditingGameData(isEditingThisGame ? null : { ...game }); }} className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}><Edit2 className="w-4 h-4" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                </div>
+        return (
+          <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
+            <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer" onClick={() => setSelectedGameDetails(game)}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
               </div>
-              
-              {isEditingThisGame && (
-                <div className="p-4 bg-blue-50/30 border-b border-slate-100 flex flex-col gap-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.date}</label><input type="date" value={editingGameData.date || ''} onChange={e => setEditingGameData({...editingGameData, date: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.time}</label><input type="time" value={editingGameData.time || ''} onChange={e => setEditingGameData({...editingGameData, time: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.league}</label><input type="text" value={editingGameData.league || ''} onChange={e => setEditingGameData({...editingGameData, league: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label><select value={editingGameData.requiredUmpires || 2} onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold">{[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.away}</label><input type="text" value={editingGameData.away || ''} onChange={e => setEditingGameData({...editingGameData, away: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.home}</label><input type="text" value={editingGameData.home || ''} onChange={e => setEditingGameData({...editingGameData, home: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                    <div className="space-y-1 sm:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400">{t.location}</label><input type="text" value={editingGameData.location || ''} onChange={e => setEditingGameData({...editingGameData, location: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                  </div>
-                  <div className="flex gap-2"><button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold text-xs uppercase shadow-sm hover:bg-green-700">{t.saveChanges}</button><button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-lg font-bold text-xs uppercase hover:bg-slate-300">{t.cancel}</button></div>
-                </div>
-              )}
-              
-              <div className="p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                   {gameAssignments.map(asg => {
-                     const m = masterUmpires.find(mu => mu.id === asg.userId);
-                     return (
-                       <div key={asg.userId} className={`flex items-center justify-between p-2 rounded-xl border ${asg.pendingChange ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 bg-green-50/30'}`}>
-                         <div className="flex items-center gap-2">
-                           {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <Users className="w-3 h-3 text-green-600" />}
-                           <span className="text-xs font-bold text-slate-700 text-left flex items-center">{asg.userName}{asg.pendingChange && <span className="ml-2 text-[9px] text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded-md uppercase tracking-widest">{t.pendingReply}</span>}</span>
-                           {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLeagueStyles(m.level)}`}>{m.level}</span>}
-                         </div>
-                         <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
-                       </div>
-                     );
-                   })}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                  {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
-                        const m = masterUmpires.find(mu => mu.id === app.userId); 
-                        return (
-                          <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold">{app.userName}</span>
-                              {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLeagueStyles(m.level)}`}>{m.level}</span>}
-                            </div>
-                            <button disabled={isFullyStaffed} onClick={(e) => { e.stopPropagation(); assignUmpire(game.id, app.userId, app.userName); }} className="bg-blue-600 text-white hover:bg-blue-700 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"><UserPlus className="w-3 h-3" /> Assign</button>
-                          </div>
-                        ); 
-                      })}
-                    </div>
-                  )}
-                </div>
+              <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                 {gameAssignments.map(asg => (
+                   <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                     <div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div>
+                     <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
+                   </div>
+                 ))}
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
-}
 
-function AuthModal({ t, setShowAuthModal, handleAuthSubmit, authEmail, setAuthEmail, authPassword, setAuthPassword, isLoginMode, setIsLoginMode, authError, setAuthError, handleResetPassword }) {
-  return (
+  const renderAuthModal = () => (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-      <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 relative">
-        <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
-        <div className="text-center space-y-2"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Shield className="w-8 h-8 text-blue-600" /></div><h3 className="text-2xl font-black text-slate-800 leading-tight">{t.appTitle}</h3><p className="text-xs text-slate-400 font-medium">{isLoginMode ? t.loginToContinue : t.createAnAccount}</p></div>
+      <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl relative">
+        <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-full"><X className="w-5 h-5" /></button>
+        <div className="text-center space-y-2"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Shield className="w-8 h-8 text-blue-600" /></div><h3 className="text-2xl font-black text-slate-800">{t.appTitle}</h3><p className="text-xs text-slate-400 font-medium">{isLoginMode ? t.loginToContinue : t.createAnAccount}</p></div>
         <form onSubmit={handleAuthSubmit} className="space-y-4">
           {authError && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 break-words">{authError}</div>}
-          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.email}</label><input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" placeholder="namn@exempel.se" /></div>
-          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.password}</label><input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" placeholder="••••••••" /></div>
-          <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">{isLoginMode ? t.login : t.register}</button>
+          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.email}</label><input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold mt-1" placeholder="namn@exempel.se" /></div>
+          <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.password}</label><input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold mt-1" placeholder="••••••••" /></div>
+          <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700">{isLoginMode ? t.login : t.register}</button>
         </form>
         <div className="pt-4 border-t border-slate-100 flex flex-col items-center gap-2">
-          <button onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors">{isLoginMode ? t.noAccount : t.hasAccount}</button>
-          {isLoginMode && <button onClick={handleResetPassword} type="button" className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors mt-2">{t.forgotPassword}</button>}
+          <button onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} className="text-xs font-bold text-slate-500">{isLoginMode ? t.noAccount : t.hasAccount}</button>
+          {isLoginMode && <button onClick={handleResetPassword} type="button" className="text-[10px] font-black text-slate-400 uppercase mt-2">{t.forgotPassword}</button>}
         </div>
       </div>
     </div>
   );
-}
 
-function NamePromptModal({ t, setShowNamePrompt, searchQuery, setSearchQuery, filteredMasterUmpires, setUserName, setUmpireId, updateProfile, isAddingNew, setIsAddingNew, tempEditName, setTempEditName, addMasterUmpire, getLevelStyles }) {
-  return (
+  const renderNamePromptModal = () => (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-      <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20">
-        <div className="text-center space-y-2"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><UserCheck className="w-8 h-8 text-blue-600" /></div><h3 className="text-2xl font-black text-slate-800 leading-tight">{t.nameRequiredTitle}</h3><p className="text-xs text-slate-400 font-medium leading-relaxed">{t.nameRequiredDesc}</p></div>
+      <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl relative">
+        <div className="text-center space-y-2"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><UserCheck className="w-8 h-8 text-blue-600" /></div><h3 className="text-2xl font-black text-slate-800">{t.nameRequiredTitle}</h3><p className="text-xs text-slate-400 font-medium">{t.nameRequiredDesc}</p></div>
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.masterList}</label>
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-              <input type="text" value={searchQuery} placeholder={t.namePlaceholder} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500" />
+              <input type="text" value={searchQuery} placeholder={t.namePlaceholder} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 pl-11 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" />
             </div>
-            <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
+            <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto divide-y divide-slate-100">
               {filteredMasterUmpires.length > 0 ? (
                 filteredMasterUmpires.map(u => (
-                  <button key={u.id} onClick={async () => { setUserName(u.name); setUmpireId(u.id); await updateProfile(u.name, u.id); setShowNamePrompt(false); setSearchQuery(''); }} className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center justify-between group">
-                    <div className="flex items-center gap-2"><span className="text-sm font-bold text-slate-700">{u.name}</span>{u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}</div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                  <button key={u.id} onClick={async () => { setUserName(u.name); setUmpireId(u.id); await updateProfile(u.name, u.id); setShowNamePrompt(false); setSearchQuery(''); }} className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center justify-between group">
+                    <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-300" />
                   </button>
                 ))
-              ) : (<div className="p-4 text-center"><p className="text-xs text-slate-400 font-medium italic">{t.noGames}</p></div>)}
+              ) : (<div className="p-4 text-center"><p className="text-xs text-slate-400 italic">{t.noGames}</p></div>)}
             </div>
           </div>
           <div className="pt-4 border-t border-slate-100 space-y-3">
-            <button onClick={() => setIsAddingNew(!isAddingNew)} className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase hover:underline"><Plus className="w-3 h-3" /> {t.addNewName}</button>
+            <button onClick={() => setIsAddingNew(!isAddingNew)} className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase"><Plus className="w-3 h-3" /> {t.addNewName}</button>
             {isAddingNew && (
-              <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+              <div className="space-y-2">
                 <input type="text" autoFocus value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} placeholder="För- och efternamn" className="w-full p-3 bg-white border border-blue-200 rounded-xl font-bold text-sm outline-none" />
-                <button onClick={async () => { if (tempEditName.trim()) { const newId = await addMasterUmpire(tempEditName); setUserName(tempEditName); setUmpireId(newId); await updateProfile(tempEditName, newId); setTempEditName(''); setIsAddingNew(false); setShowNamePrompt(false); } }} className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-blue-200">{t.createUmpire}</button>
+                <button onClick={async () => { if (tempEditName.trim()) { const newId = await addMasterUmpire(tempEditName); setUserName(tempEditName); setUmpireId(newId); await updateProfile(tempEditName, newId); setTempEditName(''); setIsAddingNew(false); setShowNamePrompt(false); } }} className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-blue-200">{t.createUmpire}</button>
               </div>
             )}
           </div>
         </div>
-        <button onClick={() => setShowNamePrompt(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">{t.cancel}</button>
+        <button onClick={() => setShowNamePrompt(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px]">{t.cancel}</button>
       </div>
     </div>
   );
-}
 
-function AdminModal({ t, user, userName, umpireId, isAdmin, isSuperAdmin, features, toggleSystemFeature, masterUmpires, toggleUmpireReminderPref, forceRunRemindersNow, setShowAdminModal, logoutUmpire }) {
-  return (
+  const renderAdminModal = () => (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-      <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
-        <div><h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3><p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{user?.email}</p></div>
+      <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl relative overflow-y-auto max-h-[90vh]">
+        <div><h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3><p className="text-xs text-slate-400 font-medium uppercase">{user?.email}</p></div>
         <div className="space-y-4">
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.displayName}</p><p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p></div>
-            <button onClick={logoutUmpire} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1 font-black text-[10px] uppercase"><LogOut className="w-4 h-4" /> {t.logout}</button>
+            <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">{t.displayName}</p><p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p></div>
+            <button onClick={logoutUmpire} className="p-2 text-red-500 hover:bg-red-50 rounded-xl flex items-center gap-1 font-black text-[10px] uppercase"><LogOut className="w-4 h-4" /> {t.logout}</button>
           </div>
-          {features.reminders && umpireId && (
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.reminderPreferences}</p><p className="text-xs font-bold text-slate-700">{t.receiveReminders}</p></div>
-              <button onClick={() => toggleUmpireReminderPref(umpireId, (masterUmpires.find(u => u.id === umpireId) || {}).remindersEnabled)} className={`p-2 rounded-xl transition-colors flex items-center justify-center ${(masterUmpires.find(u => u.id === umpireId) || {}).remindersEnabled !== false ? 'bg-blue-100 text-blue-600 shadow-inner' : 'bg-slate-200 text-slate-400'}`}>{(masterUmpires.find(u => u.id === umpireId) || {}).remindersEnabled !== false ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}</button>
-            </div>
-          )}
           {isAdmin && (
             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
-              <Shield className="w-5 h-5 text-blue-600" /><div><p className="text-xs font-black text-blue-800 uppercase tracking-widest">Admin</p><p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p></div>
-            </div>
-          )}
-          {isSuperAdmin && (
-            <div className="pt-4 border-t border-slate-100 space-y-3">
-              <h4 className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2 mb-4"><Sliders className="w-4 h-4" /> {t.superAdminSettings}</h4>
-              <button onClick={() => toggleSystemFeature('marketplace')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100"><span className="text-xs font-bold text-purple-900">{t.featureMarketplace}</span><div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.marketplace ? 'bg-purple-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.marketplace ? 'translate-x-5' : 'translate-x-0'}`} /></div></button>
-              <button onClick={() => toggleSystemFeature('evaluations')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100"><span className="text-xs font-bold text-purple-900">{t.featureEvaluations}</span><div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.evaluations ? 'bg-purple-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.evaluations ? 'translate-x-5' : 'translate-x-0'}`} /></div></button>
-              <button onClick={() => toggleSystemFeature('reminders')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100"><span className="text-xs font-bold text-purple-900">{t.featureReminders}</span><div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.reminders ? 'bg-purple-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.reminders ? 'translate-x-5' : 'translate-x-0'}`} /></div></button>
-              {features.reminders && <button onClick={forceRunRemindersNow} className="w-full mt-2 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"><RefreshCw className="w-3.5 h-3.5" /> {t.runRemindersNow}</button>}
+              <Shield className="w-5 h-5 text-blue-600" /><div><p className="text-xs font-black text-blue-800 uppercase">Admin</p><p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p></div>
             </div>
           )}
         </div>
-        <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">{t.close}</button>
+        <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px]">{t.close}</button>
       </div>
     </div>
   );
-}
 
-function GameDetailsModal({ t, selectedGameDetails, setSelectedGameDetails, groupedAssignments, getLeagueStyles }) {
-  return (
+  const renderGameDetailsModal = () => (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-0 sm:p-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
-        <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto relative">
+        <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full"><X className="w-5 h-5" /></button>
         <div className="space-y-6 pt-4">
           <div>
             <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(selectedGameDetails.league)}`}>{selectedGameDetails.league}</span>
@@ -962,23 +1147,137 @@ function GameDetailsModal({ t, selectedGameDetails, setSelectedGameDetails, grou
           </div>
           <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center">
             <div><p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p><p className="font-bold text-blue-900">{selectedGameDetails.location}</p></div>
-            <a href={`https://www.google.com/maps/search/?api=1&query=$?q=$${selectedGameDetails.location}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2 hover:bg-blue-600 hover:text-white transition-colors"><Map className="w-4 h-4"/> {t.mapDirections}</a>
+            <a href={`https://www.google.com/maps/search/?api=1&query=$?q=$${selectedGameDetails.location}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2"><Map className="w-4 h-4"/> {t.mapDirections}</a>
           </div>
-          <div className="space-y-3">
-            <h4 className="text-[10px] font-black uppercase text-slate-400">{t.crew}</h4>
-            {(groupedAssignments[selectedGameDetails.id] || []).map(asg => (
-              <div key={asg.userId} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between"><span className="font-bold">{asg.userName}</span></div>
-            ))}
-            {(groupedAssignments[selectedGameDetails.id] || []).length === 0 && <p className="text-xs italic text-slate-400">{t.notAssigned || "Inga domare tillsatta än."}</p>}
-          </div>
-          <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-xs hover:bg-slate-200 transition-colors">{t.close}</button>
+          <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-xs">{t.close}</button>
         </div>
       </div>
     </div>
   );
+
+  // --- 7. MAIN RENDER ---
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
+      <header onClick={() => { setView('schedule'); scrollToTop(); }} className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-20 cursor-pointer">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-white" />
+              <div><h1 className="text-sm sm:text-xl font-bold">{t.appTitle}</h1><p className="text-[8px] sm:text-[10px] font-black uppercase text-blue-300">{t.season} {selectedYear}</p></div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); if(user) setShowAdminModal(true); else setShowAuthModal(true); }} className="p-1.5 sm:hidden">{user ? <Settings className="w-4 h-4"/> : <User className="w-4 h-4"/>}</button>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <select value={selectedYear} onClick={(e) => e.stopPropagation()} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-2 py-1.5 outline-none appearance-none cursor-pointer shadow-inner">
+              <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+            </select>
+            <div className="flex bg-blue-800 rounded-lg p-0.5 shadow-inner">
+              <button onClick={(e) => { e.stopPropagation(); setLang('sv'); }} className={`px-1.5 py-1 text-[10px] rounded-md ${lang === 'sv' ? 'bg-blue-600' : 'opacity-50'}`}>🇸🇪</button>
+              <button onClick={(e) => { e.stopPropagation(); setLang('en'); }} className={`px-1.5 py-1 text-[10px] rounded-md ${lang === 'en' ? 'bg-blue-600' : 'opacity-50'}`}>🇬🇧</button>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setView('help'); setHelpTab('guide'); }} className="p-1.5 hover:bg-blue-800 rounded-full"><HelpCircle className="w-4 h-4 sm:w-5 sm:h-5" /></button>
+            <button onClick={(e) => { e.stopPropagation(); if(user) setShowAdminModal(true); else setShowAuthModal(true); }} className="p-1.5 hidden sm:block hover:bg-blue-800 rounded-full">{user ? <Settings className="w-5 h-5"/> : <User className="w-5 h-5"/>}</button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto p-4 space-y-6">
+        {view !== 'help' && (
+          <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto whitespace-nowrap">
+            {[
+              { id: 'schedule', label: t.schedule, icon: CalendarIcon },
+              { id: 'locations', label: t.locations, icon: MapPin },
+              { id: 'umpire-list', label: t.umpireList, icon: Users },
+              ...(user?.email ? [{ id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
+              ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart }] : [])
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setView(tab.id)} className={`flex-1 min-w-[110px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
+                <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {globalNote && view !== 'help' && (
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl shadow-sm flex gap-3 items-start animate-in fade-in">
+            <Megaphone className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+            <p className="text-sm font-bold text-yellow-800 whitespace-pre-wrap">{globalNote}</p>
+          </div>
+        )}
+
+        {['schedule', 'admin', 'locations'].includes(view) && (
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            {['schedule', 'admin'].includes(view) && (
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+                <button onClick={() => setFilterStatus('')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase ${filterStatus === '' ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-500'}`}>{t.filterStatusAll}</button>
+                <button onClick={() => setFilterStatus('needs_umpire')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase ${filterStatus === 'needs_umpire' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-700'}`}>{t.needsUmpire}</button>
+                <button onClick={() => setFilterStatus('no_interests')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase ${filterStatus === 'no_interests' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-700'}`}>{t.noInterests}</button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className={`relative ${view === 'locations' ? 'md:col-span-4' : 'md:col-span-2'}`}>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
+              </div>
+              {['schedule', 'admin'].includes(view) && (
+                <>
+                  <select value={filterLeague} onChange={(e) => setFilterLeague(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm"><option value="">{t.allSeries}</option>{leagues.map(l => <option key={l} value={l}>{l}</option>)}</select>
+                  <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm"><option value="">{t.allLocations}</option>{locations.map(l => <option key={l} value={l}>{l}</option>)}</select>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {view === 'help' && renderHelpView()}
+        {view === 'locations' && renderLocationsView()}
+        {view === 'stats' && renderStatsView()}
+        {view === 'schedule' && renderScheduleView()}
+        {view === 'my-apps' && renderMyGamesView()}
+        {view === 'admin' && renderAdminView()}
+
+        {view === 'umpire-list' && (
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+             <div className="p-6 border-b border-slate-100 flex justify-between bg-slate-50"><h2 className="text-xl font-black">{t.umpireList}</h2></div>
+             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+               {sortedUmpireList.map(u => (
+                 <div key={u.id} onClick={() => { setSelectedProfileId(u.id); setView('umpire-profile'); }} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md cursor-pointer group">
+                   <div className="flex gap-3 items-center"><div className="w-10 h-10 rounded-full bg-white font-black flex items-center justify-center border">{u.name.charAt(0)}</div><div><span className="font-bold block">{u.name}</span>{u.level && <span className={`text-[9px] font-black px-1.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}</div></div>
+                 </div>
+               ))}
+             </div>
+          </div>
+        )}
+      </main>
+
+      {/* Floating Buttons */}
+      {showBackToTop && <button onClick={scrollToTop} className="fixed bottom-6 right-6 bg-blue-900 text-white p-3 rounded-full shadow-2xl z-[70]"><ArrowUp className="w-6 h-6" /></button>}
+
+      {user?.email ? (
+        umpireId ? (
+          <button onClick={() => setShowAdminModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase">{userName ? userName.charAt(0) : '?'}</div>
+              <div className="text-left"><p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{t.userSettings}</p><span className="text-sm font-bold leading-none">{userName}</span></div>
+            </div>
+          </button>
+        ) : (
+          <button onClick={() => setShowNamePrompt(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-50 backdrop-blur-md animate-pulse"><UserCheck className="w-5 h-5" /><span className="text-sm font-black uppercase">{t.saveName}</span></button>
+        )
+      ) : (
+        <button onClick={() => setShowAuthModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-800/50 backdrop-blur-md"><User className="w-5 h-5" /><span className="text-sm font-black uppercase">{t.login}</span></button>
+      )}
+
+      {/* Modals */}
+      {showAuthModal && renderAuthModal()}
+      {showNamePrompt && renderNamePromptModal()}
+      {showAdminModal && renderAdminModal()}
+      {selectedGameDetails && renderGameDetailsModal()}
+    </div>
+  );
 }
 
-// Export the application wrapped in ErrorBoundary
 export default function App() {
   return (
     <ErrorBoundary>
