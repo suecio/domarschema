@@ -202,25 +202,20 @@ const translations = {
 // ==========================================
 const getISOWeekNumber = (date) => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const dayNum = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 };
 
 const formatCalendarDate = (dateStr, timeStr, addHours = 3) => {
-  const cleanDate = (dateStr || '').replace(/-/g, '');
-  const cleanTime = (timeStr || '00:00').replace(/:/g, '');
-  const start = `${cleanDate}T${cleanTime}00`;
-  const [hours, mins] = (timeStr || '00:00').split(':');
+  const cleanDate = (dateStr || '').replace(/-/g, ''); const cleanTime = (timeStr || '00:00').replace(/:/g, '');
+  const start = `${cleanDate}T${cleanTime}00`; const [hours, mins] = (timeStr || '00:00').split(':');
   const endHours = (parseInt(hours || '0') + addHours).toString().padStart(2, '0');
-  const end = `${cleanDate}T${endHours}${mins || '00'}00`;
-  return { start, end };
+  const end = `${cleanDate}T${endHours}${mins || '00'}00`; return { start, end };
 };
 
 const getGoogleCalendarLink = (game) => {
-  if (!game.date || !game.time) return '#';
-  const { start, end } = formatCalendarDate(game.date, game.time);
+  if (!game.date || !game.time) return '#'; const { start, end } = formatCalendarDate(game.date, game.time);
   const title = encodeURIComponent(`${game.away} @ ${game.home} (${game.league})`);
   const details = encodeURIComponent(`League: ${game.league}\nLocation: ${game.location}`);
   const location = encodeURIComponent(game.location);
@@ -228,8 +223,7 @@ const getGoogleCalendarLink = (game) => {
 };
 
 const getOutlookCalendarLink = (game) => {
-  if (!game.date || !game.time) return '#';
-  const { start, end } = formatCalendarDate(game.date, game.time);
+  if (!game.date || !game.time) return '#'; const { start, end } = formatCalendarDate(game.date, game.time);
   const title = encodeURIComponent(`${game.away} @ ${game.home} (${game.league})`);
   const details = encodeURIComponent(`League: ${game.league}\nLocation: ${game.location}`);
   const location = encodeURIComponent(game.location);
@@ -250,7 +244,39 @@ const renderMarkdown = (text) => {
 };
 
 // ==========================================
-// VIEWS & MODALS (Combined into single file for canvas)
+// ERROR BOUNDARY
+// ==========================================
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, errorInfo) { console.error("Critical React Crash:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full text-center border border-red-100">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Ett oväntat fel uppstod</h2>
+            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade under laddning. Felet var:</p>
+            <div className="bg-red-50 rounded-xl p-4 text-left overflow-x-auto mb-6 border border-red-100">
+              <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap">{this.state.error?.toString()}</pre>
+            </div>
+            <button onClick={() => window.location.reload()} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-colors">
+              Ladda om sidan
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
+
+// ==========================================
+// VIEW & MODAL COMPONENTS
 // ==========================================
 
 function HelpView({ t, setView, helpTab, setHelpTab, copyGuideLink, contactName, setContactName, contactEmail, setContactEmail, contactSubject, setContactSubject, contactMessage, setContactMessage, contactStatus, setContactStatus, handleContactSubmit, readmeLoading, readmeContent }) {
