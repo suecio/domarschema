@@ -655,7 +655,7 @@ const translations = {
       league: "Liiga",
       saveChanges: "Tallenna muutokset",
       listView: "Lista",
-      calendarView: "Kalenderi",
+      calendarView: "Kalenteri",
       days: ["Su", "Ma", "Ti", "Ke", "To", "Pe", "La"],
       months: ["Tammikuu", "Helmikuu", "Maaliskuu", "Huhtikuu", "Toukokuu", "Kesäkuu", "Heinäkuu", "Elokuu", "Syyskuu", "Lokakuu", "Marraskuu", "Joulukuu"],
       requiredUmpires: "Tarvittavat tuomarit",
@@ -1024,7 +1024,7 @@ const translations = {
       noFacilities: "Keine Anlagen angegeben",
       addFacility: "Anlage hinzufügen...",
       editLocation: "Standort bearbeiten",
-      noLocationsInfo: "Klicka auf einen Standort, um Details anzuzeigen.",
+      noLocationsInfo: "Klicke auf einen Standort, um Details anzuzeigen.",
       matchMovedWarning: "Spiel verschoben! Bitte bestätige die neue Zeit.",
       acceptTime: "Zeit akzeptieren",
       declineTime: "Kann nicht (Absagen)",
@@ -2298,5 +2298,14 @@ function MainApp() {
         </div>
       )}
     </div>
+  );
+}
+
+// Export the application wrapped in our ErrorBoundary so it handles crashes gracefully
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
   );
 }
