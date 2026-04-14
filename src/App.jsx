@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo, Component } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
   collection, 
   doc, 
   setDoc, 
-  getDoc,
   onSnapshot, 
   deleteDoc,
   writeBatch,
@@ -14,13 +13,9 @@ import {
 } from 'firebase/firestore';
 import { 
   getAuth,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
   signInAnonymously,
   signInWithCustomToken,
-  signOut
+  onAuthStateChanged
 } from 'firebase/auth';
 import { 
   getAnalytics, 
@@ -44,7 +39,6 @@ import {
   BarChart3,
   History as HistoryIcon,
   Info,
-  User,
   UserPlus,
   UserMinus,
   Download,
@@ -58,25 +52,7 @@ import {
   ChevronLeft,
   ArrowUpDown,
   ArrowUp,
-  Users2,
-  Github,
-  GitCommit,
-  X,
-  AlertTriangle,
-  ArrowLeft,
-  Megaphone,
-  HelpCircle,
-  BookOpen,
-  MessageCircle,
-  Code,
-  Mail,
-  Send,
-  Share2,
-  SendCheck,
-  Map,
-  ArrowRightLeft,
-  Star,
-  Navigation
+  Users2
 } from 'lucide-react';
 
 /**
@@ -96,9 +72,6 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
-
-// --- GITHUB CONFIGURATION ---
-const GITHUB_REPO = "suecio/domarschema"; 
 
 // --- Translation Dictionary ---
 const translations = {
@@ -137,7 +110,6 @@ const translations = {
     deleteAllGames: "Rensa hela säsongen",
     deleteAllConfirm: "ÄR DU HELT SÄKER? Detta kommer radera ALLA matcher, intresseanmälningar och tillsättningar för det valda året.",
     deleteAllSuccess: "Säsongen har rensats.",
-    downloadBackup: "Ladda ner backup (JSON)",
     umpire: "Domare",
     interests: "Intresseanmälningar",
     gamesAssigned: "Dömda matcher",
@@ -152,6 +124,11 @@ const translations = {
     profileAccess: "Konfigurera profil & åtkomst",
     displayName: "Visningsnamn",
     namePlaceholder: "Sök eller skriv ditt namn...",
+    adminVerify: "Admin-verifiering",
+    accessCode: "Åtkomstkod",
+    verify: "Verifiera",
+    adminActive: "Admin aktiv",
+    logoutAdmin: "Logga ut admin",
     logout: "Logga ut",
     close: "Stäng",
     status: "Status",
@@ -167,7 +144,7 @@ const translations = {
     confirmedGames: "Bekräftade uppdrag",
     interestedGames: "Anmält intresse",
     nameRequiredTitle: "Vem är du?",
-    nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.",
+    nameRequiredDesc: "Välj ditt namn från listan nedan för att se ditt schema på alla enheter.",
     saveName: "Välj profil",
     addNewName: "Hittar du inte ditt namn?",
     createUmpire: "Skapa ny profil",
@@ -190,147 +167,10 @@ const translations = {
     requiredUmpires: "Antal domare",
     level: "Nivå",
     name: "Namn",
-    sortBy: "Sortera",
-    week: "V.",
-    systemUpdates: "Systemuppdateringar",
-    fetchError: "Kunde inte hämta data",
-    login: "Logga in",
-    register: "Skapa konto",
-    email: "E-postadress",
-    password: "Lösenord",
-    forgotPassword: "Glömt lösenord?",
-    loginToContinue: "Logga in för att fortsätta",
-    createAnAccount: "Skapa ett nytt konto",
-    noAccount: "Inget konto? Registrera dig här",
-    hasAccount: "Har du redan ett konto? Logga in",
-    loginRequiredMsg: "Du måste logga in för att se detta.",
-    adminManagement: "Administratörer",
-    addAdmin: "Lägg till admin",
-    adminAdded: "Admin tillagd",
-    adminRemoved: "Admin borttagen",
-    masterAdminInfo: "Du är inloggad som Master Admin.",
-    linkedAccount: "Konto:",
-    notLinked: "Inget konto",
-    linkEmailPlaceholder: "Koppla e-post...",
-    selectEmail: "-- Välj E-post --",
-    otherEmail: "+ Ange annan...",
-    umpireProfile: "Domarprofil",
-    back: "Tillbaka",
-    assignedMatches: "Tillsatta matcher",
-    noAssignedMatches: "Inga tillsatta matcher än.",
-    totalAssignments: "Tillsättningar",
-    totalInterests: "Intresseanmälningar",
-    deleteUmpireConfirm: "Är du säker på att du vill ta bort",
-    umpireDeletedSubject: "Din domarprofil har tagits bort",
-    umpireDeletedBody: "Hej,\n\nEn administratör har tagit bort din domarprofil från domarsystemet.",
-    assignmentEmailSubject: "Ny matchtillsättning",
-    assignmentEmailBody: "Hej {name},\n\nDu har blivit tillsatt på matchen {away} @ {home} den {date} kl {time}.",
-    myGamesReminder: "Viktigt! Om du måste lämna återbud till en redan tillsatt match är det ditt ansvar att hitta en ersättare samt att informera Elitdomargruppen.",
-    globalAnnouncement: "Globalt Meddelande",
-    saveAnnouncement: "Publicera",
-    clearAnnouncement: "Ta bort",
-    announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...",
-    helpAndInfo: "Hjälp & Info",
-    guide: "Kom igång",
-    faq: "Vanliga frågor",
-    about: "Om Appen",
-    guideStep1Title: "1. Skapa ett konto",
-    guideStep1Desc: "Klicka på inloggningsikonen längst ner eller uppe i hörnet och välj 'Skapa ett nytt konto'. Fyll i din e-post och ett valfritt lösenord.",
-    guideStep2Title: "2. Sök efter din profil",
-    guideStep2Desc: "Direkt efter inloggning visas rutan 'Vem är du?'. Skriv ditt namn i sökfältet för att hitta dig själv i domarlistan.",
-    guideStep3Title: "3. Bekräfta & Koppla",
-    guideStep3Desc: "Klicka på ditt namn i listan. Detta kopplar ditt konto till profilen permanent så att ditt schema synkas över alla dina enheter.",
-    guideStep4Title: "4. Saknas ditt namn?",
-    guideStep4Desc: "Om du är helt ny och inte finns i listan klickar du på 'Hittar du inte ditt namn?' för att skapa din domarprofil från grunden.",
-    faq1Q: "Kan jag byta namn eller profil om jag valde fel?",
-    faq1A: "Nej, av säkerhetsskäl låses ditt konto till den profil du väljer. Råkade du välja fel person måste du kontakta en administratör för att återställa kopplingen.",
-    faq2Q: "Hur anmäler jag intresse för att döma en match?",
-    faq2A: "Gå till 'Spelschema'. Klicka på den blå knappen 'Intresserad' bredvid de matcher du kan och vill döma.",
-    faq3Q: "Vem tillsätter matcherna?",
-    faq3A: "Du anmäler intresse, men det är Elitdomargruppen/Administratörerna som gör den slutgiltiga schemaläggningen och tillsättningen.",
-    faq4Q: "Varför är min statistiksida tom?",
-    faq4A: "Statistiken uppdateras och visas så fort du anmäler intresse för en match eller blir tilldelad ett uppdrag.",
-    faq5Q: "Hur fungerar marknaden (Byt bort match)?",
-    faq5A: "Om du inte kan döma en match klickar du på 'Byt bort' under Mina Matcher. Den hamnar då på Marknaden. Du ansvarar för matchen tills någon annan klickar på 'Ta match'.",
-    loadingReadme: "Hämtar README från GitHub...",
-    contactUs: "Kontakta oss",
-    contactDesc: "Behöver du hjälp eller har du en fråga? Skicka ett meddelande till oss så hjälper vi dig.",
-    subject: "Ämne",
-    message: "Meddelande",
-    sendMsg: "Skicka Meddelande",
-    sending: "Skickar...",
-    msgSentTitle: "Meddelande skickat!",
-    msgSentDesc: "Tack för ditt meddelande. Vi återkommer till dig så snart som möjligt på den angivna e-postadressen.",
-    sendAnother: "Skicka ett nytt meddelande",
-    shareGuide: "Dela guide",
-    linkCopied: "Länk kopierad till urklipp!",
-    sendSchedules: "Skicka spelschema",
-    reviewEmails: "Granska Utskick",
-    customEmailMessage: "Personligt meddelande (Frivilligt)",
-    customEmailPlaceholder: "Skriv ett meddelande som visas högst upp i e-postmeddelandet till alla...",
-    sendAllEmails: "Skicka till {count} domare",
-    missingEmailWarning: "{count} domare har matcher men saknar e-postadress:",
-    emailPreview: "Förhandsgranskning av E-post",
-    emailsSentSuccess: "Alla spelscheman har skickats!",
-    bookedIn: "Bokad i",
-    filterStatusAll: "Alla statusar",
-    noInterests: "Inga anmälningar",
-    coUmpires: "Dömer med:",
-    noCoUmpires: "Inga meddomare",
-    calendarColumn: "Kalender",
-    gameDetails: "Matchinformation",
-    mapDirections: "Öppna Karta",
-    officials: "Domarteam",
-    supervisor: "Supervisor",
-    techComm: "Technical Commissioner",
-    notAssigned: "Ej tillsatt",
-    yourGame: "Din match",
-    marketplace: "Marknad",
-    marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare. När du tar en match tilldelas du den omedelbart.",
-    tradeGame: "Byt bort",
-    cancelTrade: "Ångra byte",
-    takeGame: "Ta match",
-    gamesForTrade: "Matcher som bytes bort",
-    noMarketplaceGames: "Inga matcher bytes bort just nu.",
-    tradeSuccess: "Du har tagit över matchen! Ditt schema har uppdaterats.",
-    tradeConfirm: "Är du säker på att du vill ta över denna match?",
-    downloadCalendar: "Ladda ner",
-    formatICS: ".ICS Fil",
-    subtextICS: "För Apple & Outlook",
-    formatCSV: ".CSV Fil",
-    subtextCSV: "För Google Kalender",
-    evaluate: "Utvärdera",
-    grade: "Betyg",
-    feedback: "Feedback / Kommentar",
-    saveEval: "Spara utvärdering",
-    evalSaved: "Utvärdering sparad",
-    yourEval: "Utvärdering",
-    selectAdmin: "Välj Admin...",
-    selectUmpire: "Välj Domare...",
-    enterTCName: "Ange namn på TC...",
-    umpireShort: "DOMARE",
-    supShort: "SUP",
-    tcShort: "TC",
-    locations: "Platser",
-    address: "Adress",
-    facilities: "Faciliteter",
-    noFacilities: "Inga faciliteter angivna",
-    addFacility: "Lägg till facilitet...",
-    editLocation: "Redigera plats",
-    noLocationsInfo: "Klicka på en plats för att se detaljer eller lägga till en adress och faciliteter.",
-    matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.",
-    acceptTime: "Acceptera ny tid",
-    declineTime: "Kan inte (Avboka)",
-    timeChangedBadge: "Tid Ändrad",
-    pendingReply: "Väntar på svar",
-    emailMatchMovedSubject: "Spelschema uppdaterat ({count} st) / Schedule Updated",
-    emailMatchMovedBody: "Hej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.\n\n---\n\nHello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.",
-    pendingEmailsQueued: "⏳ {count} e-postmeddelanden väntar på att skickas till domare om ändrade matcher. De pausas i 15 minuter för att gruppera dubbelmatcher.",
-    sendQueuedNow: "Skicka direkt",
-    actionRequired: "Kräver åtgärd"
+    sortBy: "Sortera"
   },
   en: {
-    appTitle: "Umpire Portal",
+    appTitle: "Domartillsättning",
     season: "Season",
     schedule: "Schedule",
     myGames: "My Games",
@@ -364,7 +204,6 @@ const translations = {
     deleteAllGames: "Clear Entire Season",
     deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
     deleteAllSuccess: "Season cleared successfully.",
-    downloadBackup: "Download Backup (JSON)",
     umpire: "Umpire",
     interests: "Interests",
     gamesAssigned: "Games Assigned",
@@ -379,6 +218,11 @@ const translations = {
     profileAccess: "Configure profile & access",
     displayName: "Display Name",
     namePlaceholder: "Search or type name...",
+    adminVerify: "Admin Verification",
+    accessCode: "Access Code",
+    verify: "Verify",
+    adminActive: "Admin Active",
+    logoutAdmin: "Logout Admin",
     logout: "Logout",
     close: "Close",
     status: "Status",
@@ -417,339 +261,40 @@ const translations = {
     requiredUmpires: "Crew Size",
     level: "Level",
     name: "Name",
-    sortBy: "Sort by",
-    week: "W.",
-    systemUpdates: "System Updates",
-    fetchError: "Could not fetch data",
-    login: "Login",
-    register: "Register",
-    email: "Email Address",
-    password: "Password",
-    forgotPassword: "Forgot Password?",
-    loginToContinue: "Login to continue",
-    createAnAccount: "Create a new account",
-    noAccount: "No account? Register here",
-    hasAccount: "Already have an account? Login",
-    loginRequiredMsg: "You must be logged in to view this.",
-    adminManagement: "Admin Roles",
-    addAdmin: "Add Admin",
-    adminAdded: "Admin added",
-    adminRemoved: "Admin removed",
-    masterAdminInfo: "You are logged in as Master Admin.",
-    linkedAccount: "Account:",
-    notLinked: "No account",
-    linkEmailPlaceholder: "Link email...",
-    selectEmail: "-- Select Email --",
-    otherEmail: "+ Enter other...",
-    umpireProfile: "Umpire Profile",
-    back: "Back",
-    assignedMatches: "Assigned Matches",
-    noAssignedMatches: "No assigned matches yet.",
-    totalAssignments: "Assignments",
-    totalInterests: "Interests",
-    deleteUmpireConfirm: "Are you sure you want to remove",
-    umpireDeletedSubject: "Your umpire profile has been removed",
-    umpireDeletedBody: "Hello,\n\nAn admin has removed your umpire profile from the scheduling system.",
-    assignmentEmailSubject: "New Match Assignment",
-    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}.",
-    myGamesReminder: "Important! If you need to cancel an assigned game, it is your responsibility to find a replacement and notify the elite umpire group.",
-    globalAnnouncement: "Global Announcement",
-    saveAnnouncement: "Publish",
-    clearAnnouncement: "Clear",
-    announcementPlaceholder: "Type an important message to display to everyone...",
-    helpAndInfo: "Help & Info",
-    guide: "Getting Started",
-    faq: "FAQ",
-    about: "About App",
-    guideStep1Title: "1. Create an account",
-    guideStep1Desc: "Click the login icon and select 'Create a new account'. Fill in your email address and a secure password.",
-    guideStep2Title: "2. Search for your profile",
-    guideStep2Desc: "Immediately after logging in, the 'Who are you?' prompt appears. Type your name into the search bar.",
-    guideStep3Title: "3. Confirm & Link",
-    guideStep3Desc: "Click your name in the list. This permanently links your account to the official profile, syncing your schedule across devices.",
-    guideStep4Title: "4. Name Missing?",
-    guideStep4Desc: "If you are completely new and not in the list, click 'Can't find your name?' to create a brand new profile from scratch.",
-    faq1Q: "Can I change my linked profile if I made a mistake?",
-    faq1A: "No, for security reasons your account is locked to the chosen profile. Contact an administrator to reset the link.",
-    faq2Q: "How do I apply to umpire a game?",
-    faq2A: "Navigate to 'Schedule' and click the blue 'Interested' button next to the games you are available for.",
-    faq3Q: "Who assigns the games?",
-    faq3A: "You mark your interest, but the Elite Umpire Group/Administrators make the final staffing assignments.",
-    faq4Q: "Why is my stats page empty?",
-    faq4A: "Your statistics will be generated as soon as you mark interest for a game or receive an assignment.",
-    faq5Q: "How does the marketplace work?",
-    faq5A: "If you cannot umpire a game, click 'Give Away' under My Games. It will be listed on the Marketplace. You are responsible for the game until someone else clicks 'Take Game'.",
-    loadingReadme: "Fetching README from GitHub...",
-    contactUs: "Contact Us",
-    contactDesc: "Need help or have a question? Send us a message and we'll assist you.",
-    subject: "Subject",
-    message: "Message",
-    sendMsg: "Send Message",
-    sending: "Sending...",
-    msgSentTitle: "Message Sent!",
-    msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
-    sendAnother: "Send another message",
-    shareGuide: "Share Guide",
-    linkCopied: "Link copied to clipboard!",
-    sendSchedules: "Send Schedules",
-    reviewEmails: "Review Emails",
-    customEmailMessage: "Custom Message (Optional)",
-    customEmailPlaceholder: "Type a message to appear at the top of the email for everyone...",
-    sendAllEmails: "Send to {count} umpires",
-    missingEmailWarning: "{count} umpires have assignments but no email linked:",
-    emailPreview: "Email Preview",
-    emailsSentSuccess: "All schedules have been sent successfully!",
-    bookedIn: "Booked in",
-    filterStatusAll: "All Statuses",
-    noInterests: "No Interests",
-    coUmpires: "Co-umpires:",
-    noCoUmpires: "No co-umpires",
-    calendarColumn: "Calendar",
-    gameDetails: "Game Details",
-    mapDirections: "Open Map",
-    officials: "Officials",
-    supervisor: "Supervisor",
-    techComm: "Technical Commissioner",
-    notAssigned: "Not Assigned",
-    yourGame: "Your Game",
-    marketplace: "Marketplace",
-    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires. Taking a game immediately assigns it to you.",
-    tradeGame: "Give Away",
-    cancelTrade: "Cancel Give Away",
-    takeGame: "Take Game",
-    gamesForTrade: "Games Up For Trade",
-    noMarketplaceGames: "No games are up for trade right now.",
-    tradeSuccess: "You have taken over the game! Your schedule is updated.",
-    tradeConfirm: "Are you sure you want to take over this game?",
-    downloadCalendar: "Download",
-    formatICS: ".ICS File",
-    subtextICS: "For Apple & Outlook",
-    formatCSV: ".CSV File",
-    subtextCSV: "For Google Calendar",
-    evaluate: "Evaluate",
-    grade: "Grade",
-    feedback: "Feedback / Comment",
-    saveEval: "Save Evaluation",
-    evalSaved: "Evaluation Saved",
-    yourEval: "Evaluation",
-    selectAdmin: "Select Admin...",
-    selectUmpire: "Select Umpire...",
-    enterTCName: "Enter TC name...",
-    umpireShort: "UMP",
-    supShort: "SUP",
-    tcShort: "TC",
-    locations: "Locations",
-    address: "Address",
-    facilities: "Facilities",
-    noFacilities: "No facilities listed",
-    addFacility: "Add facility...",
-    editLocation: "Edit Location",
-    noLocationsInfo: "Click on a location to view details or add an address and facilities.",
-    matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
-    acceptTime: "Accept New Time",
-    declineTime: "Cannot Make It",
-    timeChangedBadge: "Time Changed",
-    pendingReply: "Pending Reply",
-    emailMatchMovedSubject: "Schedule Updated ({count} games) / Spelschema uppdaterat",
-    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.",
-    pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games. Paused for 15 mins to batch double-headers.",
-    sendQueuedNow: "Send Now",
-    actionRequired: "Action Required"
+    sortBy: "Sort by"
   }
 };
 
-const getISOWeekNumber = (date) => {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-};
-
-// --- CALENDAR LINK GENERATORS ---
-const formatCalendarDate = (dateStr, timeStr, addHours = 3) => {
-  const cleanDate = (dateStr || '').replace(/-/g, '');
-  const cleanTime = (timeStr || '00:00').replace(/:/g, '');
-  const start = `${cleanDate}T${cleanTime}00`;
-  const [hours, mins] = (timeStr || '00:00').split(':');
-  const endHours = (parseInt(hours || '0') + addHours).toString().padStart(2, '0');
-  const end = `${cleanDate}T${endHours}${mins || '00'}00`;
-  return { start, end };
-};
-
-const getGoogleCalendarLink = (game) => {
-  if (!game.date || !game.time) return '#';
-  const { start, end } = formatCalendarDate(game.date, game.time);
-  const title = encodeURIComponent(`${game.away} @ ${game.home} (${game.league})`);
-  const details = encodeURIComponent(`League: ${game.league}\nLocation: ${game.location}`);
-  const location = encodeURIComponent(game.location);
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
-};
-
-const getOutlookCalendarLink = (game) => {
-  if (!game.date || !game.time) return '#';
-  const { start, end } = formatCalendarDate(game.date, game.time);
-  const title = encodeURIComponent(`${game.away} @ ${game.home} (${game.league})`);
-  const details = encodeURIComponent(`League: ${game.league}\nLocation: ${game.location}`);
-  const location = encodeURIComponent(game.location);
-  return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${title}&startdt=${start}&enddt=${end}&body=${details}&location=${location}`;
-};
-
-// --- MARKDOWN PARSER FOR README ---
-const renderMarkdown = (text) => {
-  if (!text) return null;
-  return text.split('\n').map((line, i) => {
-    if (line.startsWith('# ')) return <h1 key={i} className="text-3xl font-black text-slate-800 mb-4 mt-8 tracking-tight">{line.substring(2)}</h1>;
-    if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-bold text-slate-800 mb-3 mt-6 pb-2 border-b border-slate-100">{line.substring(3)}</h2>;
-    if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-bold text-slate-700 mb-2 mt-4">{line.substring(4)}</h3>;
-    if (line.startsWith('- ')) return <li key={i} className="ml-6 list-disc mb-1 text-slate-600 font-medium">{line.substring(2)}</li>;
-    if (line.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-blue-400 bg-blue-50 p-3 my-4 italic text-slate-700 rounded-r-lg">{line.substring(2)}</blockquote>;
-    if (line.trim() === '') return <div key={i} className="h-2"></div>;
-    return <p key={i} className="mb-2 text-slate-600 font-medium leading-relaxed">{line.replace(/\*\*(.*?)\*\*/g, '$1')}</p>;
-  });
-};
-
-// ==========================================
-// ERROR BOUNDARY
-// ==========================================
-class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("Critical React Crash:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full text-center border border-red-100">
-            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Ett oväntat fel uppstod</h2>
-            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade under laddning. Felet var:</p>
-            <div className="bg-red-50 rounded-xl p-4 text-left overflow-x-auto mb-6 border border-red-100">
-              <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap">
-                {this.state.error?.toString()}
-              </pre>
-            </div>
-            <button onClick={() => window.location.reload()} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-colors">
-              Ladda om sidan
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children; 
-  }
-}
-
-// ==========================================
-// MAIN APPLICATION COMPONENT
-// ==========================================
-function MainApp() {
-  // Auth & Roles
+export default function App() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminUmpireIds, setAdminUmpireIds] = useState([]);
-  
-  // Navigation & View
-  const [view, setView] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('view') || 'schedule';
-    }
-    return 'schedule';
-  });
+  const [view, setView] = useState('schedule');
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
-  const [myGamesViewMode, setMyGamesViewMode] = useState('list');
+  const [myGamesViewMode, setMyGamesViewMode] = useState('list'); 
   const [selectedYear, setSelectedYear] = useState('2026');
   
-  // Language & UI Context
-  const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
+  const defaultLang = typeof navigator !== 'undefined' && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
-  const t = translations[lang] || translations['en'];
+  const t = translations[lang];
 
   // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const [globalNote, setGlobalNote] = useState('');
-  
-  // Help View State
-  const [helpTab, setHelpTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('tab') || 'guide';
-    }
-    return 'guide';
-  });
-  const [readmeContent, setReadmeContent] = useState(null);
-  const [readmeLoading, setReadmeLoading] = useState(false);
-  
-  // Contact Form State
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactSubject, setContactSubject] = useState('');
-  const [contactMessage, setContactMessage] = useState('');
-  const [contactStatus, setContactStatus] = useState('idle');
-
-  // Email Module State
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [customEmailMessage, setCustomEmailMessage] = useState('');
-  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
-
-  // Calendar Dropdown States
-  const [showScheduleExport, setShowScheduleExport] = useState(false);
-  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
 
   // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [masterUmpires, setMasterUmpires] = useState([]);
-  const [registeredEmails, setRegisteredEmails] = useState([]);
-  const [evaluations, setEvaluations] = useState([]);
-  const [locationsData, setLocationsData] = useState([]);
-  const [mailQueue, setMailQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [firebaseError, setFirebaseError] = useState(null); 
   
-  // Auth & Modals State
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [isLoginMode, setIsLoginMode] = useState(true);
-  const [authError, setAuthError] = useState('');
+  // UI Controls
+  const [adminCode, setAdminCode] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
-  const [selectedProfileId, setSelectedProfileId] = useState(null);
-  const [selectedGameDetails, setSelectedGameDetails] = useState(null);
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  
-  // Evaluation Forms State
-  const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
-  const [evalGrade, setEvalGrade] = useState(0);
-  const [evalComment, setEvalComment] = useState('');
-
-  // Location Editing State
-  const [editingLocation, setEditingLocation] = useState(null);
-  const [newFacility, setNewFacility] = useState('');
-  
-  // Changelog
-  const [showChangelogModal, setShowChangelogModal] = useState(false);
-  const [changelog, setChangelog] = useState([]);
-  const [loadingChangelog, setLoadingChangelog] = useState(false);
-  
-  // Admin Editing Controls
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
@@ -757,94 +302,28 @@ function MainApp() {
   const [editingUmpireId, setEditingUmpireId] = useState(null);
   const [tempEditName, setTempEditName] = useState('');
   const [tempEditLevel, setTempEditLevel] = useState('');
-  const [tempEditEmail, setTempEditEmail] = useState('');
-  const [editNoteText, setEditNoteText] = useState('');
-  const [showManualEmailInput, setShowManualEmailInput] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
-  const [umpireSort, setUmpireSort] = useState('level');
+  const [umpireSort, setUmpireSort] = useState('level'); // 'level' or 'name'
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
 
-  // Robust parsing of appId to fix Firebase collection path validation
-  const getAppId = (year) => {
-    const base = typeof window !== 'undefined' && window.__app_id 
-      ? String(window.__app_id).replace(/[\/\\]/g, '-') 
-      : 'baseball-umpire-scheduler';
-    return `${base}-${year}`;
-  };
-  const appId = getAppId(selectedYear);
+  const appId = `baseball-umpire-scheduler-${selectedYear}`;
   
-  // Localized today
+  // Localized today for comparisons
   const today = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
-  // Keep admin edit note perfectly in sync when loaded
-  useEffect(() => {
-    setEditNoteText(globalNote);
-  }, [globalNote]);
-
-  // Fetch GitHub README when About Tab is opened
-  useEffect(() => {
-    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
-      setReadmeLoading(true);
-      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.content) {
-            const text = decodeURIComponent(escape(atob(data.content)));
-            setReadmeContent(text);
-          } else {
-            setReadmeContent(t.fetchError);
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          setReadmeContent(t.fetchError);
-        })
-        .finally(() => setReadmeLoading(false));
-    }
-  }, [view, helpTab, readmeContent, t.fetchError]);
-
-  // Reset Evaluation State when modal closes or changes
-  useEffect(() => {
-    setEvaluatingUmpire(null);
-    setEvalGrade(0);
-    setEvalComment('');
-  }, [selectedGameDetails]);
-
-  // --- DEFENSIVE UI HELPERS ---
-  const safeDateMonth = (dateString) => {
-    if (!dateString) return '';
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString; 
-    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
-  };
-
-  const safeDateDay = (dateString) => {
-    if (!dateString) return '-';
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return '-';
-    const dayIndex = d.getDay(); 
-    return (t.days && t.days[dayIndex]) ? t.days[dayIndex] : '-';
-  };
-
-  const safeDateNum = (dateString) => {
-    if (!dateString) return '-';
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return '-';
-    return d.getDate();
-  };
+  // --- HELPERS ---
 
   const toLocalISO = (date) => {
-    if (!date || isNaN(date.getTime())) return "";
+    if (!date) return "";
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
@@ -852,11 +331,11 @@ function MainApp() {
   };
 
   const scrollToTop = () => {
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getLeagueStyles = (league) => {
-    const l = (league || '').toLowerCase();
+    const l = league?.toLowerCase() || '';
     if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
     if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
     if (l.includes('pre') || l.includes('off')) return 'bg-red-100 text-red-700 border-red-200';
@@ -865,7 +344,7 @@ function MainApp() {
   };
 
   const getLevelStyles = (level) => {
-    const l = (level || '').toLowerCase();
+    const l = level?.toLowerCase() || '';
     if (l.includes('internationell')) return 'bg-[#204d99] text-white border-[#1a3d7a]';
     if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]';
     if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]';
@@ -881,49 +360,22 @@ function MainApp() {
     return 'bg-green-100 text-green-700 border-green-200';
   };
 
-  // --- REUSABLE CREW RENDERING ---
-  // A helper component to render the Umpire, Supervisor, and TC clearly on cards
-  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
-    const hasOfficials = gameAssignments.length > 0 || game.supervisorName || game.tcName;
-    if (!hasOfficials) return null;
-
-    return (
-      <div className="flex flex-wrap gap-1 mt-3 items-center">
-        {gameAssignments.map(asg => {
-            const m = masterUmpires.find(mu => mu.id === asg.userId);
-            return (
-              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
-                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} 
-                  {t.umpireShort}: {asg.userName} 
-                  {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-              </div>
-            );
-        })}
-        {game.supervisorName && (
-          <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1">
-              <Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}
-          </div>
-        )}
-        {game.tcName && (
-          <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1">
-              <FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // 1. Authentication Configuration
+  // 1. Authentication
   useEffect(() => {
     const initAuth = async () => {
-      try {
+      try { 
         if (typeof window !== 'undefined' && window.__initial_auth_token) {
-          await signInWithCustomToken(auth, window.__initial_auth_token);
+          try {
+            await signInWithCustomToken(auth, window.__initial_auth_token);
+          } catch (customErr) {
+            console.warn("Custom token mismatch - expected when using your own custom Firebase project.");
+            await signInAnonymously(auth);
+          }
         } else {
-          await signInAnonymously(auth);
+          await signInAnonymously(auth); 
         }
-      } catch (err) {
-        console.warn("Auth initialization fallback. Proceeding safely.", err);
+      } catch (err) { 
+        console.warn("Anonymous auth restricted. Gå in i Firebase Console -> Authentication -> Sign-in method och slå på 'Anonymous' för att gäster ska kunna se schemat."); 
       }
     };
     initAuth();
@@ -936,256 +388,69 @@ function MainApp() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Listeners 
+  // 2. Data Listeners
   useEffect(() => {
-    const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null;
-    if (isCanvas && !user) return; 
-
-    const handleDbError = (err) => {
-      console.error("Firebase Sync Error:", err);
-      if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
-        setFirebaseError('permission-denied');
-      }
-    };
+    if (!user) return;
 
     const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
     const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
       const gamesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setGames(gamesList.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
-      setFirebaseError(null);
-    }, handleDbError);
+      setGames(gamesList.sort((a, b) => a.date.localeCompare(b.date)));
+    }, (err) => console.error(err));
 
     const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
     const unsubscribeApps = onSnapshot(appsCol, (snapshot) => {
       setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, handleDbError);
+    }, (err) => console.error(err));
 
     const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments');
     const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => {
       setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, handleDbError);
+    }, (err) => console.error(err));
 
     const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires');
     const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => {
-      setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
-    }, handleDbError);
-    
-    const regUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'registered_users');
-    const unsubscribeRegUsers = onSnapshot(regUsersCol, (snapshot) => {
-      const emails = snapshot.docs.map(doc => doc.data().email).filter(Boolean);
-      setRegisteredEmails([...new Set(emails)]);
-    }, handleDbError);
-    
-    const evalsCol = collection(db, 'artifacts', appId, 'public', 'data', 'evaluations');
-    const unsubscribeEvals = onSnapshot(evalsCol, (snapshot) => {
-      setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, handleDbError);
+      setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.name.localeCompare(b.name)));
+    }, (err) => console.error(err));
 
-    const locCol = collection(db, 'artifacts', appId, 'public', 'data', 'locations');
-    const unsubscribeLocations = onSnapshot(locCol, (snapshot) => {
-      setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, handleDbError);
-
-    const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'mail_queue');
-    const unsubscribeQueue = onSnapshot(queueCol, (snapshot) => {
-      setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, handleDbError);
-
-    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
-    const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
+    const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+    const unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        setAdminUmpireIds(data.adminUmpireIds || []);
-        setGlobalNote(data.globalNote || '');
+        setUserName(data.name || '');
+        setUmpireId(data.umpireId || '');
+        setIsAdmin(data.isAdmin || false);
       }
-    }, handleDbError);
+    }, (err) => console.error(err));
 
     return () => {
       unsubscribeGames(); 
       unsubscribeApps(); 
       unsubscribeAssign(); 
-      unsubscribeUmpires();
-      unsubscribeRegUsers();
-      unsubscribeEvals();
-      unsubscribeLocations();
-      unsubscribeQueue();
-      unsubscribeSettings();
+      unsubscribeUmpires(); 
+      unsubscribeProfile();
     };
-  }, [user, appId]);
+  }, [user, appId, isAdmin]);
 
-  // 3. User Profile & Role Evaluation
-  useEffect(() => {
-    let unsubscribeProfile = () => {};
-
-    if (user && user.email) {
-      const isMaster = user.email === 'suecio@tryempire.com';
-      setContactEmail(user.email);
-      
-      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
-        email: user.email.toLowerCase(),
-        lastSeen: Date.now()
-      }, { merge: true }).catch(err => console.warn("Failed to register email:", err));
-
-      const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
-        if (snapshot.exists() && snapshot.data().umpireId) {
-          const data = snapshot.data();
-          setUserName(data.name || '');
-          setContactName(data.name || '');
-          setUmpireId(data.umpireId || '');
-          
-          const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
-          setIsAdmin(isMaster || isStandardAdmin);
-        } else {
-          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
-          if (preLinkedUmpire) {
-             setDoc(profileDoc, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
-          } else {
-             setUserName('');
-             setUmpireId('');
-             setIsAdmin(isMaster);
-          }
-        }
-      }, (err) => console.error(err));
-    } else {
-      setIsAdmin(false);
-      setUserName('');
-      setUmpireId('');
-    }
-
-    return () => unsubscribeProfile();
-  }, [user, appId, adminUmpireIds, masterUmpires]);
-
-  // 3.5 Auto-link email to public umpire profile
-  useEffect(() => {
-    if (user && user.email && umpireId && masterUmpires.length > 0) {
-      const myUmpire = masterUmpires.find(u => u.id === umpireId);
-      if (myUmpire && myUmpire.linkedEmail !== user.email) {
-        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
-          linkedUserId: user.uid,
-          linkedEmail: user.email
-        }).catch(e => console.warn("Background email sync failed", e));
-      }
-    }
-  }, [user, umpireId, masterUmpires, appId]);
-
-  // 4. Scroll & Analytics
+  // 3. Scroll Tracking & Analytics tracking
   useEffect(() => {
     if (analytics) {
-      logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
+      logEvent(analytics, 'screen_view', { 
+        firebase_screen: view, 
+        year: selectedYear, 
+        lang: lang 
+      });
     }
+    
     const handleScroll = () => { 
-      if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); 
+      setShowBackToTop(window.scrollY > 300); 
     };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [view, selectedYear, lang]);
 
-  // 5. Fetch GitHub Changelog
-  useEffect(() => {
-    const fetchChangelog = async () => {
-      if (!GITHUB_REPO || GITHUB_REPO.includes("your-github-username")) return;
-      setLoadingChangelog(true);
-      try {
-        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=5`);
-        if (res.ok) {
-          const data = await res.json();
-          setChangelog(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch changelog:", err);
-      } finally {
-        setLoadingChangelog(false);
-      }
-    };
-
-    if (showChangelogModal && changelog.length === 0) {
-      fetchChangelog();
-    }
-  }, [showChangelogModal, changelog.length]);
-
-  // 6. Background Queue Processor
-  useEffect(() => {
-    if (!isAdmin || mailQueue.length === 0) return;
-    
-    const interval = setInterval(() => {
-       const now = Date.now();
-       const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
-       
-       if (readyToProcess.length > 0) {
-           readyToProcess.forEach(async (queueItem) => {
-              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
-              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
-              
-              const emailBody = t.emailMatchMovedBody
-                 .replace(/\{name\}/g, queueItem.userName)
-                 .replace(/\{changesListSv\}/g, changesTextSv)
-                 .replace(/\{changesListEn\}/g, changesTextEn);
-                 
-              try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-                   to: queueItem.email,
-                   message: {
-                     subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
-                     text: emailBody
-                   },
-                   createdAt: Date.now()
-                });
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
-              } catch(e) { console.error("Auto-process queue error", e); }
-           });
-       }
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [isAdmin, mailQueue, appId, t]);
-
   // --- ACTIONS ---
-
-  const handleAuthSubmit = async (e) => {
-    e.preventDefault();
-    setAuthError('');
-    try {
-      let cred;
-      if (isLoginMode) {
-        cred = await signInWithEmailAndPassword(auth, authEmail, authPassword);
-      } else {
-        cred = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
-      }
-      
-      setShowAuthModal(false);
-      
-      if (cred && cred.user) {
-        const docRef = doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile', 'info');
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists() || !docSnap.data().umpireId) {
-          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === authEmail.toLowerCase());
-          if (preLinkedUmpire) {
-            await setDoc(docRef, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
-          } else {
-            setShowNamePrompt(true);
-          }
-        }
-      }
-    } catch (err) {
-      setAuthError(err.message);
-    }
-  };
-
-  const handleResetPassword = async () => {
-    if (!authEmail) {
-      setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Please enter your email address first.');
-      return;
-    }
-    try {
-      await sendPasswordResetEmail(auth, authEmail);
-      if (typeof window !== 'undefined') alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!');
-    } catch (err) {
-      setAuthError(err.message);
-    }
-  };
 
   const handleSort = (key) => {
     setSortConfig(prev => ({ 
@@ -1194,134 +459,42 @@ function MainApp() {
     }));
   };
 
-  const handleContactSubmit = async (e) => {
-    e.preventDefault();
-    setContactStatus('sending');
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: 'admin@domarweb.se',
-        replyTo: contactEmail,
-        message: {
-          subject: `[Kontaktformulär] ${contactSubject}`,
-          text: `Nytt meddelande från Domarportalen:\n\nAvsändare: ${contactName}\nE-post: ${contactEmail}\n\nMeddelande:\n${contactMessage}`
-        },
-        createdAt: Date.now()
-      });
-      setContactStatus('success');
-      setContactSubject('');
-      setContactMessage('');
-    } catch (error) {
-      console.error("Error sending contact email:", error);
-      setContactStatus('error');
-    }
-  };
-
   const updateProfile = async (name, id) => {
-    if (!user || !user.email) return;
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
+    if (!user) return;
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id, isAdmin }, { merge: true });
   };
 
   const logoutUmpire = async () => {
-    await signOut(auth);
-    try { await signInAnonymously(auth); } catch (e) { }
-    setShowAdminModal(false);
-    setView('schedule');
-  };
-
-  const saveGlobalNote = async () => {
-    if (!isAdmin) return;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: editNoteText }, { merge: true });
-  };
-  
-  const clearGlobalNote = async () => {
-    if (!isAdmin) return;
-    setEditNoteText('');
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: '' }, { merge: true });
-  };
-
-  const copyGuideLink = () => {
-    if (typeof window !== 'undefined') {
-      const link = `${window.location.origin}${window.location.pathname}?view=help&tab=guide`;
-      navigator.clipboard.writeText(link).then(() => {
-        alert(t.linkCopied);
-      }).catch(() => {
-        const textArea = document.createElement("textarea");
-        textArea.value = link;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-          document.execCommand('copy');
-          alert(t.linkCopied);
-        } catch (err) {
-          console.error('Fallback: Oops, unable to copy', err);
-        }
-        document.body.removeChild(textArea);
-      });
-    }
-  };
-
-  const toggleUmpireAdmin = async (uId) => {
-    if (user?.email !== 'suecio@tryempire.com') return; 
-    
-    let updatedIds = [...(adminUmpireIds || [])];
-    if (updatedIds.includes(uId)) {
-      updatedIds = updatedIds.filter(id => id !== uId);
-    } else {
-      updatedIds.push(uId);
-    }
-    
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminUmpireIds: updatedIds }, { merge: true });
+    if (!user) return;
+    setUserName(''); 
+    setUmpireId('');
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name: '', umpireId: '', isAdmin: false }, { merge: true });
+    setShowNamePrompt(true);
   };
 
   const addMasterUmpire = async (name, level = "") => {
     if (!name.trim()) return "";
-    const exists = masterUmpires.find(u => (u.name || '').toLowerCase() === name.toLowerCase());
+    const exists = masterUmpires.find(u => u.name.toLowerCase() === name.toLowerCase());
     if (exists) return exists.id;
     const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name, level });
     return docRef.id;
   };
 
-  const updateMasterUmpire = async (id, newName, newLevel, newEmail) => {
+  const updateMasterUmpire = async (id, newName, newLevel) => {
     if (!isAdmin || !newName.trim()) return;
-    const updateData = { name: newName, level: newLevel };
-    if (newEmail !== undefined) {
-      updateData.linkedEmail = newEmail.trim().toLowerCase();
-    }
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), updateData, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { name: newName, level: newLevel }, { merge: true });
   };
 
-  const deleteMasterUmpire = async (id, name, linkedEmail) => {
+  const deleteMasterUmpire = async (id) => {
     if (!isAdmin) return;
-    
-    if (typeof window !== 'undefined') {
-      if (!window.confirm(`${t.deleteUmpireConfirm} "${name}"?`)) return;
-    }
-
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id));
-    
-    if (linkedEmail) {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: linkedEmail,
-        message: {
-          subject: t.umpireDeletedSubject,
-          text: t.umpireDeletedBody
-        },
-        createdAt: Date.now()
-      });
-    }
   };
 
   const toggleApplication = async (gameId) => {
-    if (!user || !user.email) { 
-      setShowAuthModal(true); 
-      return; 
-    }
-    if (!umpireId) { 
+    if (!user || !umpireId) { 
       setShowNamePrompt(true); 
       return; 
     }
-    
     const appIdStr = `${gameId}_${umpireId}`;
     const existing = applications.find(a => a.id === appIdStr);
     
@@ -1353,58 +526,6 @@ function MainApp() {
     const asgId = `${gameId}_${uId}`;
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
   };
-  
-  // --- MARKETPLACE ACTIONS ---
-  const toggleTradeStatus = async (asgId, status) => {
-    if (!umpireId && !isAdmin) return; 
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
-      forTrade: status
-    }).catch(e => console.error("Toggle trade error:", e));
-  };
-
-  const takeTrade = async (oldAsg, game) => {
-    if (!user || !user.email) { setShowAuthModal(true); return; }
-    if (!umpireId) { setShowNamePrompt(true); return; }
-    if (oldAsg.userId === umpireId) return; 
-    
-    // Check conflicts
-    const umpireAssignedGamesToday = assignments
-      .filter(asg => asg.userId === umpireId)
-      .map(asg => games.find(g => g.id === asg.gameId))
-      .filter(g => g && g.date === game.date && g.id !== game.id);
-    
-    const conflictGame = umpireAssignedGamesToday.find(g => 
-      (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
-    );
-    
-    if (conflictGame) {
-      if(typeof window !== 'undefined') alert(`${t.bookedIn} ${conflictGame.location}. Du kan inte ta denna match.`);
-      return;
-    }
-
-    if (typeof window !== 'undefined' && !window.confirm(t.tradeConfirm)) return;
-    
-    setSyncing(true);
-    try {
-      const batch = writeBatch(db);
-      batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
-      
-      const newAsgId = `${game.id}_${umpireId}`;
-      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', newAsgId), {
-        gameId: game.id,
-        userId: umpireId,
-        userName: userName,
-        assignedAt: Date.now(),
-        forTrade: false 
-      });
-      await batch.commit();
-      if (typeof window !== 'undefined') alert(t.tradeSuccess);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const handleBulkImport = async () => {
     if (!isAdmin || !bulkInput.trim()) return;
@@ -1433,7 +554,7 @@ function MainApp() {
       await batch.commit();
       setBulkInput(''); 
       setShowImportTool(false);
-      if (typeof window !== 'undefined') alert(t.importSuccess);
+      alert(t.importSuccess);
     } catch (e) { 
       console.error(e); 
     } finally { 
@@ -1443,15 +564,9 @@ function MainApp() {
 
   const saveEditedGame = async () => {
     if (!isAdmin || !editingGameData) return;
-    setSyncing(true);
     try {
-      const originalGame = games.find(g => g.id === editingGameData.id);
-      const isTimeChanged = originalGame && (originalGame.date !== editingGameData.date || originalGame.time !== editingGameData.time);
-
-      const batch = writeBatch(db);
       const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id);
-      
-      batch.update(gameRef, { 
+      await updateDoc(gameRef, { 
         date: editingGameData.date, 
         time: editingGameData.time, 
         league: editingGameData.league, 
@@ -1460,174 +575,23 @@ function MainApp() {
         location: editingGameData.location, 
         requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 
       });
-
-      if (isTimeChanged) {
-        // 1. Markera tillsatta domare med "Tid ändrad" (Pending change)
-        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
-        affectedAssignments.forEach((asg) => {
-          const asgRef = doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id);
-          batch.update(asgRef, { pendingChange: true });
-        });
-
-        // 2. NYTT: Ta bort alla intresseanmälningar för matchen eftersom tiden ändrats
-        const affectedApplications = applications.filter(a => a.gameId === editingGameData.id);
-        affectedApplications.forEach((app) => {
-          const appRef = doc(db, 'artifacts', appId, 'public', 'data', 'applications', app.id);
-          batch.delete(appRef);
-        });
-      }
-
-      await batch.commit();
-
-      // Queue emails outside the main transaction to utilize existing state gracefully
-      if (isTimeChanged) {
-        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
-        for (const asg of affectedAssignments) {
-          const ump = masterUmpires.find(u => u.id === asg.userId);
-          if (ump && ump.linkedEmail) {
-             const existingQueue = mailQueue.find(q => q.id === asg.userId);
-             const gameChangeInfo = {
-                gameId: editingGameData.id,
-                away: editingGameData.away,
-                home: editingGameData.home,
-                oldDate: originalGame.date,
-                oldTime: originalGame.time,
-                newDate: editingGameData.date,
-                newTime: editingGameData.time
-             };
-
-             const currentChanges = existingQueue ? existingQueue.changes : [];
-             const updatedChanges = [...currentChanges.filter(c => c.gameId !== editingGameData.id), gameChangeInfo];
-
-             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', asg.userId), {
-                userId: asg.userId,
-                email: ump.linkedEmail,
-                userName: asg.userName,
-                changes: updatedChanges,
-                processAfter: Date.now() + 15 * 60 * 1000 // Exact 15 min wait time
-             });
-          }
-        }
-      }
-
       setEditingGameData(null);
     } catch (e) { 
       console.error(e); 
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const forceSendQueue = async () => {
-    if (!isAdmin) return;
-    setSyncing(true);
-    try {
-       const promises = mailQueue.map(async (queueItem) => {
-          const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
-          const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
-          
-          const emailBody = t.emailMatchMovedBody
-             .replace(/\{name\}/g, queueItem.userName)
-             .replace(/\{changesListSv\}/g, changesTextSv)
-             .replace(/\{changesListEn\}/g, changesTextEn);
-             
-          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-             to: queueItem.email,
-             message: {
-               subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
-               text: emailBody
-             },
-             createdAt: Date.now()
-          });
-          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
-       });
-       await Promise.all(promises);
-    } catch(e) {
-       console.error(e);
-    } finally {
-       setSyncing(false);
-    }
-  };
-
-  const confirmScheduleChange = async (asgId) => {
-     if (!umpireId) return;
-     try {
-       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
-          pendingChange: false
-       });
-     } catch (e) {
-       console.error("Error confirming schedule change:", e);
-     }
-  };
-
-  const assignOfficial = async (gameId, role, value) => {
-    if (!isAdmin) return;
-    const updateObj = {};
-    if (role === 'supervisor') {
-        const uName = value ? masterUmpires.find(u => u.id === value)?.name : '';
-        updateObj.supervisorId = value;
-        updateObj.supervisorName = uName;
-    } else {
-        // For Technical Commissioner, it's just a free-text name
-        updateObj.tcName = value;
-    }
-    try {
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), updateObj);
-      if (selectedGameDetails?.id === gameId) {
-        setSelectedGameDetails(prev => ({ ...prev, ...updateObj }));
-      }
-    } catch (e) {
-      console.error("Error assigning official", e);
-    }
-  };
-
-  const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
-    if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
-    const evalId = `${gameId}_${targetUmpireId}`;
-    try {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', evalId), {
-          gameId,
-          umpireId: targetUmpireId,
-          evaluatorId: umpireId,
-          grade,
-          comment,
-          timestamp: Date.now()
-      });
-      if (typeof window !== 'undefined') alert(t.evalSaved);
-    } catch (e) {
-      console.error("Error saving evaluation", e);
-    }
-  };
-
-  const saveLocation = async () => {
-    if (!isAdmin || !editingLocation) return;
-    try {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', editingLocation.id), {
-        address: editingLocation.address || '',
-        facilities: editingLocation.facilities || []
-      }, { merge: true });
-      setEditingLocation(null);
-      // Auto-update details view if we have it open
-      if (selectedLocation === editingLocation.id) {
-         // It will auto update via the onSnapshot listener mapped in render
-      }
-    } catch (e) {
-      console.error("Error saving location:", e);
     }
   };
 
   const deleteAllGames = async () => {
     if (!isAdmin) return;
-    if (typeof window !== 'undefined' && !window.confirm(t.deleteAllConfirm)) return;
+    if (!window.confirm(t.deleteAllConfirm)) return;
     setSyncing(true);
     try {
       const batch = writeBatch(db);
       games.forEach(game => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)));
       assignments.forEach(asg => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${asg.gameId}_${asg.userId}`)));
       applications.forEach(app => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', `${app.gameId}_${app.userId}`)));
-      evaluations.forEach(ev => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', ev.id)));
       await batch.commit();
-      if (typeof window !== 'undefined') alert(t.deleteAllSuccess);
+      alert(t.deleteAllSuccess);
     } catch (e) { 
       console.error(e); 
     } finally { 
@@ -1635,17 +599,28 @@ function MainApp() {
     }
   };
 
+  const handleAdminAuth = async () => {
+    if (adminCode === 'admin123' && user) {
+      setIsAdmin(true); 
+      setShowAdminModal(false);
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { isAdmin: true }, { merge: true });
+    }
+  };
+
   const generateICS = (gamesToExport) => {
-    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
-    if (analytics) logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
+    if (gamesToExport.length === 0) return;
+    
+    if (analytics) {
+      logEvent(analytics, 'calendar_bulk_export', { count: gamesToExport.length });
+    }
     
     const events = gamesToExport.map(game => {
-      const cleanDate = (game.date || '').replace(/-/g, '');
-      const cleanTime = (game.time || '00:00').replace(/:/g, '');
+      const cleanDate = game.date.replace(/-/g, '');
+      const cleanTime = game.time.replace(/:/g, '');
       const startTime = `${cleanDate}T${cleanTime}00`;
-      const [hours, mins] = (game.time || '00:00').split(':');
-      const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
-      const endTime = `${cleanDate}T${endHours}${mins || '00'}00`;
+      const [hours, mins] = game.time.split(':');
+      const endHours = (parseInt(hours) + 3).toString().padStart(2, '0');
+      const endTime = `${cleanDate}T${endHours}${mins}00`;
       
       return [
         'BEGIN:VEVENT',
@@ -1653,9 +628,9 @@ function MainApp() {
         `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
         `DTSTART:${startTime}`,
         `DTEND:${endTime}`,
-        `SUMMARY:${game.away || 'TBA'} @ ${game.home || 'TBA'} (${game.league || 'Unknown'})`,
-        `DESCRIPTION:League: ${game.league || ''}\\nLocation: ${game.location || ''}`,
-        `LOCATION:${game.location || ''}`,
+        `SUMMARY:${game.away} @ ${game.home} (${game.league})`,
+        `DESCRIPTION:League: ${game.league}\\nLocation: ${game.location}`,
+        `LOCATION:${game.location}`,
         'END:VEVENT'
       ].join('\n');
     }).join('\n');
@@ -1671,211 +646,24 @@ function MainApp() {
     document.body.removeChild(link);
   };
 
-  const generateCSV = (gamesToExport) => {
-    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
-    if (analytics) logEvent(analytics, 'calendar_bulk_csv_export', { count: gamesToExport.length });
-
-    const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location\n";
-    const rows = gamesToExport.map(game => {
-      const [hours, mins] = (game.time || '00:00').split(':');
-      const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
-      const endTime = `${endHours}:${mins || '00'}`;
-
-      const subject = `"${game.away || 'TBA'} @ ${game.home || 'TBA'} (${game.league || 'Unknown'})"`;
-      const startDate = game.date;
-      const startTime = game.time;
-      const endDate = game.date;
-      const description = `"League: ${game.league || ''}"`;
-      const location = `"${game.location || ''}"`;
-
-      return `${subject},${startDate},${startTime},${endDate},${endTime},${description},${location}`;
-    }).join('\n');
-
-    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `schedule-${selectedYear}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleCalendarExport = (game) => {
     if (!game.date || !game.time) return;
     if (analytics) logEvent(analytics, 'calendar_single_export', { game_id: game.id });
     generateICS([game]);
   };
 
-  const handleDownloadBackup = () => {
-    if (!isAdmin || typeof window === 'undefined') return;
-    const backupData = {
-      timestamp: new Date().toISOString(),
-      year: selectedYear,
-      appId: appId,
-      collections: {
-        games,
-        applications,
-        assignments,
-        umpires: masterUmpires,
-        adminUmpireIds,
-        evaluations,
-        locations: locationsData
-      }
-    };
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `umpire-backup-${selectedYear}-${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
-  };
-
-  // --- EMAIL BULK SENDING LOGIC ---
-  const umpiresWithAssignmentsMap = useMemo(() => {
-    const map = {};
-    assignments.forEach(asg => {
-      if (!map[asg.userId]) {
-        map[asg.userId] = { 
-          umpire: masterUmpires.find(u => u.id === asg.userId), 
-          assignedGames: [] 
-        };
-      }
-      const game = games.find(g => g.id === asg.gameId);
-      if (game) map[asg.userId].assignedGames.push(game);
-    });
-    // Sort games by date inside the map
-    Object.values(map).forEach(obj => {
-      obj.assignedGames.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    });
-    return map;
-  }, [assignments, masterUmpires, games]);
-
-  const emailCandidates = useMemo(() => {
-    const list = Object.values(umpiresWithAssignmentsMap).filter(obj => obj.umpire !== undefined);
-    const ready = list.filter(obj => obj.umpire.linkedEmail);
-    const missing = list.filter(obj => !obj.umpire.linkedEmail);
-    return { ready, missing };
-  }, [umpiresWithAssignmentsMap]);
-
-  const generateEmailHtml = (umpireName, umpireGames) => {
-    const customHtml = customEmailMessage ? `<p style="font-size: 14px; line-height: 1.5; color: #475569; background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">${customEmailMessage.replace(/\n/g, '<br/>')}</p>` : '';
-    
-    const rows = umpireGames.map(g => {
-      const googleLnk = getGoogleCalendarLink(g);
-      const outlookLnk = getOutlookCalendarLink(g);
-      return `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 12px 8px; font-size: 14px; color: #334155; white-space: nowrap;">
-            <strong>${g.date}</strong><br/>
-            <span style="font-size: 12px; color: #64748b;">${g.time}</span>
-          </td>
-          <td style="padding: 12px 8px; font-size: 14px; color: #0f172a;">
-            <strong>${g.away} @ ${g.home}</strong><br/>
-            <span style="font-size: 12px; color: #64748b;">${g.league} • ${g.location}</span>
-          </td>
-          <td style="padding: 12px 8px; font-size: 12px; text-align: right; white-space: nowrap;">
-            <a href="${googleLnk}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: bold; display: block; margin-bottom: 6px;">+ Google</a>
-            <a href="${outlookLnk}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: bold; display: block;">+ Outlook</a>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    return `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; max-width: 600px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #1e3a8a; margin-top: 0;">Domaruppdrag / Umpire Assignments ${selectedYear}</h2>
-        <p style="font-size: 16px;">Hej / Hello <strong>${umpireName}</strong>,</p>
-        ${customHtml}
-        <p style="font-size: 15px; color: #334155; margin-top: 20px;">Här är dina tilldelade matcher för säsongen / Here are your assigned matches for the season:</p>
-        
-        <table style="width: 100%; border-collapse: collapse; margin-top: 16px; margin-bottom: 32px;">
-          <tr style="background-color: #f1f5f9; text-align: left;">
-            <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Datum / Date</th>
-            <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Match / Game</th>
-            <th style="padding: 12px 8px; border-bottom: 2px solid #cbd5e1; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; text-align: right;">${t.calendarColumn}</th>
-          </tr>
-          ${rows}
-        </table>
-        
-        <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
-           <a href="https://schema.domarweb.se/?view=my-apps" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
-             Se ditt schema & Ladda ner alla matcher (.ics)<br/>
-             <span style="font-size: 12px; font-weight: normal; opacity: 0.9;">View schedule & Download all matches</span>
-           </a>
-        </div>
-      </div>
-    `;
-  };
-
-  const handleSendAllSchedules = async () => {
-    if (!isAdmin) return;
-    setSendingBulkEmails(true);
-    
-    try {
-      const promises = emailCandidates.ready.map(candidate => {
-        return addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-          to: candidate.umpire.linkedEmail,
-          message: {
-            subject: `Domaruppdrag ${selectedYear} / Umpire Assignments`,
-            html: generateEmailHtml(candidate.umpire.name, candidate.assignedGames)
-          },
-          createdAt: Date.now()
-        });
-      });
-      
-      await Promise.all(promises);
-      
-      if (typeof window !== 'undefined') alert(t.emailsSentSuccess);
-      setShowEmailPreview(false);
-      setCustomEmailMessage('');
-    } catch (error) {
-      console.error("Error sending bulk emails:", error);
-      if (typeof window !== 'undefined') alert("Ett fel uppstod när mejlen skulle skickas.");
-    } finally {
-      setSendingBulkEmails(false);
-    }
-  };
-
-
   // --- DERIVED DATA ---
 
-  const unconnectedEmails = useMemo(() => {
-    const linked = masterUmpires.map(u => (u.linkedEmail || '').toLowerCase()).filter(Boolean);
-    return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
-  }, [registeredEmails, masterUmpires]);
-
-  const calendarWeeks = useMemo(() => {
+  const calendarDays = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay(); 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const shiftedFirstDay = firstDay === 0 ? 6 : firstDay - 1; 
-    
-    let currentWeek = [];
-    const weeks = [];
-
-    for (let i = 0; i < shiftedFirstDay; i++) currentWeek.push(null);
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      currentWeek.push(new Date(year, month, d));
-      if (currentWeek.length === 7) {
-        const validDate = currentWeek.find(day => day !== null);
-        weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
-        currentWeek = [];
-      }
-    }
-
-    if (currentWeek.length > 0) {
-      while (currentWeek.length < 7) currentWeek.push(null);
-      const validDate = currentWeek.find(day => day !== null);
-      weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
-    }
-
-    return weeks;
+    const days = [];
+    for (let i = 0; i < shiftedFirstDay; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+    return days;
   }, [currentDate]);
 
   const groupedAssignments = useMemo(() => {
@@ -1889,29 +677,19 @@ function MainApp() {
 
   const sortedStatistics = useMemo(() => {
     const stats = {};
-    
-    // Seed with all master umpires so everyone is visible
-    masterUmpires.forEach(u => {
-      stats[u.id] = { userId: u.id, name: u.name || 'Unknown', games: 0, interest: 0 };
-    });
-
     assignments.forEach(asg => {
       if (!asg.userId) return;
-      if (!stats[asg.userId]) stats[asg.userId] = { userId: asg.userId, name: asg.userName || 'Unknown', games: 0, interest: 0 };
+      if (!stats[asg.userId]) stats[asg.userId] = { name: asg.userName, games: 0, interest: 0 };
       stats[asg.userId].games += 1;
     });
-
     applications.forEach(app => {
-      if (!app.userId) return;
-      if (!stats[app.userId]) stats[app.userId] = { userId: app.userId, name: app.userName || 'Unknown', games: 0, interest: 0 };
+      if (!stats[app.userId]) stats[app.userId] = { name: app.userName, games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
-
     const data = Object.values(stats).map(s => {
       const rate = s.interest > 0 ? Math.round((s.games / s.interest) * 100) : (s.games > 0 ? 100 : 0);
       return { ...s, rate };
     });
-    
     return data.sort((a, b) => {
       let valA = a[sortConfig.key];
       let valB = b[sortConfig.key];
@@ -1920,71 +698,48 @@ function MainApp() {
       if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [assignments, applications, masterUmpires, sortConfig]);
+  }, [assignments, applications, sortConfig]);
 
   const filteredGames = useMemo(() => {
     return games.filter(game => {
-      const hName = (game.home || '').toLowerCase();
-      const aName = (game.away || '').toLowerCase();
-      const search = searchQuery.toLowerCase();
-      
-      const matchesSearch = hName.includes(search) || aName.includes(search);
+      const matchesSearch = game.home.toLowerCase().includes(searchQuery.toLowerCase()) || game.away.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
-      const isHistorical = (game.date || '') < today;
-      
-      let statusMatch = true;
-      if (filterStatus === 'needs_umpire') {
-          const gameAssignments = groupedAssignments[game.id] || [];
-          statusMatch = gameAssignments.length < (game.requiredUmpires || 2);
-      } else if (filterStatus === 'no_interests') {
-          const applicants = applications.filter(a => a.gameId === game.id);
-          statusMatch = applicants.length === 0;
-      }
-      
-      return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch : !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
+      const isHistorical = game.date < today;
+      return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation : !isHistorical && matchesSearch && matchesLeague && matchesLocation;
     });
-  }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
+  }, [games, searchQuery, filterLeague, filterLocation, showHistory, today]);
 
-  const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
-  
-  // Extract unique locations from games to populate the new Locations tab
-  const allLocationNames = useMemo(() => {
-    const fromGames = games.map(g => g.location);
-    const fromData = locationsData.map(l => l.id);
-    return [...new Set([...fromGames, ...fromData])].filter(Boolean).sort((a, b) => a.localeCompare(b, lang));
-  }, [games, locationsData, lang]);
+  const leagues = useMemo(() => [...new Set(games.map(g => g.league))], [games]);
+  const locations = useMemo(() => [...new Set(games.map(g => g.location))], [games]);
 
-  const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
-
-  const uiDays = useMemo(() => {
-    const arr = [...(t.days || [])];
-    if (arr.length > 0) {
-      const sunday = arr.shift();
-      arr.push(sunday);
-    }
-    return arr;
-  }, [t.days]);
-
+  // Sort and filter logic specifically for the public umpire list tab
   const sortedUmpireList = useMemo(() => {
-    const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
-    let umps = masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+    const levelOrder = {
+      'internationell': 1,
+      'elit': 2,
+      'nationell': 3,
+      'region': 4,
+      'förening': 5
+    };
+
+    let umps = masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
     
     if (umpireSort === 'level') {
       umps.sort((a, b) => {
-        const orderA = levelOrder[(a.level || '').toLowerCase()] || 99;
-        const orderB = levelOrder[(b.level || '').toLowerCase()] || 99;
+        const orderA = levelOrder[a.level?.toLowerCase()] || 99;
+        const orderB = levelOrder[b.level?.toLowerCase()] || 99;
         if (orderA !== orderB) return orderA - orderB;
-        return (a.name || '').localeCompare(b.name || '');
+        return a.name.localeCompare(b.name);
       });
     } else {
-      umps.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      umps.sort((a, b) => a.name.localeCompare(b.name));
     }
     return umps;
   }, [masterUmpires, searchQuery, umpireSort]);
 
   const filteredMasterUmpires = useMemo(() => {
-    return masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+    return masterUmpires.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [masterUmpires, searchQuery]);
 
   const myAssignedGames = useMemo(() => {
@@ -2002,33 +757,6 @@ function MainApp() {
 
   // --- RENDER ---
 
-  if (firebaseError === 'permission-denied') {
-    return (
-      <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center font-sans">
-         <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full border border-red-100 text-center">
-           <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
-           <h2 className="text-2xl font-black text-slate-800 mb-2">Databasåtkomst Nekad</h2>
-           <p className="text-slate-600 mb-6 font-medium leading-relaxed">Applikationen kan inte hämta spelschemat eftersom Firebase-reglerna blockerar åtkomst. För att besökare ska kunna se schemat måste du tillåta publik läsning.</p>
-           <div className="bg-slate-900 rounded-xl p-4 text-left overflow-x-auto mb-6 shadow-inner">
-             <pre className="text-green-400 text-xs font-mono leading-relaxed">
-{`rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /artifacts/{appId}/{document=**} {
-      allow read: if true; 
-      allow write: if request.auth != null; 
-    }
-  }
-}`}
-             </pre>
-           </div>
-           <p className="text-sm text-slate-500 font-bold mb-4">1. Gå till Firebase Console &rarr; Firestore Database &rarr; Rules.</p>
-           <p className="text-sm text-slate-500 font-bold">2. Klistra in koden ovan och klicka "Publish".</p>
-         </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 text-blue-600">
@@ -2040,6 +768,7 @@ service cloud.firestore {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
       
+      {/* Header with full reset logic */}
       <header 
         onClick={() => { 
           setView('schedule'); 
@@ -2047,57 +776,41 @@ service cloud.firestore {
           setSearchQuery(''); 
           setFilterLeague(''); 
           setFilterLocation(''); 
-          setFilterStatus('');
           setShowHistory(false); 
           scrollToTop(); 
         }} 
-        className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-20 cursor-pointer group"
+        className="bg-blue-900 text-white p-4 shadow-lg sticky top-0 z-20 cursor-pointer group"
       >
-        <div className="max-w-5xl mx-auto flex justify-between items-center pointer-events-none gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="bg-white rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 border border-white/20 shadow-inner group-hover:scale-110 transition-transform">
-              <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-blue-900" />
+        <div className="max-w-5xl mx-auto flex justify-between items-center pointer-events-none">
+          <div className="flex items-center gap-3">
+            <div className="bg-white rounded-lg overflow-hidden flex items-center justify-center h-10 w-10 border border-white/20 shadow-inner group-hover:scale-110 transition-transform">
+              <Trophy className="w-6 h-6 text-blue-900" />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-xl font-bold tracking-tight leading-none group-hover:text-blue-200 transition-colors truncate">{t.appTitle}</h1>
-              <p className="text-[8px] sm:text-[10px] font-black uppercase text-blue-300 tracking-widest mt-1 truncate">{t.season} {selectedYear}</p>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight leading-none group-hover:text-blue-200 transition-colors">{t.appTitle}</h1>
+              <p className="text-[10px] font-black uppercase text-blue-300 tracking-widest mt-1">{t.season} {selectedYear}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 pointer-events-auto flex-shrink-0">
-            <div className="flex bg-blue-800 rounded-lg p-0.5">
-              <button onClick={(e) => { e.stopPropagation(); setLang('sv'); }} className={`px-1.5 py-1 sm:px-2 text-[10px] sm:text-xs rounded-md transition-all ${lang === 'sv' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇸🇪</button>
-              <button onClick={(e) => { e.stopPropagation(); setLang('en'); }} className={`px-1.5 py-1 sm:px-2 text-[10px] sm:text-xs rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
+          <div className="flex items-center gap-2 pointer-events-auto">
+            <div className="flex bg-blue-800 rounded-lg p-0.5 mr-2">
+              <button onClick={(e) => { e.stopPropagation(); setLang('sv'); }} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'sv' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇸🇪</button>
+              <button onClick={(e) => { e.stopPropagation(); setLang('en'); }} className={`px-2 py-1 text-xs rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 shadow-sm' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
             </div>
             <select 
               value={selectedYear} 
               onClick={(e) => e.stopPropagation()} 
               onChange={(e) => setSelectedYear(e.target.value)} 
-              className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-1.5 py-1 sm:px-2 outline-none appearance-none cursor-pointer hidden sm:block"
+              className="bg-blue-800 text-[10px] font-black uppercase border-none rounded-lg px-2 py-1 outline-none appearance-none cursor-pointer"
             >
               <option value="2025">2025</option>
               <option value="2026">2026</option>
               <option value="2027">2027</option>
             </select>
             <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                setView('help');
-                setHelpTab('guide');
-              }} 
-              className="p-1.5 sm:p-2 hover:bg-blue-800 rounded-full transition-colors ml-0.5"
-              title={t.helpAndInfo}
+              onClick={(e) => { e.stopPropagation(); setShowAdminModal(true); }} 
+              className="p-2 hover:bg-blue-800 rounded-full transition-colors ml-1"
             >
-              <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                if (user && user.email) setShowAdminModal(true); 
-                else setShowAuthModal(true); 
-              }} 
-              className="p-1.5 sm:p-2 hover:bg-blue-800 rounded-full transition-colors ml-0.5"
-            >
-              {user && user.email ? <Settings className="w-4 h-4 sm:w-5 sm:h-5" /> : <User className="w-4 h-4 sm:w-5 sm:h-5" />}
+              <Settings className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -2106,69 +819,32 @@ service cloud.firestore {
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         
         {/* Navigation Tabs */}
-        {view !== 'help' && (
-          <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar whitespace-nowrap">
-            {[
-              { id: 'schedule', label: t.schedule, icon: CalendarIcon },
-              { id: 'locations', label: t.locations, icon: MapPin },
-              { id: 'umpire-list', label: t.umpireList, icon: Users2 },
-              ...(user && user.email ? [
-                  { id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft },
-                  { id: 'my-apps', label: t.myGames, icon: CheckCircle }
-                ] : []),
-              ...(isAdmin ? [
-                  { id: 'admin', label: t.staffing, icon: Shield }, 
-                  { id: 'stats', label: t.analytics, icon: BarChart3 }
-                ] : [])
-            ].map(tab => (
-              <button 
-                key={tab.id} 
-                onClick={() => { setView(tab.id); scrollToTop(); }} 
-                className={`flex-1 min-w-[110px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
-              >
-                <tab.icon className="w-4 h-4 shrink-0" />
-                <span className="inline">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Global Announcement Banner */}
-        {globalNote && view !== 'help' && (
-          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl shadow-sm flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
-            <Megaphone className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-            <p className="text-sm font-bold text-yellow-800 whitespace-pre-wrap">{globalNote}</p>
-          </div>
-        )}
+        <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          {[
+            { id: 'schedule', label: t.schedule, icon: CalendarIcon },
+            { id: 'umpire-list', label: t.umpireList, icon: Users2 },
+            { id: 'my-apps', label: t.myGames, icon: CheckCircle },
+            ...(isAdmin ? [
+                { id: 'admin', label: t.staffing, icon: Shield }, 
+                { id: 'stats', label: t.analytics, icon: BarChart3 }
+              ] : [])
+          ].map(tab => (
+            <button 
+              key={tab.id} 
+              onClick={() => { setView(tab.id); scrollToTop(); }} 
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
 
         {/* Global Filters */}
-        {(view === 'schedule' || view === 'admin' || view === 'umpire-list' || view === 'marketplace' || view === 'locations') && (
+        {(view === 'schedule' || view === 'admin' || view === 'umpire-list') && (
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            {(view === 'schedule' || view === 'admin' || view === 'marketplace') && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                <button 
-                  onClick={() => setFilterStatus('')} 
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-colors ${filterStatus === '' ? 'bg-blue-900 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                >
-                  {t.filterStatusAll}
-                </button>
-                <button 
-                  onClick={() => setFilterStatus('needs_umpire')} 
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-colors ${filterStatus === 'needs_umpire' ? 'bg-yellow-500 text-white shadow-sm' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200'}`}
-                >
-                  {t.needsUmpire}
-                </button>
-                <button 
-                  onClick={() => setFilterStatus('no_interests')} 
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-colors ${filterStatus === 'no_interests' ? 'bg-red-500 text-white shadow-sm' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'}`}
-                >
-                  {t.noInterests}
-                </button>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className={`relative sm:col-span-2 ${view === 'locations' ? 'lg:col-span-4' : 'lg:col-span-2'}`}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="relative md:col-span-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
@@ -2179,7 +855,7 @@ service cloud.firestore {
                 />
               </div>
               
-              {(view === 'schedule' || view === 'admin' || view === 'marketplace') && (
+              {(view === 'schedule' || view === 'admin') && (
                 <>
                   <select 
                     value={filterLeague} 
@@ -2206,296 +882,6 @@ service cloud.firestore {
 
         <section className="space-y-4">
           
-          {/* VIEW: HELP & INFO */}
-          {view === 'help' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <button 
-                onClick={() => { setView('schedule'); }} 
-                className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> {t.back}
-              </button>
-
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="flex border-b border-slate-100 bg-slate-50 overflow-x-auto custom-scrollbar">
-                  <button 
-                    onClick={() => setHelpTab('guide')}
-                    className={`min-w-[120px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'guide' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
-                  >
-                    <BookOpen className="w-4 h-4" /> {t.guide}
-                  </button>
-                  <button 
-                    onClick={() => setHelpTab('faq')}
-                    className={`min-w-[120px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'faq' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
-                  >
-                    <MessageCircle className="w-4 h-4" /> {t.faq}
-                  </button>
-                  <button 
-                    onClick={() => setHelpTab('contact')}
-                    className={`min-w-[140px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'contact' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
-                  >
-                    <Mail className="w-4 h-4" /> {t.contactUs}
-                  </button>
-                  <button 
-                    onClick={() => setHelpTab('about')}
-                    className={`min-w-[120px] flex-1 py-4 text-xs font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2 ${helpTab === 'about' ? 'bg-white text-blue-600 border-t-2 border-t-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
-                  >
-                    <Code className="w-4 h-4" /> {t.about}
-                  </button>
-                </div>
-
-                <div className="p-6 sm:p-8">
-                  {helpTab === 'guide' && (
-                    <div className="space-y-8 max-w-2xl mx-auto">
-                      <div className="text-center mb-8">
-                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <BookOpen className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800">{t.guide}</h2>
-                        <p className="text-slate-500 font-medium mt-2">Hur du kopplar ditt konto till din domarprofil</p>
-                        
-                        <button 
-                          onClick={copyGuideLink}
-                          className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-100 text-blue-700 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-blue-200 transition-colors shadow-sm active:scale-95"
-                        >
-                          <Share2 className="w-4 h-4" /> {t.shareGuide}
-                        </button>
-                      </div>
-
-                      <div className="grid gap-6">
-                        <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                          <div className="flex gap-4 sm:gap-6 items-start">
-                            <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
-                              <UserPlus className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-slate-800">{t.guideStep1Title}</h3>
-                              <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep1Desc}</p>
-                            </div>
-                          </div>
-                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                            <img src="https://raw.githubusercontent.com/suecio/domarschema/72d9cca83a50386e09064a93afa1bc50de4d1db3/src/IMG_3614.jpeg" alt="Steg 1" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                          <div className="flex gap-4 sm:gap-6 items-start">
-                            <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
-                              <Search className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-slate-800">{t.guideStep2Title}</h3>
-                              <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep2Desc}</p>
-                            </div>
-                          </div>
-                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                            <img src="https://raw.githubusercontent.com/suecio/domarschema/09b438482ba230232de25f244c1281b4c2c146dc/src/Ska%CC%88rmavbild%202026-04-05%20kl.%2014.24.40.png" alt="Steg 2" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-4 bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm">
-                          <div className="flex gap-4 sm:gap-6 items-start">
-                            <div className="bg-blue-600 p-3 rounded-xl shadow-md shrink-0">
-                              <CheckCircle className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-blue-900">{t.guideStep3Title}</h3>
-                              <p className="text-blue-800 font-medium leading-relaxed mt-1">{t.guideStep3Desc}</p>
-                            </div>
-                          </div>
-                          <div className="mt-2 rounded-xl overflow-hidden border border-blue-200 shadow-sm bg-white">
-                            <img src="https://placehold.co/800x400/eff6ff/1e3a8a?text=Skärmavbild:+Koppla+Konto" alt="Steg 3" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100 mt-4">
-                          <div className="flex gap-4 sm:gap-6 items-start">
-                            <div className="bg-white p-3 rounded-xl shadow-sm shrink-0 border border-slate-200">
-                              <Info className="w-6 h-6 text-slate-400" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-slate-800">{t.guideStep4Title}</h3>
-                              <p className="text-slate-600 font-medium leading-relaxed mt-1">{t.guideStep4Desc}</p>
-                            </div>
-                          </div>
-                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                            <img src="https://placehold.co/800x400/f8fafc/475569?text=Skärmavbild:+Lägg+Till+Ny" alt="Steg 4" className="w-full h-auto object-cover aspect-video sm:aspect-auto" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {helpTab === 'faq' && (
-                    <div className="max-w-2xl mx-auto space-y-6">
-                      <div className="text-center mb-8">
-                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <MessageCircle className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800">{t.faq}</h2>
-                      </div>
-
-                      <div className="space-y-4">
-                        {[
-                          { q: t.faq1Q, a: t.faq1A },
-                          { q: t.faq2Q, a: t.faq2A },
-                          { q: t.faq3Q, a: t.faq3A },
-                          { q: t.faq4Q, a: t.faq4A },
-                          { q: t.faq5Q, a: t.faq5A }
-                        ].map((faq, idx) => (
-                          <div key={idx} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                            <h3 className="text-sm font-black uppercase text-slate-800 mb-2">{faq.q}</h3>
-                            <p className="text-slate-600 font-medium leading-relaxed">{faq.a}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {helpTab === 'contact' && (
-                    <div className="max-w-2xl mx-auto">
-                      <div className="text-center mb-8">
-                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Mail className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800">{t.contactUs}</h2>
-                        <p className="text-slate-500 font-medium mt-2">{t.contactDesc}</p>
-                      </div>
-
-                      {contactStatus === 'success' ? (
-                        <div className="bg-green-50 border border-green-200 rounded-3xl p-8 text-center animate-in zoom-in-95 duration-300">
-                          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle className="w-8 h-8" />
-                          </div>
-                          <h3 className="text-xl font-black text-green-800 mb-2">{t.msgSentTitle}</h3>
-                          <p className="text-green-700 font-medium mb-6">{t.msgSentDesc}</p>
-                          <button 
-                            onClick={() => setContactStatus('idle')} 
-                            className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs hover:bg-green-700 transition-colors shadow-md"
-                          >
-                            {t.sendAnother}
-                          </button>
-                        </div>
-                      ) : (
-                        <form onSubmit={handleContactSubmit} className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-100 space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.name}</label>
-                              <input type="text" required value={contactName} onChange={e => setContactName(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.email}</label>
-                              <input type="email" required value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" />
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.subject}</label>
-                            <input type="text" required value={contactSubject} onChange={e => setContactSubject(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.message}</label>
-                            <textarea required value={contactMessage} onChange={e => setContactMessage(e.target.value)} className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[150px]" />
-                          </div>
-
-                          <div className="pt-2">
-                            <button 
-                              type="submit" 
-                              disabled={contactStatus === 'sending'} 
-                              className="w-full py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-                            >
-                              {contactStatus === 'sending' ? (
-                                <><RefreshCw className="w-4 h-4 animate-spin" /> {t.sending}</>
-                              ) : (
-                                <><Send className="w-4 h-4" /> {t.sendMsg}</>
-                              )}
-                            </button>
-                          </div>
-                        </form>
-                      )}
-                    </div>
-                  )}
-
-                  {helpTab === 'about' && (
-                    <div className="max-w-3xl mx-auto">
-                      <div className="text-center mb-8">
-                        <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Code className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800">{t.about}</h2>
-                      </div>
-                      
-                      <div className="bg-slate-50 p-6 sm:p-10 rounded-3xl border border-slate-100">
-                        {readmeLoading ? (
-                          <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-4">
-                            <RefreshCw className="w-8 h-8 animate-spin" />
-                            <p className="text-sm font-bold">{t.loadingReadme}</p>
-                          </div>
-                        ) : (
-                          <div className="markdown-body text-sm sm:text-base">
-                            {renderMarkdown(readmeContent)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* VIEW: LOCATIONS DIRECTORY */}
-          {view === 'locations' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-blue-600" /> {t.locations}
-                </h2>
-              </div>
-
-              {allLocationNames.length === 0 ? (
-                <div className="bg-slate-50 border border-slate-100 p-8 rounded-2xl text-center text-slate-400 font-medium">
-                  {t.noLocationsInfo}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {allLocationNames.filter(name => name.toLowerCase().includes(searchQuery.toLowerCase())).map(locName => {
-                    const locData = locationsData.find(l => l.id === locName);
-                    return (
-                      <button 
-                        key={locName} 
-                        onClick={() => setSelectedLocation(locName)}
-                        className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all text-left group flex flex-col justify-between min-h-[120px]"
-                      >
-                        <div>
-                          <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-700 transition-colors">{locName}</h3>
-                          {locData?.address && (
-                            <p className="text-xs text-slate-500 mt-1 flex items-start gap-1">
-                              <Navigation className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <span className="line-clamp-2">{locData.address}</span>
-                            </p>
-                          )}
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-1">
-                           {locData?.facilities && locData.facilities.length > 0 ? (
-                             <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
-                               {locData.facilities.length} {t.facilities}
-                             </span>
-                           ) : (
-                             <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
-                               {t.noFacilities}
-                             </span>
-                           )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* VIEW: SCHEDULE */}
           {view === 'schedule' && (
             <>
@@ -2503,55 +889,28 @@ service cloud.firestore {
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">
                   {showHistory ? t.archived : t.activeSchedule}
                 </h2>
-                <div className="flex flex-wrap items-center gap-3">
-                  {filteredGames.length > 0 && (
-                    <div className="relative">
-                      <button 
-                        onClick={() => setShowScheduleExport(!showScheduleExport)} 
-                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
-                      >
-                        <CalendarPlus className="w-4 h-4" /> {t.downloadCalendar} <ChevronDown className="w-3 h-3" />
-                      </button>
-                      {showScheduleExport && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setShowScheduleExport(false)}></div>
-                          <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                            <button onClick={() => { generateICS(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex flex-col gap-0.5">
-                              <span className="text-xs font-black text-slate-700">{t.formatICS}</span>
-                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextICS}</span>
-                            </button>
-                            <button onClick={() => { generateCSV(filteredGames); setShowScheduleExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex flex-col gap-0.5">
-                              <span className="text-xs font-black text-slate-700">{t.formatCSV}</span>
-                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextCSV}</span>
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                       <button 
-                         onClick={() => setScheduleViewMode('list')} 
-                         className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                       >
-                         <List className="w-4 h-4" />
-                       </button>
-                       <button 
-                         onClick={() => setScheduleViewMode('calendar')} 
-                         className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                       >
-                         <CalendarIcon className="w-4 h-4" />
-                       </button>
-                    </div>
-                    <button 
-                      onClick={() => setShowHistory(!showHistory)} 
-                      className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                    >
-                      <HistoryIcon className="w-3.5 h-3.5" />
-                      {showHistory ? t.upcoming : t.history}
-                    </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                     <button 
+                       onClick={() => setScheduleViewMode('list')} 
+                       className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                     >
+                       <List className="w-4 h-4" />
+                     </button>
+                     <button 
+                       onClick={() => setScheduleViewMode('calendar')} 
+                       className={`p-2 rounded-lg transition-all ${scheduleViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                     >
+                       <CalendarIcon className="w-4 h-4" />
+                     </button>
                   </div>
+                  <button 
+                    onClick={() => setShowHistory(!showHistory)} 
+                    className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-all ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                  >
+                    <HistoryIcon className="w-3.5 h-3.5" />
+                    {showHistory ? t.upcoming : t.history}
+                  </button>
                 </div>
               </div>
 
@@ -2573,37 +932,35 @@ service cloud.firestore {
                         ))}
                     </div>
                     <div className="grid grid-cols-7">
-                        {calendarWeeks.flatMap((week) => 
-                          week.days.map((day, idx) => {
-                            const dateStr = day ? toLocalISO(day) : null;
-                            const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
-                            const isToday = dateStr === today;
-                            
-                            return (
-                              <div key={`${week.weekNumber}-${idx}`} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
-                                {day && (
-                                  <>
-                                    <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
-                                      {day.getDate()}
-                                    </span>
-                                    <div className="mt-2 space-y-1">
-                                      {matches.map(g => (
-                                        <button 
-                                          key={g.id} 
-                                          onClick={(e) => { e.stopPropagation(); setSelectedGameDetails(g); }} 
-                                          className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
-                                        >
-                                          <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
-                                          <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
+                        {calendarDays.map((day, idx) => {
+                          const dateStr = day ? toLocalISO(day) : null;
+                          const matches = dateStr ? filteredGames.filter(g => g.date === dateStr) : [];
+                          const isToday = dateStr === today;
+                          
+                          return (
+                            <div key={idx} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
+                              {day && (
+                                <>
+                                  <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
+                                    {day.getDate()}
+                                  </span>
+                                  <div className="mt-2 space-y-1">
+                                    {matches.map(g => (
+                                      <button 
+                                        key={g.id} 
+                                        onClick={() => { setSearchQuery(g.home); setScheduleViewMode('list'); }} 
+                                        className="w-full text-left p-1 rounded border border-slate-100 hover:border-blue-200 transition-all group overflow-hidden"
+                                      >
+                                        <div className={`w-full h-1 rounded-full mb-1 ${getLeagueStyles(g.league).split(' ')[0]}`} />
+                                        <p className="text-[8px] font-bold text-slate-700 truncate leading-none uppercase">{g.away} @ {g.home}</p>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
                     </div>
                 </div>
               ) : (
@@ -2618,33 +975,44 @@ service cloud.firestore {
                     const appsCount = applications.filter(a => a.gameId === game.id).length;
                     const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
                     const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
+                    const d = new Date(game.date);
                     const required = game.requiredUmpires || 2;
                     
                     return (
-                      <div 
-                        key={game.id} 
-                        onClick={() => setSelectedGameDetails(game)}
-                        className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all cursor-pointer hover:border-blue-300 group ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}
-                      >
+                      <div key={game.id} className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
                         <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex gap-4">
-                            <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
-                              <p className="text-2xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
+                            <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border border-slate-100">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.days[d.getDay()]}</p>
+                              <p className="text-2xl font-black text-slate-800 leading-none">{d.getDate()}</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' })}</p>
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                                <button onClick={() => handleCalendarExport(game)} className="text-slate-400 hover:text-blue-600 transition-colors" title={t.addToCalendar}>
+                                  <CalendarPlus className="w-4 h-4" />
+                                </button>
                               </div>
-                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</h3>
+                              <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight">{game.away} @ {game.home}</h3>
                               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
                                 <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
                                 <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
                               </div>
                               
-                              {/* Centralized Officials Output */}
-                              {renderOfficialsRow(game, gameAssignments, masterUmpires)}
+                              {gameAssignments.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-3 items-center">
+                                  {gameAssignments.map(asg => {
+                                      const m = masterUmpires.find(mu => mu.id === asg.userId);
+                                      return (
+                                        <div key={asg.userId} className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
+                                            <CheckCircle className="w-3 h-3" /> {asg.userName} 
+                                            {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                                        </div>
+                                      );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           </div>
                           
@@ -2659,18 +1027,13 @@ service cloud.firestore {
                                     </span>
                                   )}
                                 </div>
-                                {isAssignedToThisGame ? (
-                                  <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5">
-                                    <CheckCircle className="w-4 h-4" /> {t.yourGame}
-                                  </div>
-                                ) : (
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} 
-                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 hover:bg-blue-700'}`}
-                                  >
-                                    {isApplied ? t.withdraw : t.interested}
-                                  </button>
-                                )}
+                                <button 
+                                  onClick={() => toggleApplication(game.id)} 
+                                  disabled={isAssignedToThisGame} 
+                                  className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 disabled:opacity-30'}`}
+                                >
+                                  {isApplied ? t.withdraw : t.interested}
+                                </button>
                               </>
                             )}
                           </div>
@@ -2681,152 +1044,6 @@ service cloud.firestore {
                 )
               )}
             </>
-          )}
-          
-          {/* VIEW: MARKETPLACE */}
-          {view === 'marketplace' && (
-            <div className="space-y-8">
-               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
-                   <ArrowRightLeft className="w-5 h-5 text-blue-600" /> {t.marketplace}
-                 </h2>
-               </div>
-
-               {/* Section 1: Up for trade */}
-               <div className="space-y-4">
-                 <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 p-4 rounded-2xl">
-                    <Info className="w-6 h-6 text-orange-600 shrink-0" />
-                    <p className="text-sm font-medium text-orange-800">{t.marketplaceDesc}</p>
-                 </div>
-                 
-                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t.gamesForTrade}</h3>
-                 
-                 {(() => {
-                   const tradedAssignments = assignments.filter(asg => asg.forTrade);
-                   const tradedGames = tradedAssignments.map(asg => ({ asg, game: games.find(g => g.id === asg.gameId) })).filter(item => item.game && item.game.date >= today);
-                   
-                   if (tradedGames.length === 0) return <div className="bg-slate-50 border border-slate-100 p-8 rounded-2xl text-center text-slate-400 font-medium">{t.noMarketplaceGames}</div>;
-                   
-                   return (
-                     <div className="grid gap-4">
-                       {tradedGames.map(({asg, game}) => (
-                          <div 
-                            key={asg.id} 
-                            onClick={() => setSelectedGameDetails(game)}
-                            className="bg-white p-4 rounded-2xl border border-orange-200 shadow-sm flex flex-col sm:flex-row justify-between gap-4 group cursor-pointer hover:border-orange-400 transition-colors"
-                          >
-                            {/* Game info */}
-                            <div className="flex gap-4">
-                               {/* date block */}
-                               <div className="bg-orange-50 p-3 rounded-xl text-center min-w-[75px] border border-orange-100 flex flex-col justify-center">
-                                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">{safeDateDay(game.date)}</p>
-                                  <p className="text-2xl font-black text-orange-700 leading-none">{safeDateNum(game.date)}</p>
-                                  <p className="text-[9px] font-black text-orange-600 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
-                                </div>
-                                <div>
-                                   <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                   <h3 className="font-bold text-slate-900 text-sm leading-tight">{game.away} @ {game.home}</h3>
-                                   <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time} <MapPin className="w-3.5 h-3.5 ml-2" /> {game.location}</p>
-                                   
-                                   {/* Officials Render */}
-                                   {renderOfficialsRow(game, groupedAssignments[game.id] || [], masterUmpires)}
-
-                                   <div className="mt-3 bg-orange-100 border border-orange-200 rounded-lg px-3 py-2 w-fit flex items-center gap-2">
-                                     <UserMinus className="w-3.5 h-3.5 text-orange-600"/>
-                                     <span className="text-[10px] font-black uppercase text-orange-800">Bytes bort av: {asg.userName}</span>
-                                   </div>
-                                </div>
-                            </div>
-                            <div className="flex items-center">
-                               <button 
-                                 onClick={(e) => { e.stopPropagation(); takeTrade(asg, game); }} 
-                                 disabled={asg.userId === umpireId}
-                                 className="w-full sm:w-auto px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase rounded-xl transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                               >
-                                 <ArrowRightLeft className="w-4 h-4" />
-                                 {asg.userId === umpireId ? t.yourGame : t.takeGame}
-                               </button>
-                            </div>
-                          </div>
-                       ))}
-                     </div>
-                   );
-                 })()}
-               </div>
-
-               {/* Section 2: Missing Umpires */}
-               <div className="space-y-4 pt-6 border-t border-slate-200">
-                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t.needsUmpire}</h3>
-                 {(() => {
-                    const unstaffedGames = filteredGames.filter(g => (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2) && g.date >= today);
-                    if (unstaffedGames.length === 0) return <div className="bg-slate-50 border border-slate-100 p-8 rounded-2xl text-center text-slate-400 font-medium">Inga matcher saknar domare just nu.</div>;
-                    
-                    return (
-                      <div className="grid gap-4">
-                        {unstaffedGames.map(game => {
-                           const appsCount = applications.filter(a => a.gameId === game.id).length;
-                           const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
-                           const gameAssignments = groupedAssignments[game.id] || [];
-                           const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
-                           const required = game.requiredUmpires || 2;
-                           
-                           return (
-                             <div 
-                               key={game.id} 
-                               onClick={() => setSelectedGameDetails(game)}
-                               className="bg-white rounded-2xl shadow-sm border border-yellow-200 overflow-hidden transition-all cursor-pointer hover:border-blue-300 group"
-                             >
-                                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                  <div className="flex gap-4">
-                                    <div className="bg-yellow-50 p-3 rounded-xl text-center min-w-[75px] border border-yellow-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
-                                      <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">{safeDateDay(game.date)}</p>
-                                      <p className="text-2xl font-black text-yellow-700 leading-none">{safeDateNum(game.date)}</p>
-                                      <p className="text-[9px] font-black text-yellow-600 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
-                                    </div>
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                      </div>
-                                      <h3 className="font-bold text-slate-900 mt-1 text-base leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</h3>
-                                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
-                                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
-                                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
-                                      </div>
-
-                                      {/* Officials Render */}
-                                      {renderOfficialsRow(game, gameAssignments, masterUmpires)}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{appsCount} {t.applied}</span>
-                                      <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mt-0.5">
-                                        {gameAssignments.length}/{required} {t.assignedTo}
-                                      </span>
-                                    </div>
-                                    {isAssignedToThisGame ? (
-                                      <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5">
-                                        <CheckCircle className="w-4 h-4" /> {t.yourGame}
-                                      </div>
-                                    ) : (
-                                      <button 
-                                        onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} 
-                                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white shadow-lg active:scale-95 hover:bg-blue-700'}`}
-                                      >
-                                        {isApplied ? t.withdraw : t.interested}
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                             </div>
-                           );
-                        })}
-                      </div>
-                    );
-                 })()}
-               </div>
-            </div>
           )}
 
           {/* VIEW: UMPIRE LIST */}
@@ -2855,17 +1072,13 @@ service cloud.firestore {
                
                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                  {sortedUmpireList.map(u => (
-                   <button 
-                     key={u.id} 
-                     onClick={() => { setSelectedProfileId(u.id); setView('umpire-profile'); scrollToTop(); }}
-                     className="w-full text-left flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-300 hover:shadow-md transition-all active:scale-95 group"
-                   >
+                   <div key={u.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
                      <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-blue-900 shadow-sm group-hover:bg-blue-900 group-hover:text-white transition-colors">
+                       <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-blue-900 shadow-sm">
                          {u.name.charAt(0)}
                        </div>
                        <div className="flex flex-col">
-                         <span className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors">{u.name}</span>
+                         <span className="font-bold text-slate-800">{u.name}</span>
                          {u.level && (
                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-1 ${getLevelStyles(u.level)}`}>
                              {u.level}
@@ -2873,8 +1086,7 @@ service cloud.firestore {
                          )}
                        </div>
                      </div>
-                     <ChevronRight className="w-5 h-5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                   </button>
+                   </div>
                  ))}
                  {sortedUmpireList.length === 0 && (
                    <p className="col-span-full text-center py-12 text-slate-400 italic">{t.noGames}</p>
@@ -2883,282 +1095,67 @@ service cloud.firestore {
              </div>
           )}
 
-          {/* VIEW: UMPIRE PROFILE */}
-          {view === 'umpire-profile' && selectedProfileId && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              {(() => {
-                const profileUser = masterUmpires.find(u => u.id === selectedProfileId);
-                if (!profileUser) return <div className="text-center p-8">{t.fetchError}</div>;
-                
-                const profileAsgs = assignments.filter(a => a.userId === selectedProfileId);
-                const profileApps = applications.filter(a => a.userId === selectedProfileId);
-                const profileGames = games.filter(g => profileAsgs.some(a => a.gameId === g.id)).sort((a,b) => (a.date || '').localeCompare(b.date || ''));
-                
-                return (
-                  <>
-                    <button 
-                      onClick={() => { setView('umpire-list'); setSelectedProfileId(null); }} 
-                      className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"
-                    >
-                      <ArrowLeft className="w-4 h-4" /> {t.back}
-                    </button>
-                    
-                    <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-900/10 to-transparent" />
-                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-blue-900 text-white flex items-center justify-center text-4xl font-black shadow-lg border-4 border-white z-10 shrink-0 mt-4 sm:mt-0">
-                        {profileUser.name.charAt(0)}
-                      </div>
-                      <div className="relative z-10 flex-1 w-full">
-                        <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{profileUser.name}</h2>
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
-                          {profileUser.level && (
-                            <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLevelStyles(profileUser.level)}`}>
-                              {profileUser.level}
-                            </span>
-                          )}
-                          {(adminUmpireIds || []).includes(profileUser.id) && (
-                            <span className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded border uppercase font-black flex items-center gap-1">
-                              <Shield className="w-3 h-3" /> Admin
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-6">
-                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center sm:items-start">
-                            <span className="text-3xl font-black text-blue-600 leading-none">{profileAsgs.length}</span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{t.totalAssignments}</span>
-                          </div>
-                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center sm:items-start">
-                            <span className="text-3xl font-black text-slate-700 leading-none">{profileApps.length}</span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{t.totalInterests}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4" /> {t.assignedMatches}
-                      </h3>
-                      {profileGames.length === 0 ? (
-                        <div className="bg-white p-8 rounded-3xl text-center border border-slate-200">
-                          <p className="text-slate-400 font-medium text-sm">{t.noAssignedMatches}</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {profileGames.map(game => {
-                            const gameAssignments = groupedAssignments[game.id] || [];
-                            return (
-                              <div 
-                                key={game.id} 
-                                onClick={() => setSelectedGameDetails(game)}
-                                className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-200 cursor-pointer transition-colors group"
-                              >
-                                <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[65px] border border-slate-100 flex flex-col justify-center group-hover:bg-blue-50 transition-colors">
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{safeDateDay(game.date)}</p>
-                                  <p className="text-xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
-                                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{safeDateMonth(game.date)}</p>
-                                </div>
-                                <div>
-                                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest mb-1 inline-block ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                                  <p className="font-bold text-slate-900 text-sm leading-tight group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</p>
-                                  <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
-                                    <Clock className="w-3 h-3" /> {game.time}
-                                    <MapPin className="w-3 h-3 ml-2" /> {game.location}
-                                  </p>
-                                  {/* Officials Render */}
-                                  {renderOfficialsRow(game, gameAssignments, masterUmpires)}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          )}
-
           {/* VIEW: ADMIN */}
           {view === 'admin' && (
              <div className="space-y-6">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="text-center sm:text-left"><h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2><p className="text-xs text-slate-500">{selectedYear} Season</p></div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 border border-slate-200 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2 shadow-sm">
-                      <Download className="w-4 h-4" /> {t.downloadBackup}
-                    </button>
-                    <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-all shadow-sm text-xs uppercase"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
-                    <button onClick={() => setShowEmailPreview(true)} className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg text-xs uppercase">
-                      <Mail className="w-4 h-4" /> {t.sendSchedules}
-                    </button>
-                  </div>
-                </div>
-
-                {showImportTool && (
-                  <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 animate-in slide-in-from-top">
-                    <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3>
-                    <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder="YYYY-MM-DD	HH:MM	Serie	Borta	Hemma	Plats" className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
-                    <div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button></div>
-                  </div>
-                )}
-
+                
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Megaphone className="w-4 h-4" /> {t.globalAnnouncement}
+                    <Users2 className="w-4 h-4" /> {t.masterList}
                   </h3>
-                  <textarea
-                    value={editNoteText}
-                    onChange={(e) => setEditNoteText(e.target.value)}
-                    placeholder={t.announcementPlaceholder}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 transition-all min-h-[80px]"
-                  />
-                  <div className="flex gap-2 mt-3">
-                    <button onClick={saveGlobalNote} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.saveAnnouncement}</button>
-                    <button onClick={clearGlobalNote} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.clearAnnouncement}</button>
-                  </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Users2 className="w-4 h-4" /> {t.masterList}
-                    </h3>
-                    {user?.email === 'suecio@tryempire.com' && (
-                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
-                        <Shield className="w-3 h-3" /> Master Admin
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                     {masterUmpires.map(u => (
-                      <div key={u.id} className="flex flex-col gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                      <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                         {editingUmpireId === u.id ? (
                           <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
                             <input 
                               type="text" 
                               value={tempEditName} 
                               onChange={(e) => setTempEditName(e.target.value)} 
-                              className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-bold outline-none" 
+                              className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1 rounded-lg text-sm font-bold outline-none" 
                             />
                             <select 
                               value={tempEditLevel} 
                               onChange={(e) => setTempEditLevel(e.target.value)} 
-                              className="w-32 bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none"
+                              className="w-32 bg-white border border-blue-300 px-2 py-1 rounded-lg text-sm font-bold outline-none"
                             >
                               <option value="">- {t.level} -</option>
                               {['Internationell', 'Elit', 'Nationell', 'Region', 'Förening'].map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
-                            
-                            {!showManualEmailInput ? (
-                              <select 
-                                value={tempEditEmail} 
-                                onChange={(e) => {
-                                  if (e.target.value === 'MANUAL_ENTRY') {
-                                    setShowManualEmailInput(true);
-                                    setTempEditEmail('');
-                                  } else {
-                                    setTempEditEmail(e.target.value);
-                                  }
-                                }}
-                                className="flex-1 min-w-[150px] bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none"
-                              >
-                                <option value="">{t.selectEmail}</option>
-                                {unconnectedEmails.map(email => (
-                                  <option key={email} value={email}>{email}</option>
-                                ))}
-                                {tempEditEmail && !unconnectedEmails.includes(tempEditEmail) && tempEditEmail !== 'MANUAL_ENTRY' && (
-                                  <option value={tempEditEmail}>{tempEditEmail}</option>
-                                )}
-                                <option value="MANUAL_ENTRY">{t.otherEmail}</option>
-                              </select>
-                            ) : (
-                              <div className="flex-1 flex items-center min-w-[150px] relative">
-                                <input 
-                                  type="email" 
-                                  value={tempEditEmail} 
-                                  onChange={(e) => setTempEditEmail(e.target.value)} 
-                                  placeholder={t.linkEmailPlaceholder}
-                                  className="w-full bg-white border border-blue-300 px-3 py-1.5 pr-8 rounded-lg text-sm font-bold outline-none" 
-                                />
-                                <button 
-                                  onClick={() => { setShowManualEmailInput(false); setTempEditEmail(''); }} 
-                                  className="absolute right-2 text-slate-400 hover:text-slate-600"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            )}
-
-                            <div className="flex gap-1 items-center">
-                              <button 
-                                onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel, tempEditEmail); setEditingUmpireId(null); }} 
-                                className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={() => setEditingUmpireId(null)} 
-                                className="bg-slate-200 text-slate-600 p-2 rounded-lg hover:bg-slate-300 transition-colors"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
+                            <button 
+                              onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel); setEditingUmpireId(null); }} 
+                              className="bg-green-600 text-white p-1.5 rounded-lg"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => setEditingUmpireId(null)} 
+                              className="bg-slate-200 text-slate-600 p-1.5 rounded-lg"
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </button>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-slate-700">{u.name}</span>
-                                {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
-                                {(adminUmpireIds || []).includes(u.id) && (
-                                  <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5">
-                                    <Shield className="w-2 h-2" /> Admin
-                                  </span>
-                                )}
-                              </div>
-                              {u.linkedEmail ? (
-                                <span className="text-[10px] text-green-600 font-bold mt-1 flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3" /> {t.linkedAccount} {u.linkedEmail}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-slate-400 font-medium mt-1 flex items-center gap-1">
-                                  <Info className="w-3 h-3" /> {t.notLinked}
-                                </span>
-                              )}
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                              {u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
                             </div>
-                            <div className="flex gap-1 items-start">
-                              {user?.email === 'suecio@tryempire.com' && (
-                                <button 
-                                  onClick={() => toggleUmpireAdmin(u.id)} 
-                                  className={`p-1.5 rounded-lg transition-colors ${(adminUmpireIds || []).includes(u.id) ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-blue-600'}`}
-                                  title={(adminUmpireIds || []).includes(u.id) ? "Ta bort administratör" : "Gör till administratör"}
-                                >
-                                  <Shield className="w-4 h-4" />
-                                </button>
-                              )}
+                            <div className="flex gap-1">
                               <button 
-                                onClick={() => { 
-                                  setEditingUmpireId(u.id); 
-                                  setTempEditName(u.name || ''); 
-                                  setTempEditLevel(u.level || ''); 
-                                  setTempEditEmail(u.linkedEmail || ''); 
-                                  setShowManualEmailInput(false);
-                                }} 
+                                onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name); setTempEditLevel(u.level || ''); }} 
                                 className="p-1.5 text-slate-400 hover:text-blue-600"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button 
-                                onClick={() => deleteMasterUmpire(u.id, u.name, u.linkedEmail)} 
+                                onClick={() => deleteMasterUmpire(u.id)} 
                                 className="p-1.5 text-slate-400 hover:text-red-600"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
-                          </div>
+                          </>
                         )}
                       </div>
                     ))}
@@ -3167,34 +1164,6 @@ service cloud.firestore {
                 
                 {/* Staffing Desk Section */}
                 <div className="space-y-4">
-                  {mailQueue.length > 0 && isAdmin && (
-                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-4">
-                      <p className="text-sm font-bold text-yellow-800 flex-1 leading-relaxed">
-                         {t.pendingEmailsQueued.replace('{count}', mailQueue.length)}
-                      </p>
-                      <button 
-                        onClick={forceSendQueue} 
-                        disabled={syncing}
-                        className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-colors flex items-center justify-center whitespace-nowrap disabled:opacity-50"
-                      >
-                         {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : t.sendQueuedNow}
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}
-                    </h3>
-                    <button 
-                      onClick={() => setShowStaffed(!showStaffed)} 
-                      className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white shadow-md hover:bg-black' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      {showStaffed ? t.hideStaffed : t.showAll}
-                    </button>
-                  </div>
-                  
                   {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
                     const applicants = applications.filter(a => a.gameId === game.id);
                     const gameAssignments = groupedAssignments[game.id] || [];
@@ -3203,73 +1172,38 @@ service cloud.firestore {
                     const isFullyStaffed = gameAssignments.length >= required;
 
                     return (
-                      <div 
-                        key={game.id} 
-                        className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}
-                      >
-                        <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer transition-colors" onClick={() => setSelectedGameDetails(game)}>
+                      <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
+                        <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-widest ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                            <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
+                            <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {game.date}</p>
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <button 
-                              onClick={(e) => { e.stopPropagation(); setEditingGameData(isEditingThisGame ? null : { ...game }); }} 
+                              onClick={() => setEditingGameData(isEditingThisGame ? null : { ...game })} 
                               className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}
                             >
                               <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id)); }} 
-                              className="p-2 text-slate-300 hover:text-red-500"
-                            >
-                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
                         
                         {isEditingThisGame && (
-                          <div className="p-4 bg-blue-50/30 border-b border-slate-100 flex flex-col gap-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400">{t.date}</label>
-                                <input type="date" value={editingGameData.date || ''} onChange={e => setEditingGameData({...editingGameData, date: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400">{t.time}</label>
-                                <input type="time" value={editingGameData.time || ''} onChange={e => setEditingGameData({...editingGameData, time: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400">{t.league}</label>
-                                <input type="text" value={editingGameData.league || ''} onChange={e => setEditingGameData({...editingGameData, league: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label>
-                                <select 
-                                  value={editingGameData.requiredUmpires || 2} 
-                                  onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
-                                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
-                                >
-                                  {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
-                                </select>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400">{t.away}</label>
-                                <input type="text" value={editingGameData.away || ''} onChange={e => setEditingGameData({...editingGameData, away: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-slate-400">{t.home}</label>
-                                <input type="text" value={editingGameData.home || ''} onChange={e => setEditingGameData({...editingGameData, home: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
-                              <div className="space-y-1 sm:col-span-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400">{t.location}</label>
-                                <input type="text" value={editingGameData.location || ''} onChange={e => setEditingGameData({...editingGameData, location: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
-                              </div>
+                          <div className="p-4 bg-blue-50/30 border-b border-slate-100 grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label>
+                              <select 
+                                value={editingGameData.requiredUmpires || 2} 
+                                onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} 
+                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold"
+                              >
+                                {[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}
+                              </select>
                             </div>
-                            <div className="flex gap-2">
-                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold text-xs uppercase shadow-sm hover:bg-green-700">{t.saveChanges}</button>
-                              <button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-lg font-bold text-xs uppercase hover:bg-slate-300">{t.cancel}</button>
+                            <div className="flex items-end gap-2">
+                              <button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold text-xs uppercase">{t.save}</button>
+                              <button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2 rounded-lg font-bold text-xs uppercase">{t.cancel}</button>
                             </div>
                           </div>
                         )}
@@ -3279,19 +1213,13 @@ service cloud.firestore {
                              {gameAssignments.map(asg => {
                                const m = masterUmpires.find(mu => mu.id === asg.userId);
                                return (
-                                 <div key={asg.userId} className={`flex items-center justify-between p-2 rounded-xl border ${asg.pendingChange ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 bg-green-50/30'}`}>
+                                 <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
                                    <div className="flex items-center gap-2">
-                                     {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <Users2 className="w-3 h-3 text-green-600" />}
-                                     <button 
-                                       onClick={(e) => { e.stopPropagation(); setSelectedProfileId(asg.userId); setView('umpire-profile'); scrollToTop(); }}
-                                       className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline text-left flex items-center"
-                                     >
-                                       {asg.userName}
-                                       {asg.pendingChange && <span className="ml-2 text-[9px] text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded-md uppercase tracking-widest">{t.pendingReply}</span>}
-                                     </button>
+                                     <Users2 className="w-3 h-3 text-green-600" />
+                                     <span className="text-xs font-bold text-slate-700">{asg.userName}</span>
                                      {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                    </div>
-                                   <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg">
+                                   <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg">
                                      <UserMinus className="w-3.5 h-3.5" />
                                    </button>
                                  </div>
@@ -3301,45 +1229,24 @@ service cloud.firestore {
                           
                           <div className="space-y-1">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
-                                  const m = masterUmpires.find(mu => mu.id === app.userId); 
-                                  
-                                  // Conflict Detection Logic
-                                  const umpireAssignedGamesToday = assignments
-                                    .filter(asg => asg.userId === app.userId)
-                                    .map(asg => games.find(g => g.id === asg.gameId))
-                                    .filter(g => g && g.date === game.date && g.id !== game.id);
-                                  
-                                  const conflictGame = umpireAssignedGamesToday.find(g => 
-                                    (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
-                                  );
-                                  const isConflict = !!conflictGame;
-
-                                  return (
-                                    <div key={app.userId} className={`flex items-center justify-between p-2 rounded-xl border ${isConflict ? 'border-red-100 bg-red-50/30' : 'border-slate-100 bg-white hover:border-blue-300'} transition-all`}>
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-xs font-bold ${isConflict ? 'text-red-700' : ''}`}>{app.userName}</span>
-                                        {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                                      </div>
-                                      <button 
-                                        disabled={isFullyStaffed || isConflict} 
-                                        onClick={(e) => { e.stopPropagation(); assignUmpire(game.id, app.userId, app.userName); }} 
-                                        className={`${isConflict ? 'bg-red-100 text-red-700' : 'bg-blue-600 text-white hover:bg-blue-700'} text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${isFullyStaffed && !isConflict ? 'opacity-50' : ''} transition-colors`}
-                                        title={isConflict ? `${t.bookedIn} ${conflictGame.location}` : ''}
-                                      >
-                                        {isConflict ? (
-                                          <><AlertTriangle className="w-3 h-3" /> {conflictGame.location}</>
-                                        ) : (
-                                          <><UserPlus className="w-3 h-3" /> Assign</>
-                                        )}
-                                      </button>
-                                    </div>
-                                  ); 
-                                })}
-                              </div>
-                            )}
+                            {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
+                              const m = masterUmpires.find(mu => mu.id === app.userId); 
+                              return (
+                                <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold">{app.userName}</span>
+                                    {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                                  </div>
+                                  <button 
+                                    disabled={isFullyStaffed} 
+                                    onClick={() => assignUmpire(game.id, app.userId, app.userName)} 
+                                    className="bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <UserPlus className="w-3 h-3" /> Assign
+                                  </button>
+                                </div>
+                              ); 
+                            })}
                           </div>
                         </div>
                       </div>
@@ -3388,14 +1295,9 @@ service cloud.firestore {
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black uppercase">{stat.name.charAt(0)}</div>
                           <div className="flex flex-col">
-                            <button 
-                              onClick={() => { setSelectedProfileId(stat.userId); setView('umpire-profile'); scrollToTop(); }}
-                              className="font-bold text-slate-700 text-left hover:text-blue-600 hover:underline"
-                            >
-                              {stat.name}
-                            </button>
+                            <span className="font-bold text-slate-700">{stat.name}</span>
                             {masterUmpires.find(m => m.name === stat.name)?.level && (
-                              <span className={`text-[8px] font-black px-1 rounded border uppercase w-max mt-0.5 ${getLevelStyles(masterUmpires.find(m => m.name === stat.name)?.level)}`}>
+                              <span className={`text-[8px] font-black px-1 rounded border uppercase w-max ${getLevelStyles(masterUmpires.find(m => m.name === stat.name)?.level)}`}>
                                 {masterUmpires.find(m => m.name === stat.name)?.level}
                               </span>
                             )}
@@ -3422,268 +1324,37 @@ service cloud.firestore {
           {/* VIEW: MY GAMES */}
           {view === 'my-apps' && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
-                <div className="flex flex-wrap items-center gap-3">
-                  {myAssignedGames.length > 0 && (
-                    <div className="relative">
-                      <button 
-                        onClick={() => setShowMyGamesExport(!showMyGamesExport)} 
-                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
-                      >
-                        <CalendarPlus className="w-4 h-4" /> {t.downloadCalendar} <ChevronDown className="w-3 h-3" />
-                      </button>
-                      {showMyGamesExport && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setShowMyGamesExport(false)}></div>
-                          <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                            <button onClick={() => { generateICS(myAssignedGames); setShowMyGamesExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex flex-col gap-0.5">
-                              <span className="text-xs font-black text-slate-700">{t.formatICS}</span>
-                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextICS}</span>
-                            </button>
-                            <button onClick={() => { generateCSV(myAssignedGames); setShowMyGamesExport(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex flex-col gap-0.5">
-                              <span className="text-xs font-black text-slate-700">{t.formatCSV}</span>
-                              <span className="text-[10px] font-bold text-slate-400 normal-case">{t.subtextCSV}</span>
-                            </button>
-                          </div>
-                        </>
-                      )}
+              <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
+              {myAssignedGames.map(game => (
+                <div key={game.id} className="bg-white p-4 rounded-2xl border border-green-200 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-green-100 text-green-600"><CalendarIcon className="w-5 h-5" /></div>
+                    <div>
+                      <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
+                      <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
                     </div>
-                  )}
-                  <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-fit">
-                     <button 
-                       onClick={() => setMyGamesViewMode('list')} 
-                       className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'list' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                     >
-                       <List className="w-4 h-4" />
-                     </button>
-                     <button 
-                       onClick={() => setMyGamesViewMode('calendar')} 
-                       className={`p-2 rounded-lg transition-all ${myGamesViewMode === 'calendar' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                     >
-                       <CalendarIcon className="w-4 h-4" />
-                     </button>
                   </div>
+                  <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</div>
                 </div>
-              </div>
+              ))}
               
-              <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex gap-3 items-start mb-6">
-                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                <p className="text-xs sm:text-sm font-medium text-blue-800 leading-relaxed">
-                  {t.myGamesReminder}
-                </p>
+              <div className="pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
+                {myInterestedGames.map(game => (
+                  <div key={game.id} className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
+                      <div>
+                        <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
+                        <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => toggleApplication(game.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
-
-              {!user || !user.email ? (
-                <div className="bg-white p-12 rounded-3xl text-center border border-slate-200 shadow-sm">
-                  <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <User className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <p className="text-slate-500 font-medium mb-6">{t.loginRequiredMsg}</p>
-                  <button onClick={() => setShowAuthModal(true)} className="bg-blue-600 text-white px-8 py-3 rounded-full font-black uppercase text-xs shadow-lg hover:bg-blue-700 transition-colors">
-                    {t.login}
-                  </button>
-                </div>
-              ) : myGamesViewMode === 'calendar' ? (
-                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in duration-300">
-                   <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <h3 className="font-black text-slate-800 uppercase tracking-tight">
-                          {t.months[currentDate.getMonth()]} {currentDate.getFullYear()}
-                        </h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronLeft className="w-4 h-4"/></button>
-                            <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">IDAG</button>
-                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white rounded-xl border border-slate-200 transition-colors shadow-sm"><ChevronRight className="w-4 h-4"/></button>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-7 border-b border-slate-100">
-                        {["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map(d => (
-                          <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-r last:border-r-0 border-slate-50">{d}</div>
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-7">
-                        {calendarWeeks.flatMap((week) => 
-                          week.days.map((day, idx) => {
-                            const dateStr = day ? toLocalISO(day) : null;
-                            const myMatches = dateStr ? [...myAssignedGames, ...myInterestedGames].filter(g => g.date === dateStr) : [];
-                            const isToday = dateStr === today;
-                            
-                            return (
-                              <div key={`${week.weekNumber}-${idx}`} className={`min-h-[100px] p-2 border-r border-b border-slate-50 relative ${!day ? 'bg-slate-50/30' : 'bg-white'}`}>
-                                {day && (
-                                  <>
-                                    <span className={`text-xs font-black ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full shadow-lg' : 'text-slate-400'}`}>
-                                      {day.getDate()}
-                                    </span>
-                                    <div className="mt-2 space-y-1">
-                                      {myMatches.map(g => {
-                                        const myAsg = groupedAssignments[g.id]?.find(a => a.userId === umpireId);
-                                        const isAssigned = myAsg !== undefined;
-                                        const isPending = myAsg?.pendingChange;
-                                        
-                                        return (
-                                          <div 
-                                            key={g.id} 
-                                            onClick={() => setSelectedGameDetails(g)}
-                                            className={`w-full text-left p-1 rounded border overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${isPending ? 'border-yellow-300 bg-yellow-50' : isAssigned ? 'border-green-200 bg-green-50' : 'border-slate-100 bg-white'}`}
-                                          >
-                                            <div className={`w-full h-1 rounded-full mb-1 ${isPending ? 'bg-yellow-500' : isAssigned ? 'bg-green-500' : getLeagueStyles(g.league).split(' ')[0]}`} />
-                                            <p className={`text-[8px] font-bold truncate leading-none uppercase ${isPending ? 'text-yellow-800' : isAssigned ? 'text-green-800' : 'text-slate-700'}`}>{g.away} @ {g.home}</p>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                    </div>
-                </div>
-              ) : (
-                <>
-                  {(() => {
-                    const pendingAssignedGames = myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange);
-                    const confirmedAssignedGames = myAssignedGames.filter(g => !groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange);
-
-                    const renderGameCard = (game) => {
-                      const gameAssignments = groupedAssignments[game.id] || [];
-                      const coUmpires = gameAssignments.filter(asg => asg.userId !== umpireId);
-                      const myAsg = gameAssignments.find(a => a.userId === umpireId);
-
-                      return (
-                        <div 
-                          key={game.id} 
-                          onClick={() => setSelectedGameDetails(game)}
-                          className={`bg-white p-4 sm:p-5 rounded-2xl border ${myAsg?.pendingChange ? 'border-yellow-400 shadow-sm shadow-yellow-100 ring-2 ring-yellow-400/20' : 'border-green-200 hover:shadow-md'} flex flex-col gap-3 cursor-pointer transition-all group`}
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                            <div className="flex items-start gap-4">
-                              <div className={`p-3 rounded-xl ${myAsg?.pendingChange ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'} shrink-0 transition-colors`}>
-                                <CalendarIcon className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</p>
-                                <p className="text-[11px] text-slate-500 font-black uppercase mt-1">{game.date} @ {game.time} • {game.location}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex flex-col items-end gap-2">
-                               {myAsg?.pendingChange ? (
-                                 <div className="bg-yellow-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit shadow-sm">{t.timeChangedBadge}</div>
-                               ) : (
-                                 <div className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase self-start sm:self-end w-fit">{t.confirmed}</div>
-                               )}
-                               
-                               {myAsg && !myAsg.pendingChange && (
-                                 myAsg.forTrade ? (
-                                    <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, false); }} className="text-[10px] font-black uppercase bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg border border-orange-200 hover:bg-orange-200 transition-colors w-fit">
-                                      {t.cancelTrade}
-                                    </button>
-                                 ) : (
-                                    <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(myAsg.id, true); }} className="text-[10px] font-black uppercase bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors flex items-center gap-1 w-fit">
-                                      <ArrowRightLeft className="w-3 h-3" /> {t.tradeGame}
-                                    </button>
-                                 )
-                               )}
-                            </div>
-                          </div>
-
-                          {/* Pending Change Warning Block */}
-                          {myAsg?.pendingChange && (
-                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mt-2 flex flex-col gap-3">
-                              <p className="text-xs font-bold text-yellow-800 flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4" /> {t.matchMovedWarning}
-                              </p>
-                              <div className="flex gap-2 flex-wrap">
-                                <button onClick={(e) => { e.stopPropagation(); confirmScheduleChange(myAsg.id); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.acceptTime}</button>
-                                <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, umpireId); }} className="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">{t.declineTime}</button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Co-umpires section */}
-                          <div className="pt-3 border-t border-slate-50 mt-1">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.officials}</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {coUmpires.map(u => (
-                                 <span key={u.userId} className="text-xs font-bold text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-md flex items-center gap-1"><CheckCircle className="w-3 h-3"/> {u.userName}</span>
-                              ))}
-                              {game.supervisorName && (
-                                 <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-md flex items-center gap-1"><Star className="w-3 h-3"/> SUP: {game.supervisorName}</span>
-                              )}
-                              {game.tcName && (
-                                 <span className="text-xs font-bold text-orange-700 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-md flex items-center gap-1"><FileText className="w-3 h-3"/> TC: {game.tcName}</span>
-                              )}
-                              {coUmpires.length === 0 && !game.supervisorName && !game.tcName && (
-                                 <span className="text-xs font-medium text-slate-400 italic">{t.noCoUmpires}</span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Calendar links */}
-                          <div className="pt-3 border-t border-slate-50 flex flex-wrap gap-2">
-                             <a href={getGoogleCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Google</a>
-                             <a href={getOutlookCalendarLink(game)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">+ Outlook</a>
-                             <button onClick={(e) => { e.stopPropagation(); handleCalendarExport(game); }} className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">.ICS</button>
-                          </div>
-                        </div>
-                      );
-                    };
-
-                    return (
-                      <div className="space-y-6">
-                        {pendingAssignedGames.length > 0 && (
-                          <div className="bg-yellow-50/50 p-4 rounded-3xl border border-yellow-200 shadow-inner">
-                            <h3 className="text-sm font-black text-yellow-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-                              <AlertTriangle className="w-5 h-5" /> {t.actionRequired}
-                            </h3>
-                            <div className="space-y-4">
-                              {pendingAssignedGames.map(renderGameCard)}
-                            </div>
-                          </div>
-                        )}
-
-                        {confirmedAssignedGames.length > 0 && (
-                          <div>
-                            {pendingAssignedGames.length > 0 && (
-                              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 mt-2 flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4" /> {t.confirmedGames}
-                              </h3>
-                            )}
-                            <div className="space-y-4">
-                              {confirmedAssignedGames.map(renderGameCard)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  
-                  <div className="pt-4 border-t border-slate-100">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">{t.interestedGames}</h3>
-                    {myInterestedGames.map(game => (
-                      <div 
-                        key={game.id} 
-                        onClick={() => setSelectedGameDetails(game)}
-                        className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between mb-2 cursor-pointer hover:border-blue-300 transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-slate-100 text-slate-400"><CalendarIcon className="w-5 h-5" /></div>
-                          <div>
-                            <p className="font-bold text-slate-900">{game.away} @ {game.home}</p>
-                            <p className="text-[10px] text-slate-400 font-black uppercase">{game.date} @ {game.time}</p>
-                          </div>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
           )}
         </section>
@@ -3699,451 +1370,22 @@ service cloud.firestore {
         </button>
       )}
 
-      {user && user.email ? (
-        umpireId ? (
-          <button 
-            onClick={() => setShowAdminModal(true)} 
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md hover:scale-105 transition-transform"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
-                {userName ? userName.charAt(0) : '?'}
-              </div>
-              <div className="text-left">
-                <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{t.userSettings}</p>
-                <span className="text-sm font-bold whitespace-nowrap leading-none">{userName}</span>
-              </div>
-            </div>
-          </button>
-        ) : (
-          <button 
-            onClick={() => setShowNamePrompt(true)} 
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-500 backdrop-blur-md animate-pulse"
-          >
-            <UserCheck className="w-5 h-5" />
-            <span className="text-sm font-black uppercase tracking-widest">{t.saveName}</span>
-          </button>
-        )
-      ) : (
-        <button 
-          onClick={() => setShowAuthModal(true)} 
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-800/50 backdrop-blur-md hover:bg-blue-800 transition-colors"
-        >
-          <User className="w-5 h-5" />
-          <span className="text-sm font-black uppercase tracking-widest">{t.login}</span>
-        </button>
-      )}
-
-      {/* Modals */}
-
-      {/* Location Details Modal */}
-      {selectedLocation && (() => {
-        const locDetail = locationsData.find(l => l.id === selectedLocation) || { id: selectedLocation, address: '', facilities: [] };
-        const mapQuery = locDetail.address ? locDetail.address : locDetail.id;
-
-        return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-end sm:justify-center z-[90] p-0 sm:p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <button 
-                onClick={() => setSelectedLocation(null)} 
-                className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors z-10"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              {editingLocation?.id === selectedLocation ? (
-                <div className="space-y-4">
-                  <h3 className="text-xl font-black text-slate-800">{t.editLocation}: {locDetail.id}</h3>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.address}</label>
-                    <input 
-                      type="text" 
-                      value={editingLocation.address} 
-                      onChange={(e) => setEditingLocation({...editingLocation, address: e.target.value})}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.facilities}</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={newFacility} 
-                        onChange={(e) => setNewFacility(e.target.value)}
-                        placeholder={t.addFacility}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if(newFacility.trim()){
-                              setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
-                              setNewFacility('');
-                            }
-                          }
-                        }}
-                        className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" 
-                      />
-                      <button 
-                        onClick={() => {
-                          if(newFacility.trim()){
-                            setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
-                            setNewFacility('');
-                          }
-                        }}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xl hover:bg-blue-700"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(editingLocation.facilities || []).map((fac, idx) => (
-                        <div key={idx} className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium text-slate-700">
-                          {fac}
-                          <button onClick={() => {
-                            const newFacs = [...editingLocation.facilities];
-                            newFacs.splice(idx, 1);
-                            setEditingLocation({...editingLocation, facilities: newFacs});
-                          }} className="text-slate-400 hover:text-red-500"><X className="w-3.5 h-3.5"/></button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex gap-3 pt-4 border-t border-slate-100">
-                    <button onClick={saveLocation} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-xs hover:bg-green-700">{t.saveChanges}</button>
-                    <button onClick={() => setEditingLocation(null)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-black uppercase text-xs hover:bg-slate-200">{t.cancel}</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2 pr-8">{locDetail.id}</h3>
-                    {locDetail.address && (
-                      <p className="text-sm font-medium text-slate-500 flex items-start gap-1.5">
-                        <Navigation className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
-                        {locDetail.address}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex flex-col items-center justify-center">
-                    <a 
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="bg-blue-600 text-white text-sm font-black uppercase px-6 py-3 rounded-xl shadow-md hover:bg-blue-700 transition-all flex items-center gap-2"
-                    >
-                      <Map className="w-4 h-4" /> {t.mapDirections}
-                    </a>
-                  </div>
-
-                  <div className="space-y-3 pt-2">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t.facilities}</h4>
-                    {locDetail.facilities && locDetail.facilities.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {locDetail.facilities.map((fac, idx) => (
-                          <span key={idx} className="bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm">
-                            {fac}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm font-medium text-slate-400 italic">{t.noFacilities}</p>
-                    )}
-                  </div>
-
-                  {isAdmin && (
-                    <div className="pt-4 border-t border-slate-100">
-                      <button 
-                        onClick={() => setEditingLocation({ ...locDetail, facilities: locDetail.facilities || [] })}
-                        className="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-black uppercase text-xs hover:bg-slate-200 flex items-center justify-center gap-2"
-                      >
-                        <Edit2 className="w-4 h-4" /> {t.editLocation}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+      <button 
+        onClick={() => setShowNamePrompt(true)} 
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">
+            {userName ? userName.charAt(0) : '?'}
           </div>
-        );
-      })()}
-      
-      {/* Game Details Modal (Phase 2 UI Preview) */}
-      {selectedGameDetails && (() => {
-        const game = selectedGameDetails;
-        const gameAssignments = groupedAssignments[game.id] || [];
-        const required = game.requiredUmpires || 2;
-        
-        // Find if this location has an address in our directory for a better map link
-        const locDetail = locationsData.find(l => l.id === game.location);
-        const mapQuery = locDetail?.address ? locDetail.address : game.location;
-        
-        return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-end sm:justify-center z-[90] p-0 sm:p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 space-y-6 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <button 
-                onClick={() => setSelectedGameDetails(null)} 
-                className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors z-10"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              <div className="pt-2">
-                <span className={`text-[10px] font-black px-2.5 py-1 rounded border uppercase tracking-widest mb-3 inline-block ${getLeagueStyles(game.league)}`}>
-                  {game.league}
-                </span>
-                <h3 className="text-2xl font-black text-slate-800 leading-tight mb-1">{game.away} @ {game.home}</h3>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">
-                  <span className="flex items-center gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> {safeDateDay(game.date)} {game.date}</span>
-                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
-                 <div className="flex items-center gap-3">
-                   <div className="bg-blue-600 text-white p-2.5 rounded-xl"><MapPin className="w-5 h-5" /></div>
-                   <div>
-                     <p className="text-[10px] font-black uppercase text-blue-800 tracking-widest mb-0.5">{t.location}</p>
-                     <p className="text-sm font-bold text-blue-900">{game.location}</p>
-                   </div>
-                 </div>
-                 <a 
-                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`} 
-                   target="_blank" 
-                   rel="noreferrer"
-                   className="bg-white text-blue-600 text-[10px] font-black uppercase px-4 py-2 rounded-xl shadow-sm hover:shadow border border-blue-200 transition-all flex items-center gap-2"
-                 >
-                   <Map className="w-3.5 h-3.5" /> {t.mapDirections}
-                 </a>
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Users2 className="w-4 h-4" /> {t.crew}
-                  </h4>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>
-                    {gameAssignments.length} / {required} {t.assignedTo}
-                  </span>
-                </div>
-                
-                {gameAssignments.length === 0 ? (
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                     <p className="text-sm font-medium text-slate-400 italic">{t.notAssigned}</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-2">
-                    {gameAssignments.map(asg => {
-                      const m = masterUmpires.find(mu => mu.id === asg.userId);
-                      const evaluation = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
-                      const isAssignedSupervisor = Boolean(umpireId && game.supervisorId === umpireId);
-                      const canEvaluate = isAdmin || isAssignedSupervisor;
-                      const canViewEval = isAdmin || isAssignedSupervisor || Boolean(umpireId && asg.userId === umpireId);
-                      const isEvaluatingThisUser = evaluatingUmpire === asg.userId;
-
-                      return (
-                        <div key={asg.userId} className="flex flex-col p-3 rounded-xl border border-slate-100 bg-slate-50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-slate-600 shadow-sm">
-                                {asg.userName.charAt(0)}
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-800">{asg.userName}</span>
-                                {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase w-max mt-0.5 ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                              </div>
-                            </div>
-                            
-                            {!evaluation && canEvaluate && !isEvaluatingThisUser && (
-                              <button 
-                                onClick={() => setEvaluatingUmpire(asg.userId)}
-                                className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors"
-                              >
-                                {t.evaluate}
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Evaluation Sub-Form */}
-                          {isEvaluatingThisUser && (
-                            <div className="mt-3 p-3 bg-white border border-blue-200 rounded-xl shadow-sm animate-in fade-in zoom-in-95 duration-200">
-                              <p className="text-[10px] font-black text-blue-800 uppercase mb-2">{t.grade}</p>
-                              <div className="flex gap-1 mb-3">
-                                {[1, 2, 3, 4, 5].map(star => (
-                                  <button 
-                                    key={star} 
-                                    onClick={() => setEvalGrade(star)} 
-                                    className={`p-1 transition-colors ${evalGrade >= star ? 'text-yellow-400' : 'text-slate-200 hover:text-yellow-200'}`}
-                                  >
-                                    <Star className="w-6 h-6 fill-current" />
-                                  </button>
-                                ))}
-                              </div>
-                              <textarea 
-                                value={evalComment} 
-                                onChange={e => setEvalComment(e.target.value)} 
-                                placeholder={t.feedback} 
-                                className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[60px] mb-3 font-medium" 
-                              />
-                              <div className="flex gap-2">
-                                <button 
-                                  onClick={() => { submitEvaluation(game.id, asg.userId, evalGrade, evalComment); }} 
-                                  disabled={evalGrade === 0}
-                                  className="flex-1 bg-blue-600 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                                >
-                                  {t.saveEval}
-                                </button>
-                                <button 
-                                  onClick={() => setEvaluatingUmpire(null)} 
-                                  className="flex-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase py-2 rounded-lg hover:bg-slate-200 transition-colors"
-                                >
-                                  {t.cancel}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Display Existing Evaluation */}
-                          {evaluation && canViewEval && !isEvaluatingThisUser && (
-                            <div className="mt-3 p-3 bg-slate-100 border border-slate-200 rounded-xl animate-in fade-in duration-300">
-                               <div className="flex justify-between items-center mb-1.5">
-                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.yourEval}</p>
-                                 <div className="flex gap-0.5">
-                                   {[1, 2, 3, 4, 5].map(star => (
-                                     <Star key={star} className={`w-3.5 h-3.5 ${evaluation.grade >= star ? 'text-yellow-500 fill-current' : 'text-slate-300'}`} />
-                                   ))}
-                                 </div>
-                               </div>
-                               {evaluation.comment && <p className="text-xs text-slate-700 italic font-medium">"{evaluation.comment}"</p>}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
-                  <Shield className="w-4 h-4" /> {t.officials}
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.supervisor}</p>
-                     {isAdmin ? (
-                       <select 
-                         value={game.supervisorId || ''} 
-                         onChange={(e) => assignOfficial(game.id, 'supervisor', e.target.value)}
-                         className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none text-slate-700 focus:ring-2 focus:ring-blue-500/20"
-                       >
-                         <option value="">{t.selectAdmin}</option>
-                         {masterUmpires.filter(u => adminUmpireIds.includes(u.id)).map(a => (
-                           <option key={a.id} value={a.id}>{a.name}</option>
-                         ))}
-                       </select>
-                     ) : (
-                       <p className="text-sm font-medium text-slate-700">{game.supervisorName || <span className="italic text-slate-400">{t.notAssigned}</span>}</p>
-                     )}
-                   </div>
-                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{t.techComm}</p>
-                     {isAdmin ? (
-                       <input 
-                         type="text"
-                         defaultValue={game.tcName || ''} 
-                         onBlur={(e) => assignOfficial(game.id, 'tc', e.target.value)}
-                         placeholder={t.enterTCName}
-                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none text-slate-700 focus:ring-2 focus:ring-blue-500/20"
-                       />
-                     ) : (
-                       <p className="text-sm font-medium text-slate-700">{game.tcName || <span className="italic text-slate-400">{t.notAssigned}</span>}</p>
-                     )}
-                   </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
-                 <button onClick={() => setSelectedGameDetails(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">
-                   {t.close}
-                 </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {showAuthModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 relative">
-            <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="text-center space-y-2">
-              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.appTitle}</h3>
-              <p className="text-xs text-slate-400 font-medium">{isLoginMode ? t.loginToContinue : t.createAnAccount}</p>
-            </div>
-            
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {authError && (
-                <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 break-words">
-                  {authError}
-                </div>
-              )}
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.email}</label>
-                <input 
-                  type="email" 
-                  value={authEmail} 
-                  onChange={(e) => setAuthEmail(e.target.value)} 
-                  required 
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
-                  placeholder="namn@exempel.se" 
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.password}</label>
-                <input 
-                  type="password" 
-                  value={authPassword} 
-                  onChange={(e) => setAuthPassword(e.target.value)} 
-                  required 
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
-                  placeholder="••••••••" 
-                />
-              </div>
-              
-              <button 
-                type="submit" 
-                className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
-              >
-                {isLoginMode ? t.login : t.register}
-              </button>
-            </form>
-            
-            <div className="pt-4 border-t border-slate-100 flex flex-col items-center gap-2">
-              <button 
-                onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} 
-                className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
-              >
-                {isLoginMode ? t.noAccount : t.hasAccount}
-              </button>
-              {isLoginMode && (
-                <button 
-                  onClick={handleResetPassword} 
-                  type="button"
-                  className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors mt-2"
-                >
-                  {t.forgotPassword}
-                </button>
-              )}
-            </div>
+          <div className="text-left">
+            <p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{userName ? t.status : t.setProfile}</p>
+            <span className="text-sm font-bold whitespace-nowrap leading-none">{userName || t.selectFromList}</span>
           </div>
         </div>
-      )}
+      </button>
 
+      {/* Modals */}
       {showNamePrompt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20">
@@ -4214,7 +1456,7 @@ service cloud.firestore {
           <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
             <div>
               <h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3>
-              <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{user?.email}</p>
+              <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{t.profileAccess}</p>
             </div>
             
             <div className="space-y-4">
@@ -4228,29 +1470,24 @@ service cloud.firestore {
                 </button>
               </div>
               
-              {isAdmin && (
-                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Admin</p>
-                    <p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p>
-                  </div>
-                </div>
-              )}
-
               <div className="pt-6 border-t border-slate-100">
-                <button 
-                  onClick={() => { setShowAdminModal(false); setShowChangelogModal(true); }} 
-                  className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50 rounded-2xl transition-colors border border-slate-200 group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <Github className="w-5 h-5" />
-                    </div>
-                    <span className="font-bold text-sm text-slate-700 group-hover:text-blue-700">{t.systemUpdates}</span>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.adminVerify}</label>
+                {!isAdmin ? (
+                  <div className="flex gap-2 mt-2">
+                    <input type="password" placeholder={t.accessCode} value={adminCode} onChange={(e) => setAdminCode(e.target.value)} className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" />
+                    <button onClick={handleAdminAuth} className="bg-slate-800 text-white px-5 rounded-2xl font-black uppercase text-xs hover:bg-black transition-all">{t.verify}</button>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
-                </button>
+                ) : (
+                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center mt-2">
+                    <p className="text-blue-700 font-black text-xs uppercase flex items-center justify-center gap-2"><Shield className="w-4 h-4" /> {t.adminActive}</p>
+                    <button 
+                      onClick={async () => { setIsAdmin(false); await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { isAdmin: false }, { merge: true }); }} 
+                      className="text-[10px] font-black text-red-500 uppercase hover:underline mt-2.5 block w-full text-center"
+                    >
+                      {t.logoutAdmin}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -4261,13 +1498,5 @@ service cloud.firestore {
         </div>
       )}
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <MainApp />
-    </ErrorBoundary>
   );
 }
