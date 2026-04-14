@@ -26,6 +26,8 @@ import {
   getAnalytics, 
   logEvent 
 } from 'firebase/analytics';
+
+// Import Icons
 import { 
   Calendar as CalendarIcon, 
   Shield, 
@@ -41,7 +43,7 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  BarChart3,
+  BarChart, 
   History as HistoryIcon,
   Info,
   User,
@@ -58,7 +60,7 @@ import {
   ChevronLeft,
   ArrowUpDown,
   ArrowUp,
-  Users2,
+  Users, 
   Github,
   X,
   AlertTriangle,
@@ -1048,6 +1050,9 @@ const translations = {
   }
 };
 
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
 const getISOWeekNumber = (date) => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
@@ -1056,7 +1061,6 @@ const getISOWeekNumber = (date) => {
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 };
 
-// --- CALENDAR LINK GENERATORS ---
 const formatCalendarDate = (dateStr, timeStr, addHours = 3) => {
   const cleanDate = (dateStr || '').replace(/-/g, '');
   const cleanTime = (timeStr || '00:00').replace(/:/g, '');
@@ -1085,7 +1089,6 @@ const getOutlookCalendarLink = (game) => {
   return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${title}&startdt=${start}&enddt=${end}&body=${details}&location=${location}`;
 };
 
-// --- MARKDOWN PARSER FOR README ---
 const renderMarkdown = (text) => {
   if (!text) return null;
   return text.split('\n').map((line, i) => {
@@ -1144,7 +1147,7 @@ class ErrorBoundary extends Component {
 // MAIN APPLICATION COMPONENT
 // ==========================================
 function MainApp() {
-  // Auth & Roles
+  // 1. Core State Hooks
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
@@ -1152,7 +1155,7 @@ function MainApp() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminUmpireIds, setAdminUmpireIds] = useState([]);
   
-  // Navigation & View
+  // 2. Navigation & View State
   const [view, setView] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1164,7 +1167,7 @@ function MainApp() {
   const [myGamesViewMode, setMyGamesViewMode] = useState('list');
   const [selectedYear, setSelectedYear] = useState('2026');
   
-  // Federation Multi-Tenant Setup
+  // 3. Federation Multi-Tenant Setup
   const [isDemoEnv, setIsDemoEnv] = useState(true);
   const [federation, setFederation] = useState('swe');
   const federations = [
@@ -1173,7 +1176,7 @@ function MainApp() {
     { id: 'sui', name: '🇨🇭 Switzerland', defaultLang: 'de' }
   ];
 
-  // Language & UI Context
+  // 4. Language Context
   const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
   
@@ -1186,46 +1189,7 @@ function MainApp() {
   };
   const t = getTranslation(lang);
 
-  // Shared UI State
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [showBackToTop, setShowBackToTop] = useState(false);
-  const [globalNote, setGlobalNote] = useState('');
-  
-  // System Feature Flags
-  const [features, setFeatures] = useState({
-    marketplace: true,
-    evaluations: true,
-    reminders: true
-  });
-  
-  // Help View State
-  const [helpTab, setHelpTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('tab') || 'guide';
-    }
-    return 'guide';
-  });
-  const [readmeContent, setReadmeContent] = useState(null);
-  const [readmeLoading, setReadmeLoading] = useState(false);
-  
-  // Contact Form State
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactSubject, setContactSubject] = useState('');
-  const [contactMessage, setContactMessage] = useState('');
-  const [contactStatus, setContactStatus] = useState('idle');
-
-  // Email Module State
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [customEmailMessage, setCustomEmailMessage] = useState('');
-  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
-
-  // Calendar Dropdown States
-  const [showScheduleExport, setShowScheduleExport] = useState(false);
-  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
-
-  // Data State
+  // 5. App Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -1234,37 +1198,56 @@ function MainApp() {
   const [evaluations, setEvaluations] = useState([]);
   const [locationsData, setLocationsData] = useState([]);
   const [mailQueue, setMailQueue] = useState([]);
+  
+  // 6. UI & Modals State
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [globalNote, setGlobalNote] = useState('');
   
-  // Auth & Modals State
+  const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
+  const [helpTab, setHelpTab] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') || 'guide' : 'guide'));
+  const [readmeContent, setReadmeContent] = useState(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
+  
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactStatus, setContactStatus] = useState('idle');
+
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [customEmailMessage, setCustomEmailMessage] = useState('');
+  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
+
+  const [showScheduleExport, setShowScheduleExport] = useState(false);
+  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
+  
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [authError, setAuthError] = useState('');
+  
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [selectedGameDetails, setSelectedGameDetails] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   
-  // Evaluation Forms State
   const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
   const [evalGrade, setEvalGrade] = useState(0);
   const [evalComment, setEvalComment] = useState('');
 
-  // Location Editing State
   const [editingLocation, setEditingLocation] = useState(null);
   const [newFacility, setNewFacility] = useState('');
   
-  // Changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelog, setChangelog] = useState([]);
   const [loadingChangelog, setLoadingChangelog] = useState(false);
   
-  // Admin Editing Controls
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
@@ -1277,22 +1260,20 @@ function MainApp() {
   const [showManualEmailInput, setShowManualEmailInput] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
+  
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
   const [umpireSort, setUmpireSort] = useState('level');
-
-  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
-  // Localized today
   const today = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
-  // Environment Logic
+  // Environment & Domain Logic
   useEffect(() => {
      if (typeof window !== 'undefined') {
         const host = window.location.hostname;
@@ -1313,7 +1294,19 @@ function MainApp() {
     return `${base}-${federation}-${selectedYear}`;
   }, [federation, selectedYear]);
 
-  // Derived state that needs to be declared BEFORE it's used
+  // ==========================================
+  // USE MEMO HOOKS (Strict Order)
+  // ==========================================
+
+  const groupedAssignments = useMemo(() => {
+    const map = {};
+    assignments.forEach(asg => {
+      if (!map[asg.gameId]) map[asg.gameId] = [];
+      map[asg.gameId].push(asg);
+    });
+    return map;
+  }, [assignments]);
+
   const calendarWeeks = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -1343,15 +1336,6 @@ function MainApp() {
 
     return weeks;
   }, [currentDate]);
-
-  const groupedAssignments = useMemo(() => {
-    const map = {};
-    assignments.forEach(asg => {
-      if (!map[asg.gameId]) map[asg.gameId] = [];
-      map[asg.gameId].push(asg);
-    });
-    return map;
-  }, [assignments]);
 
   const sortedStatistics = useMemo(() => {
     const stats = {};
@@ -1481,36 +1465,9 @@ function MainApp() {
     return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
   }, [registeredEmails, masterUmpires]);
 
-  useEffect(() => {
-    setEditNoteText(globalNote);
-  }, [globalNote]);
-
-  useEffect(() => {
-    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
-      setReadmeLoading(true);
-      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.content) {
-            const text = decodeURIComponent(escape(atob(data.content)));
-            setReadmeContent(text);
-          } else {
-            setReadmeContent(t.fetchError);
-          }
-        })
-        .catch(err => {
-          setReadmeContent(t.fetchError);
-        })
-        .finally(() => setReadmeLoading(false));
-    }
-  }, [view, helpTab, readmeContent, t.fetchError]);
-
-  useEffect(() => {
-    setEvaluatingUmpire(null);
-    setEvalGrade(0);
-    setEvalComment('');
-  }, [selectedGameDetails]);
-
+  // ==========================================
+  // HELPER UI FUNCTIONS
+  // ==========================================
   const safeDateMonth = (dateString) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -1600,6 +1557,39 @@ function MainApp() {
       </div>
     );
   };
+
+  // ==========================================
+  // EFFECT HOOKS
+  // ==========================================
+  useEffect(() => {
+    setEditNoteText(globalNote);
+  }, [globalNote]);
+
+  useEffect(() => {
+    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
+      setReadmeLoading(true);
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.content) {
+            const text = decodeURIComponent(escape(atob(data.content)));
+            setReadmeContent(text);
+          } else {
+            setReadmeContent(t.fetchError);
+          }
+        })
+        .catch(err => {
+          setReadmeContent(t.fetchError);
+        })
+        .finally(() => setReadmeLoading(false));
+    }
+  }, [view, helpTab, readmeContent, t.fetchError]);
+
+  useEffect(() => {
+    setEvaluatingUmpire(null);
+    setEvalGrade(0);
+    setEvalComment('');
+  }, [selectedGameDetails]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -1807,6 +1797,10 @@ function MainApp() {
     }
   }, [view, selectedYear, lang]);
 
+
+  // ==========================================
+  // ACTIONS / HANDLERS
+  // ==========================================
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -2227,6 +2221,25 @@ function MainApp() {
     } catch (e) { }
   };
 
+  const generateCSV = (gamesToExport) => {
+    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
+    const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location\n";
+    const rows = gamesToExport.map(game => {
+      const [hours, mins] = (game.time || '00:00').split(':');
+      const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
+      const endTime = `${endHours}:${mins || '00'}`;
+      return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${endTime},"${game.league}","${game.location}"`;
+    }).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `schedule-${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDownloadBackup = () => {
     if (!isAdmin || typeof window === 'undefined') return;
     const backupData = {
@@ -2303,36 +2316,6 @@ function MainApp() {
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `schedule-${selectedYear}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const generateCSV = (gamesToExport) => {
-    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
-    if (analytics) logEvent(analytics, 'calendar_bulk_csv_export', { count: gamesToExport.length });
-
-    const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location\n";
-    const rows = gamesToExport.map(game => {
-      const [hours, mins] = (game.time || '00:00').split(':');
-      const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
-      const endTime = `${endHours}:${mins || '00'}`;
-
-      const subject = `"${game.away || 'TBA'} @ ${game.home || 'TBA'} (${game.league || 'Unknown'})"`;
-      const startDate = game.date;
-      const startTime = game.time;
-      const endDate = game.date;
-      const description = `"League: ${game.league || ''}"`;
-      const location = `"${game.location || ''}"`;
-
-      return `${subject},${startDate},${startTime},${endDate},${endTime},${description},${location}`;
-    }).join('\n');
-
-    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `schedule-${selectedYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -2421,6 +2404,33 @@ function MainApp() {
       setSendingBulkEmails(false);
     }
   };
+
+  // --- RENDER ---
+
+  if (firebaseError === 'permission-denied') {
+    return (
+      <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center font-sans">
+         <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full border border-red-100 text-center">
+           <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
+           <h2 className="text-2xl font-black text-slate-800 mb-2">Databasåtkomst Nekad</h2>
+           <p className="text-slate-600 mb-6 font-medium leading-relaxed">Applikationen kan inte hämta spelschemat eftersom Firebase-reglerna blockerar åtkomst. För att besökare ska kunna se schemat måste du tillåta publik läsning.</p>
+           <div className="bg-slate-900 rounded-xl p-4 text-left overflow-x-auto mb-6 shadow-inner">
+             <pre className="text-green-400 text-xs font-mono leading-relaxed">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/{appId}/{document=**} {
+      allow read: if true; 
+      allow write: if request.auth != null; 
+    }
+  }
+}`}
+             </pre>
+           </div>
+         </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -2542,14 +2552,14 @@ function MainApp() {
             {[
               { id: 'schedule', label: t.schedule, icon: CalendarIcon },
               { id: 'locations', label: t.locations, icon: MapPin },
-              { id: 'umpire-list', label: t.umpireList, icon: Users2 },
+              { id: 'umpire-list', label: t.umpireList, icon: Users },
               ...(user && user.email ? [
                   ...(features.marketplace ? [{ id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft }] : []),
                   { id: 'my-apps', label: t.myGames, icon: CheckCircle }
                 ] : []),
               ...(isAdmin ? [
                   { id: 'admin', label: t.staffing, icon: Shield }, 
-                  { id: 'stats', label: t.analytics, icon: BarChart3 }
+                  { id: 'stats', label: t.analytics, icon: BarChart }
                 ] : [])
             ].map(tab => (
               <button 
@@ -3440,7 +3450,7 @@ function MainApp() {
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Users2 className="w-4 h-4" /> {t.masterList}
+                      <Users className="w-4 h-4" /> {t.masterList}
                     </h3>
                     {isSuperAdmin && (
                       <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
@@ -3710,7 +3720,7 @@ function MainApp() {
                                return (
                                  <div key={asg.userId} className={`flex items-center justify-between p-2 rounded-xl border ${asg.pendingChange ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 bg-green-50/30'}`}>
                                    <div className="flex items-center gap-2">
-                                     {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <Users2 className="w-3 h-3 text-green-600" />}
+                                     {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <Users className="w-3 h-3 text-green-600" />}
                                      <button 
                                        onClick={(e) => { e.stopPropagation(); setSelectedProfileId(asg.userId); setView('umpire-profile'); scrollToTop(); }}
                                        className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline text-left flex items-center"
@@ -4292,80 +4302,53 @@ function MainApp() {
         );
       })()}
 
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 relative">
-            <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="text-center space-y-2">
-              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-800 leading-tight">{t.appTitle}</h3>
-              <p className="text-xs text-slate-400 font-medium">{isLoginMode ? t.loginToContinue : t.createAnAccount}</p>
-            </div>
-            
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {authError && (
-                <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 break-words">
-                  {authError}
-                </div>
-              )}
+      {selectedGameDetails && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full"><X className="w-5 h-5"/></button>
+            <div className="space-y-6 pt-4">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.email}</label>
-                <input 
-                  type="email" 
-                  value={authEmail} 
-                  onChange={(e) => setAuthEmail(e.target.value)} 
-                  required 
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
-                  placeholder="namn@exempel.se" 
-                />
+                <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(selectedGameDetails.league)}`}>{selectedGameDetails.league}</span>
+                <h3 className="text-2xl font-black mt-3">{selectedGameDetails.away} @ {selectedGameDetails.home}</h3>
+                <p className="text-sm text-slate-500 font-bold uppercase mt-1">{selectedGameDetails.date} @ {selectedGameDetails.time}</p>
               </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{t.password}</label>
-                <input 
-                  type="password" 
-                  value={authPassword} 
-                  onChange={(e) => setAuthPassword(e.target.value)} 
-                  required 
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm mt-1" 
-                  placeholder="••••••••" 
-                />
+              <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center">
+                <div><p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p><p className="font-bold text-blue-900">{selectedGameDetails.location}</p></div>
+                <a href={`https://www.google.com/maps/search/?api=1&query=$?q=${selectedGameDetails.location}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2"><Map className="w-4 h-4"/> {t.mapDirections}</a>
               </div>
-              
-              <button 
-                type="submit" 
-                className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
-              >
-                {isLoginMode ? t.login : t.register}
-              </button>
-            </form>
-            
-            <div className="pt-4 border-t border-slate-100 flex flex-col items-center gap-2">
-              <button 
-                onClick={() => { setIsLoginMode(!isLoginMode); setAuthError(''); }} 
-                className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
-              >
-                {isLoginMode ? t.noAccount : t.hasAccount}
-              </button>
-              {isLoginMode && (
-                <button 
-                  onClick={handleResetPassword} 
-                  type="button"
-                  className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors mt-2"
-                >
-                  {t.forgotPassword}
-                </button>
-              )}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black uppercase text-slate-400">{t.crew}</h4>
+                {(groupedAssignments[selectedGameDetails.id] || []).map(asg => (
+                  <div key={asg.userId} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <span className="font-bold">{asg.userName}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-xs">{t.close}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Name Prompt Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in zoom-in relative">
+            <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-full"><X className="w-5 h-5"/></button>
+            <div className="text-center">
+              <Shield className="w-12 h-12 text-blue-600 mx-auto mb-4"/>
+              <h3 className="text-2xl font-black">{t.login}</h3>
+              <p className="text-xs text-slate-400 mt-1">{t.loginToContinue}</p>
+            </div>
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" placeholder={t.email}/>
+              <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" placeholder={t.password}/>
+              <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg">{isLoginMode ? t.login : t.register}</button>
+            </form>
+            <button onClick={() => setIsLoginMode(!isLoginMode)} className="w-full text-xs font-bold text-slate-500">{isLoginMode ? t.noAccount : t.hasAccount}</button>
+          </div>
+        </div>
+      )}
+
       {showNamePrompt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20">
@@ -4431,116 +4414,96 @@ function MainApp() {
         </div>
       )}
 
-      {/* Admin Modal */}
-      {showAdminModal && (() => {
-        const myMasterProfile = masterUmpires.find(u => u.id === umpireId) || {};
-        return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-            <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
-              <div>
-                <h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3>
-                <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{user?.email}</p>
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
+            <div>
+              <h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3>
+              <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{user?.email}</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.displayName}</p>
+                  <p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p>
+                </div>
+                <button onClick={logoutUmpire} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1 font-black text-[10px] uppercase">
+                  <LogOut className="w-4 h-4" /> {t.logout}
+                </button>
               </div>
-              
-              <div className="space-y-4">
+
+              {features.reminders && umpireId && (
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.displayName}</p>
-                    <p className="text-sm font-bold text-slate-800">{userName || t.setProfile}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.reminderPreferences}</p>
+                    <p className="text-xs font-bold text-slate-700">{t.receiveReminders}</p>
                   </div>
-                  <button onClick={logoutUmpire} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1 font-black text-[10px] uppercase">
-                    <LogOut className="w-4 h-4" /> {t.logout}
-                  </button>
-                </div>
-
-                {features.reminders && umpireId && (
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.reminderPreferences}</p>
-                      <p className="text-xs font-bold text-slate-700">{t.receiveReminders}</p>
-                    </div>
-                    <button 
-                      onClick={() => toggleUmpireReminderPref(umpireId, myMasterProfile.remindersEnabled)}
-                      className={`p-2 rounded-xl transition-colors flex items-center justify-center ${myMasterProfile.remindersEnabled !== false ? 'bg-blue-100 text-blue-600 shadow-inner' : 'bg-slate-200 text-slate-400'}`}
-                    >
-                      {myMasterProfile.remindersEnabled !== false ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
-                    </button>
-                  </div>
-                )}
-                
-                {isAdmin && (
-                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Admin</p>
-                      <p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p>
-                    </div>
-                  </div>
-                )}
-
-                {isSuperAdmin && (
-                  <div className="pt-4 border-t border-slate-100 space-y-3">
-                    <h4 className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2 mb-4">
-                      <Sliders className="w-4 h-4" /> {t.superAdminSettings}
-                    </h4>
-                    
-                    <button onClick={() => toggleSystemFeature('marketplace')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
-                      <span className="text-xs font-bold text-purple-900">{t.featureMarketplace}</span>
-                      <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.marketplace ? 'bg-purple-600' : 'bg-slate-300'}`}>
-                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.marketplace ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </div>
-                    </button>
-                    
-                    <button onClick={() => toggleSystemFeature('evaluations')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
-                      <span className="text-xs font-bold text-purple-900">{t.featureEvaluations}</span>
-                      <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.evaluations ? 'bg-purple-600' : 'bg-slate-300'}`}>
-                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.evaluations ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </div>
-                    </button>
-                    
-                    <button onClick={() => toggleSystemFeature('reminders')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
-                      <span className="text-xs font-bold text-purple-900">{t.featureReminders}</span>
-                      <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.reminders ? 'bg-purple-600' : 'bg-slate-300'}`}>
-                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.reminders ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </div>
-                    </button>
-
-                    {features.reminders && (
-                      <button onClick={forceRunRemindersNow} className="w-full mt-2 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2">
-                        <RefreshCw className="w-3.5 h-3.5" /> {t.runRemindersNow}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                <div className="pt-6 border-t border-slate-100">
                   <button 
-                    onClick={() => { setShowAdminModal(false); setShowChangelogModal(true); }} 
-                    className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50 rounded-2xl transition-colors border border-slate-200 group"
+                    onClick={() => toggleUmpireReminderPref(umpireId, (masterUmpires.find(u => u.id === umpireId) || {}).remindersEnabled)}
+                    className={`p-2 rounded-xl transition-colors flex items-center justify-center ${(masterUmpires.find(u => u.id === umpireId) || {}).remindersEnabled !== false ? 'bg-blue-100 text-blue-600 shadow-inner' : 'bg-slate-200 text-slate-400'}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        <Github className="w-5 h-5" />
-                      </div>
-                      <span className="font-bold text-sm text-slate-700 group-hover:text-blue-700">{t.systemUpdates}</span>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+                    {(masterUmpires.find(u => u.id === umpireId) || {}).remindersEnabled !== false ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
                   </button>
                 </div>
-              </div>
+              )}
               
-              <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">
-                {t.close}
-              </button>
+              {isAdmin && (
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Admin</p>
+                    <p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p>
+                  </div>
+                </div>
+              )}
+
+              {isSuperAdmin && (
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <h4 className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2 mb-4">
+                    <Sliders className="w-4 h-4" /> {t.superAdminSettings}
+                  </h4>
+                  
+                  <button onClick={() => toggleSystemFeature('marketplace')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
+                    <span className="text-xs font-bold text-purple-900">{t.featureMarketplace}</span>
+                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.marketplace ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.marketplace ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </button>
+                  
+                  <button onClick={() => toggleSystemFeature('evaluations')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
+                    <span className="text-xs font-bold text-purple-900">{t.featureEvaluations}</span>
+                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.evaluations ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.evaluations ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </button>
+                  
+                  <button onClick={() => toggleSystemFeature('reminders')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
+                    <span className="text-xs font-bold text-purple-900">{t.featureReminders}</span>
+                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.reminders ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.reminders ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </button>
+
+                  {features.reminders && (
+                    <button onClick={forceRunRemindersNow} className="w-full mt-2 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5" /> {t.runRemindersNow}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
+            
+            <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">
+              {t.close}
+            </button>
           </div>
-        );
-      })()}
+        </div>
+      )}
     </div>
   );
 }
 
-// Export the application wrapped in our ErrorBoundary so it handles crashes gracefully
 export default function App() {
   return (
     <ErrorBoundary>
