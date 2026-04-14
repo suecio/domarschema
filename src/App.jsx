@@ -1053,29 +1053,75 @@ function MainApp() {
       </div>
       
       {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
+        const applicants = applications.filter(a => a.gameId === game.id);
         const gameAssignments = groupedAssignments[game.id] || [];
         const required = game.requiredUmpires || 2;
+        const isEditingThisGame = editingGameData?.id === game.id;
         const isFullyStaffed = gameAssignments.length >= required;
 
         return (
-          <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
+          <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
             <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer" onClick={() => setSelectedGameDetails(game)}>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
                 <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+              <div className="flex items-center gap-1">
+                <button onClick={(e) => { e.stopPropagation(); setEditingGameData(isEditingThisGame ? null : { ...game }); }} className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}><Edit2 className="w-4 h-4" /></button>
+                <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+              </div>
             </div>
+            
+            {isEditingThisGame && (
+              <div className="p-4 bg-blue-50/30 border-b border-slate-100 flex flex-col gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.date}</label><input type="date" value={editingGameData.date || ''} onChange={e => setEditingGameData({...editingGameData, date: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.time}</label><input type="time" value={editingGameData.time || ''} onChange={e => setEditingGameData({...editingGameData, time: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.league}</label><input type="text" value={editingGameData.league || ''} onChange={e => setEditingGameData({...editingGameData, league: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label><select value={editingGameData.requiredUmpires || 2} onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold">{[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.away}</label><input type="text" value={editingGameData.away || ''} onChange={e => setEditingGameData({...editingGameData, away: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.home}</label><input type="text" value={editingGameData.home || ''} onChange={e => setEditingGameData({...editingGameData, home: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                  <div className="space-y-1 sm:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400">{t.location}</label><input type="text" value={editingGameData.location || ''} onChange={e => setEditingGameData({...editingGameData, location: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
+                </div>
+                <div className="flex gap-2"><button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold text-xs uppercase shadow-sm hover:bg-green-700">{t.saveChanges}</button><button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-lg font-bold text-xs uppercase hover:bg-slate-300">{t.cancel}</button></div>
+              </div>
+            )}
             
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                 {gameAssignments.map(asg => (
-                   <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
-                     <div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div>
-                     <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
-                   </div>
-                 ))}
+                 {gameAssignments.map(asg => {
+                   const m = masterUmpires.find(mu => mu.id === asg.userId);
+                   return (
+                     <div key={asg.userId} className={`flex items-center justify-between p-2 rounded-xl border ${asg.pendingChange ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 bg-green-50/30'}`}>
+                       <div className="flex items-center gap-2">
+                         {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <Users className="w-3 h-3 text-green-600" />}
+                         <span className="text-xs font-bold text-slate-700 text-left flex items-center">{asg.userName}{asg.pendingChange && <span className="ml-2 text-[9px] text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded-md uppercase tracking-widest">{t.pendingReply}</span>}</span>
+                         {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLeagueStyles(m.level)}`}>{m.level}</span>}
+                       </div>
+                       <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
+                     </div>
+                   );
+                 })}
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
+                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
+                      const m = masterUmpires.find(mu => mu.id === app.userId); 
+                      return (
+                        <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold">{app.userName}</span>
+                            {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLeagueStyles(m.level)}`}>{m.level}</span>}
+                          </div>
+                          <button disabled={isFullyStaffed} onClick={(e) => { e.stopPropagation(); assignUmpire(game.id, app.userId, app.userName); }} className="bg-blue-600 text-white hover:bg-blue-700 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"><UserPlus className="w-3 h-3" /> Assign</button>
+                        </div>
+                      ); 
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
