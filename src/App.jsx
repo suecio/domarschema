@@ -179,7 +179,7 @@ const translations = {
     tradeGame: "Give Away", cancelTrade: "Cancel Give Away", takeGame: "Take Game", gamesForTrade: "Games Up For Trade",
     noMarketplaceGames: "No games are up for trade right now.", tradeSuccess: "You have taken over the game! Your schedule is updated.",
     tradeConfirm: "Are you sure you want to take over this game?", downloadCalendar: "Download", formatICS: ".ICS File",
-    subtextICS: "För Apple & Outlook", formatCSV: ".CSV File", subtextCSV: "For Google Calendar", evaluate: "Evaluate",
+    subtextICS: "For Apple & Outlook", formatCSV: ".CSV File", subtextCSV: "For Google Calendar", evaluate: "Evaluate",
     grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved",
     yourEval: "Evaluation", selectAdmin: "Select Admin...", selectUmpire: "Select Umpire...", enterTCName: "Enter TC name...",
     umpireShort: "UMP", supShort: "SUP", tcShort: "TC", locations: "Locations", address: "Address", facilities: "Facilities",
@@ -324,6 +324,7 @@ function MainApp() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
   const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
+  const [evalInputs, setEvalInputs] = useState({}); // Stores temporary evaluation input state
   
   const [helpTab, setHelpTab] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') || 'guide' : 'guide'));
   const [readmeContent, setReadmeContent] = useState(null);
@@ -630,6 +631,30 @@ function MainApp() {
   const handleContactSubmit = async (e) => { e.preventDefault(); setContactStatus('sending'); try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: 'admin@domarweb.se', replyTo: contactEmail, message: { subject: `[Kontaktformulär] ${contactSubject}`, text: `Avsändare: ${contactName}\nE-post: ${contactEmail}\n\nMeddelande:\n${contactMessage}` }, createdAt: Date.now() }); setContactStatus('success'); setContactSubject(''); setContactMessage(''); } catch (error) { setContactStatus('error'); } };
   const confirmScheduleChange = async (asgId) => { if (!umpireId) return; try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { pendingChange: false }); } catch (e) { } };
   const handleDeleteGame = async (gameId) => { if(typeof window !== 'undefined' && window.confirm(t.deleteConfirm)) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId)); } };
+
+  const assignOfficial = async (gameId, role, value) => {
+    if (!isAdmin) return;
+    const updateObj = {};
+    if (role === 'supervisor') {
+        const uName = value ? masterUmpires.find(u => u.id === value)?.name : '';
+        updateObj.supervisorId = value;
+        updateObj.supervisorName = uName;
+    } else {
+        updateObj.tcName = value;
+    }
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), updateObj);
+      if (selectedGameDetails?.id === gameId) setSelectedGameDetails(prev => ({ ...prev, ...updateObj }));
+    } catch (e) { }
+  };
+
+  const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
+    if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', `${gameId}_${targetUmpireId}`), { gameId, umpireId: targetUmpireId, evaluatorId: umpireId, grade, comment, timestamp: Date.now() });
+      if (typeof window !== 'undefined') alert(t.evalSaved);
+    } catch (e) { }
+  };
 
   const takeTrade = async (oldAsg, game) => {
     if (!user || !user.email) { setShowAuthModal(true); return; }
@@ -1135,25 +1160,125 @@ function MainApp() {
     </div>
   );
 
-  const renderGameDetailsModal = () => (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-0 sm:p-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto relative">
-        <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full"><X className="w-5 h-5" /></button>
-        <div className="space-y-6 pt-4">
-          <div>
-            <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(selectedGameDetails.league)}`}>{selectedGameDetails.league}</span>
-            <h3 className="text-2xl font-black mt-3">{selectedGameDetails.away} @ {selectedGameDetails.home}</h3>
-            <p className="text-sm text-slate-500 font-bold uppercase mt-1">{selectedGameDetails.date} @ {selectedGameDetails.time}</p>
+  const renderGameDetailsModal = () => {
+    const game = selectedGameDetails;
+    const gameAssignments = groupedAssignments[game.id] || [];
+    const gameApplications = applications.filter(a => a.gameId === game.id);
+    const isGameSupervisor = game.supervisorId === umpireId;
+
+    return (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-0 sm:p-4">
+        <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto relative">
+          <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
+          
+          <div className="space-y-6 pt-4">
+            <div>
+              <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+              <h3 className="text-2xl font-black mt-3">{game.away} @ {game.home}</h3>
+              <p className="text-sm text-slate-500 font-bold uppercase mt-1">{game.date} @ {game.time}</p>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center">
+              <div><p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p><p className="font-bold text-blue-900">{game.location}</p></div>
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.location)}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Map className="w-4 h-4"/> {t.mapDirections}</a>
+            </div>
+
+            <div className="space-y-4 mt-6">
+              <div>
+                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2">{t.crew}</h4>
+                {gameAssignments.length > 0 ? (
+                  <div className="grid gap-2">
+                    {gameAssignments.map(asg => {
+                      const m = masterUmpires.find(mu => mu.id === asg.userId);
+                      const existingEval = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
+                      
+                      return (
+                        <div key={asg.userId} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-slate-800">{asg.userName}</span>
+                              {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                            </div>
+                          </div>
+                          
+                          {features.evaluations && isGameSupervisor && !existingEval && (
+                            <div className="mt-2 pt-3 border-t border-slate-200">
+                              <p className="text-[10px] font-black uppercase text-purple-600 mb-2">{t.evaluate}</p>
+                              <div className="flex flex-col gap-2">
+                                <select onChange={(e) => setEvalInputs(prev => ({...prev, [asg.userId]: {...prev[asg.userId], grade: e.target.value}}))} className="p-2 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-purple-400">
+                                  <option value="0">{t.grade}...</option>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                                <textarea placeholder={t.feedback} onChange={(e) => setEvalInputs(prev => ({...prev, [asg.userId]: {...prev[asg.userId], comment: e.target.value}}))} className="p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-purple-400 min-h-[60px]" />
+                                <button onClick={() => { const input = evalInputs[asg.userId]; if(input && parseInt(input.grade) > 0) { submitEvaluation(game.id, asg.userId, parseInt(input.grade), input.comment || ''); } }} className="bg-purple-600 hover:bg-purple-700 transition-colors text-white py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">
+                                  {t.saveEval}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {existingEval && (isAdmin || asg.userId === umpireId || isGameSupervisor) && (
+                            <div className="mt-2 pt-2 border-t border-slate-200 bg-purple-50 p-3 rounded-lg flex flex-col gap-1">
+                              <p className="text-[10px] font-black uppercase text-purple-600">{t.yourEval}</p>
+                              <div className="flex items-start gap-3 mt-1">
+                                <span className="bg-purple-600 text-white w-6 h-6 shrink-0 flex items-center justify-center rounded-full text-xs font-black">{existingEval.grade}</span>
+                                <span className="text-xs text-purple-900 font-medium italic leading-relaxed">"{existingEval.comment}"</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs italic text-slate-400">{t.notAssigned || "Inga domare tillsatta än."}</p>
+                )}
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2">{t.interests} ({gameApplications.length})</h4>
+                {gameApplications.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {gameApplications.map(app => {
+                      const m = masterUmpires.find(mu => mu.id === app.userId);
+                      return (
+                        <div key={app.userId} className="px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg flex items-center gap-2">
+                          <span className="text-xs font-bold text-blue-800">{app.userName}</span>
+                          {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs italic text-slate-400">{t.noInterests}</p>
+                )}
+              </div>
+
+              {isAdmin && (
+                <div className="pt-4 border-t border-slate-100 space-y-3 bg-slate-50 p-4 rounded-2xl border">
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1"><Shield className="w-3 h-3" /> {t.officials} (Admin)</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500">{t.supervisor}</label>
+                      <select value={game.supervisorId || ''} onChange={(e) => assignOfficial(game.id, 'supervisor', e.target.value)} className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none">
+                        <option value="">{t.selectAdmin}</option>
+                        {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500">{t.techComm}</label>
+                      <input type="text" value={game.tcName || ''} onChange={(e) => assignOfficial(game.id, 'tc', e.target.value)} placeholder={t.enterTCName} className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 mt-6 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-xs hover:bg-slate-200 transition-colors">{t.close}</button>
           </div>
-          <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center">
-            <div><p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p><p className="font-bold text-blue-900">{selectedGameDetails.location}</p></div>
-            <a href={`https://www.google.com/maps/search/?api=1&query=$?q=$${selectedGameDetails.location}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2"><Map className="w-4 h-4"/> {t.mapDirections}</a>
-          </div>
-          <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-xs">{t.close}</button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // --- 7. MAIN RENDER ---
   return (
