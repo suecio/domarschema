@@ -525,14 +525,13 @@ function MainApp() {
     );
   };
 
-
   // --- 5. EFFECTS ---
   useEffect(() => { setEditNoteText(globalNote); }, [globalNote]);
 
   useEffect(() => {
     if (view === 'help' && helpTab === 'about' && readmeContent === null) {
       setReadmeLoading(true);
-      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`).then(res => res.json())
+      fetch(`https://api.github.com/repos/suecio/domarschema/readme`).then(res => res.json())
         .then(data => { if (data.content) { setReadmeContent(decodeURIComponent(escape(atob(data.content)))); } else { setReadmeContent(t.fetchError); }})
         .catch(err => { setReadmeContent(t.fetchError); }).finally(() => setReadmeLoading(false));
     }
@@ -551,15 +550,45 @@ function MainApp() {
     const evalsCol = collection(db, 'artifacts', appId, 'public', 'data', 'evaluations'); const unsubscribeEvals = onSnapshot(evalsCol, (snapshot) => { setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
     const locCol = collection(db, 'artifacts', appId, 'public', 'data', 'locations'); const unsubscribeLocations = onSnapshot(locCol, (snapshot) => { setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
     const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'mail_queue'); const unsubscribeQueue = onSnapshot(queueCol, (snapshot) => { setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
-    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'); const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => { if (snapshot.exists()) { const data = snapshot.data(); setAdminUmpireIds(data.adminUmpireIds || []); setGlobalNote(data.globalNote || ''); if (data.features) { setFeatures(prev => ({ ...prev, ...data.features })); } } }, handleDbError);
-    return () => { unsubscribeGames(); unsubscribeApps(); unsubscribeAssign(); unsubscribeUmpires(); unsubscribeRegUsers(); unsubscribeEvals(); unsubscribeLocations(); unsubscribeQueue(); unsubscribeSettings(); };
+    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+    const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setAdminUmpireIds(data.adminUmpireIds || []);
+        setGlobalNote(data.globalNote || '');
+        if (data.features) {
+           setFeatures(prev => ({ ...prev, ...data.features }));
+        }
+      }
+    }, handleDbError);
+
+    return () => {
+      unsubscribeGames(); 
+      unsubscribeApps(); 
+      unsubscribeAssign(); 
+      unsubscribeUmpires();
+      unsubscribeRegUsers();
+      unsubscribeEvals();
+      unsubscribeLocations();
+      unsubscribeQueue();
+      unsubscribeSettings();
+    };
   }, [user, appId]);
 
   useEffect(() => {
     let unsubscribeProfile = () => {};
+
     if (user && user.email) {
-      const isMaster = user.email === 'suecio@tryempire.com'; setIsSuperAdmin(isMaster); setContactEmail(user.email);
-      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), { email: user.email.toLowerCase(), lastSeen: Date.now() }, { merge: true }).catch(err => { });
+      // FIX: Ensure case-insensitive comparison for Master Admin
+      const isMaster = user.email.toLowerCase() === 'suecio@tryempire.com';
+      setIsSuperAdmin(isMaster);
+      setContactEmail(user.email);
+      
+      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
+        email: user.email.toLowerCase(),
+        lastSeen: Date.now()
+      }, { merge: true }).catch(err => { });
+
       const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
         if (snapshot.exists() && snapshot.data().umpireId) {
@@ -1047,6 +1076,52 @@ function MainApp() {
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Megaphone className="w-4 h-4" /> {t.globalAnnouncement}</h3>
         <textarea value={editNoteText} onChange={(e) => setEditNoteText(e.target.value)} placeholder={t.announcementPlaceholder} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none min-h-[80px]" />
         <div className="flex gap-2 mt-3"><button onClick={saveGlobalNote} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.saveAnnouncement}</button><button onClick={clearGlobalNote} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.clearAnnouncement}</button></div>
+      </div>
+
+      {/* FIX: Restored Master List Section */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users className="w-4 h-4" /> {t.masterList}</h3>
+          {isSuperAdmin && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1"><Shield className="w-3 h-3" /> Master Admin</span>}
+        </div>
+        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+          {masterUmpires.map(u => (
+            <div key={u.id} className="flex flex-col gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+              {editingUmpireId === u.id ? (
+                <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
+                  <input type="text" value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-bold outline-none" />
+                  <select value={tempEditLevel} onChange={(e) => setTempEditLevel(e.target.value)} className="w-32 bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none"><option value="">- {t.level} -</option>{['Internationell', 'Elit', 'Nationell', 'Region', 'Förening'].map(l => <option key={l} value={l}>{l}</option>)}</select>
+                  {!showManualEmailInput ? (
+                    <select value={tempEditEmail} onChange={(e) => { if (e.target.value === 'MANUAL_ENTRY') { setShowManualEmailInput(true); setTempEditEmail(''); } else { setTempEditEmail(e.target.value); } }} className="flex-1 min-w-[150px] bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none">
+                      <option value="">{t.selectEmail}</option>{unconnectedEmails.map(email => <option key={email} value={email}>{email}</option>)}{tempEditEmail && !unconnectedEmails.includes(tempEditEmail) && tempEditEmail !== 'MANUAL_ENTRY' && <option value={tempEditEmail}>{tempEditEmail}</option>}<option value="MANUAL_ENTRY">{t.otherEmail}</option>
+                    </select>
+                  ) : (
+                    <div className="flex-1 flex items-center min-w-[150px] relative">
+                      <input type="email" value={tempEditEmail} onChange={(e) => setTempEditEmail(e.target.value)} placeholder={t.linkEmailPlaceholder} className="w-full bg-white border border-blue-300 px-3 py-1.5 pr-8 rounded-lg text-sm font-bold outline-none" />
+                      <button onClick={() => { setShowManualEmailInput(false); setTempEditEmail(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600"><X className="w-3 h-3" /></button>
+                    </div>
+                  )}
+                  <div className="flex gap-1 items-center">
+                    <button onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel, tempEditEmail); setEditingUmpireId(null); }} className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"><Check className="w-4 h-4" /></button>
+                    <button onClick={() => setEditingUmpireId(null)} className="bg-slate-200 text-slate-600 p-2 rounded-lg hover:bg-slate-300 transition-colors"><X className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2"><span className="text-sm font-bold text-slate-700">{u.name}</span>{u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(u.level)}`}>{u.level}</span>}{(adminUmpireIds || []).includes(u.id) && <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5"><Shield className="w-2 h-2" /> Admin</span>}</div>
+                    <div className="flex items-center gap-4 mt-1">{u.linkedEmail ? <span className="text-[10px] text-green-600 font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t.linkedAccount} {u.linkedEmail}</span> : <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1"><Info className="w-3 h-3" /> {t.notLinked}</span>}</div>
+                  </div>
+                  <div className="flex gap-1 items-start">
+                    {isSuperAdmin && <button onClick={() => toggleUmpireAdmin(u.id)} className={`p-1.5 rounded-lg transition-colors ${(adminUmpireIds || []).includes(u.id) ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-blue-600'}`}><Shield className="w-4 h-4" /></button>}
+                    <button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); setTempEditEmail(u.linkedEmail || ''); setShowManualEmailInput(false); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => deleteMasterUmpire(u.id, u.name, u.linkedEmail)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
