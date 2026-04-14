@@ -649,6 +649,8 @@ function MainApp() {
   };
 
   const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
+    // Säkerställ att man faktiskt är inloggad och behörig (Admin eller Supervisor för matchen)
+    if (!umpireId) return; 
     if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
     try {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', `${gameId}_${targetUmpireId}`), { gameId, umpireId: targetUmpireId, evaluatorId: umpireId, grade, comment, timestamp: Date.now() });
@@ -1210,7 +1212,10 @@ function MainApp() {
     const game = selectedGameDetails;
     const gameAssignments = groupedAssignments[game.id] || [];
     const gameApplications = applications.filter(a => a.gameId === game.id);
-    const isGameSupervisor = game.supervisorId === umpireId;
+    
+    // Fix: umpireId måste existera (vara inloggad), annars kan ett tomt inloggat ID råka matcha ett tomt Supervisor-ID.
+    const isGameSupervisor = Boolean(umpireId && game.supervisorId === umpireId);
+    const canEvaluate = Boolean(umpireId && (isAdmin || isGameSupervisor));
 
     return (
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-0 sm:p-4">
@@ -1247,7 +1252,7 @@ function MainApp() {
                             </div>
                           </div>
                           
-                          {features.evaluations && isGameSupervisor && !existingEval && (
+                          {features.evaluations && canEvaluate && !existingEval && (
                             <div className="mt-2 pt-3 border-t border-slate-200">
                               <p className="text-[10px] font-black uppercase text-purple-600 mb-2">{t.evaluate}</p>
                               <div className="flex flex-col gap-2">
@@ -1262,7 +1267,7 @@ function MainApp() {
                             </div>
                           )}
                           
-                          {existingEval && (isAdmin || asg.userId === umpireId || isGameSupervisor) && (
+                          {existingEval && Boolean(umpireId && (isAdmin || isGameSupervisor || asg.userId === umpireId)) && (
                             <div className="mt-2 pt-2 border-t border-slate-200 bg-purple-50 p-3 rounded-lg flex flex-col gap-1">
                               <p className="text-[10px] font-black uppercase text-purple-600">{t.yourEval}</p>
                               <div className="flex items-start gap-3 mt-1">
