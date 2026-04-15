@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, Component } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, doc, setDoc, onSnapshot, 
-  deleteDoc, writeBatch, addDoc, updateDoc
+  deleteDoc, writeBatch, addDoc, updateDoc, query, where
 } from 'firebase/firestore';
 import { 
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
@@ -424,7 +424,6 @@ function MainApp() {
       ? String(window.__app_id).replace(/[\/\\]/g, '-') 
       : 'baseball-umpire-scheduler';
       
-    // NYTT: Omdirigera till en helt isolerad testdatabas om vi är i Sandbox-läge
     if (isDemoEnv) {
       return `${base}-sandbox-${federation}-${selectedYear}`;
     }
@@ -564,43 +563,95 @@ function MainApp() {
     }
   }, [view, helpTab, readmeContent, t.fetchError]);
 
-  useEffect(() => { const initAuth = async () => { try { if (typeof window !== 'undefined' && window.__initial_auth_token) { try { await signInWithCustomToken(auth, window.__initial_auth_token); } catch (customErr) { await signInAnonymously(auth); } } else { await signInAnonymously(auth); } } catch (err) { } }; initAuth(); const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); }); return () => unsubscribe(); }, []);
+  useEffect(() => { 
+    const initAuth = async () => { 
+      try { 
+        if (typeof window !== 'undefined' && window.__initial_auth_token) { 
+          try { await signInWithCustomToken(auth, window.__initial_auth_token); } catch (customErr) { await signInAnonymously(auth); } 
+        } else { 
+          await signInAnonymously(auth); 
+        } 
+      } catch (err) { } 
+    }; 
+    initAuth(); 
+    const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); }); 
+    return () => unsubscribe(); 
+  }, []);
 
+  // OPTIMERING 1: Statisk/Grunddata som alltid behövs oavsett Historik/Kommande
   useEffect(() => {
-    const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null; if (isCanvas && !user) return; 
+    const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null; 
+    if (isCanvas && !user) return; 
     const handleDbError = (err) => { if (err.code === 'permission-denied') setFirebaseError('permission-denied'); };
-    const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games'); const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => { setGames(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.date || '').localeCompare(b.date || ''))); setFirebaseError(null); }, handleDbError);
-    const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications'); const unsubscribeApps = onSnapshot(appsCol, (snapshot) => { setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
-    const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments'); const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => { setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
-    const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires'); const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => { setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || ''))); }, handleDbError);
-    const regUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'registered_users'); const unsubscribeRegUsers = onSnapshot(regUsersCol, (snapshot) => { setRegisteredEmails([...new Set(snapshot.docs.map(doc => doc.data().email).filter(Boolean))]); }, handleDbError);
-    const evalsCol = collection(db, 'artifacts', appId, 'public', 'data', 'evaluations'); const unsubscribeEvals = onSnapshot(evalsCol, (snapshot) => { setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
-    const locCol = collection(db, 'artifacts', appId, 'public', 'data', 'locations'); const unsubscribeLocations = onSnapshot(locCol, (snapshot) => { setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
-    const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'mail_queue'); const unsubscribeQueue = onSnapshot(queueCol, (snapshot) => { setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    
+    const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires'); 
+    const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => { setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || ''))); }, handleDbError);
+    
+    const regUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'registered_users'); 
+    const unsubscribeRegUsers = onSnapshot(regUsersCol, (snapshot) => { setRegisteredEmails([...new Set(snapshot.docs.map(doc => doc.data().email).filter(Boolean))]); }, handleDbError);
+    
+    const locCol = collection(db, 'artifacts', appId, 'public', 'data', 'locations'); 
+    const unsubscribeLocations = onSnapshot(locCol, (snapshot) => { setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    
+    const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'mail_queue'); 
+    const unsubscribeQueue = onSnapshot(queueCol, (snapshot) => { setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setAdminUmpireIds(data.adminUmpireIds || []);
         setGlobalNote(data.globalNote || '');
-        if (data.features) {
-           setFeatures(prev => ({ ...prev, ...data.features }));
-        }
+        if (data.features) setFeatures(prev => ({ ...prev, ...data.features }));
       }
     }, handleDbError);
 
     return () => {
-      unsubscribeGames(); 
-      unsubscribeApps(); 
-      unsubscribeAssign(); 
       unsubscribeUmpires();
       unsubscribeRegUsers();
-      unsubscribeEvals();
       unsubscribeLocations();
       unsubscribeQueue();
       unsubscribeSettings();
     };
   }, [user, appId]);
+
+  // OPTIMERING 2: Match-specifik data. Lyssnar bara på framtida eller dåtida matcher för att spara Reads!
+  useEffect(() => {
+    const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null; 
+    if (isCanvas && !user) return; 
+    const handleDbError = (err) => { if (err.code === 'permission-denied') setFirebaseError('permission-denied'); };
+
+    const gamesColRef = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+    let gamesQuery = gamesColRef;
+    
+    // Om historik är påslaget, hämta bara gamla matcher. Annars bara dagens och framtida.
+    if (showHistory) {
+      gamesQuery = query(gamesColRef, where('date', '<', today));
+    } else {
+      gamesQuery = query(gamesColRef, where('date', '>=', today));
+    }
+
+    const unsubscribeGames = onSnapshot(gamesQuery, (snapshot) => { 
+      setGames(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.date || '').localeCompare(b.date || ''))); 
+      setFirebaseError(null); 
+    }, handleDbError);
+    
+    const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications'); 
+    const unsubscribeApps = onSnapshot(appsCol, (snapshot) => { setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    
+    const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments'); 
+    const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => { setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+    
+    const evalsCol = collection(db, 'artifacts', appId, 'public', 'data', 'evaluations'); 
+    const unsubscribeEvals = onSnapshot(evalsCol, (snapshot) => { setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); }, handleDbError);
+
+    return () => {
+      unsubscribeGames(); 
+      unsubscribeApps(); 
+      unsubscribeAssign(); 
+      unsubscribeEvals();
+    };
+  }, [user, appId, showHistory, today]);
 
   useEffect(() => {
     let unsubscribeProfile = () => {};
@@ -656,13 +707,12 @@ function MainApp() {
     return () => clearInterval(interval);
   }, [isAdmin, mailQueue, appId, t]);
 
+  // Infinite scroll logic
   useEffect(() => {
     if (analytics) logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
     const handleScroll = () => { 
       if(typeof window !== 'undefined') {
          setShowBackToTop(window.scrollY > 300); 
-         
-         // Infinite scroll: Om användaren är 800 pixlar från botten, ladda 20 fler matcher
          if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 800) {
             setVisibleGamesCount(prev => prev + 20);
          }
@@ -1131,6 +1181,9 @@ function MainApp() {
     <div className="space-y-4 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button>
+        </div>
       </div>
       <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex gap-3 items-start mb-6">
         <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
@@ -1141,7 +1194,7 @@ function MainApp() {
         <div className="bg-white p-12 rounded-3xl text-center border shadow-sm"><div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><CalendarIcon className="w-8 h-8 text-blue-600" /></div><p className="text-slate-500 font-medium mb-6">{t.loginRequiredMsg}</p></div>
       ) : (
         <>
-          {myAssignedGames.map(game => {
+          {myAssignedGames.slice(0, visibleGamesCount).map(game => {
               const myAsg = groupedAssignments[game.id]?.find(a => a.userId === umpireId);
               return (
                 <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white p-4 rounded-2xl border ${myAsg?.pendingChange ? 'border-yellow-400' : 'border-green-200 hover:shadow-md'} flex flex-col gap-3 cursor-pointer`}>
@@ -1241,7 +1294,10 @@ function MainApp() {
 
       <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
         <h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}</h3>
-        <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowHistory(!showHistory)} className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl flex items-center gap-2 ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button>
+          <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
+        </div>
       </div>
       
       {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).slice(0, visibleGamesCount).map(game => {
