@@ -333,7 +333,7 @@ function MainApp() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
   const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
-  const [evalInputs, setEvalInputs] = useState({}); // Stores temporary evaluation input state
+  const [evalInputs, setEvalInputs] = useState({});
   
   const [helpTab, setHelpTab] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') || 'guide' : 'guide'));
   const [readmeContent, setReadmeContent] = useState(null);
@@ -399,22 +399,34 @@ function MainApp() {
 
   const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
 
-  // --- 2. ENVIRONMENT & APP ID ---
+  // Environment Logic
   useEffect(() => {
      if (typeof window !== 'undefined') {
-        if (window.location.hostname === 'schema.domarweb.se') {
-           setIsDemoEnv(false); setFederation('swe'); setLang('sv');
-        } else setIsDemoEnv(true);
+        const host = window.location.hostname;
+        if (host === 'schema.domarweb.se') {
+           setIsDemoEnv(false);
+           setFederation('swe');
+           setLang('sv');
+        } else {
+           setIsDemoEnv(true);
+        }
      }
   }, []);
 
   const appId = useMemo(() => {
-    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\/\\]/g, '-') : 'baseball-umpire-scheduler';
+    const base = typeof window !== 'undefined' && window.__app_id 
+      ? String(window.__app_id).replace(/[\/\\]/g, '-') 
+      : 'baseball-umpire-scheduler';
+      
+    // NYTT: Omdirigera till en helt isolerad testdatabas om vi är i Sandbox-läge
+    if (isDemoEnv) {
+      return `${base}-sandbox-${federation}-${selectedYear}`;
+    }
+    
     return federation === 'swe' ? `${base}-${selectedYear}` : `${base}-${federation}-${selectedYear}`;
-  }, [federation, selectedYear]);
+  }, [federation, selectedYear, isDemoEnv]);
 
-
-  // --- 3. DERIVED DATA (USEMEMO) ---
+  // Derived state that needs to be declared BEFORE it's used
   const calendarWeeks = useMemo(() => {
     const year = currentDate.getFullYear(); const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -686,7 +698,6 @@ function MainApp() {
   };
 
   const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
-    // Säkerställ att man faktiskt är inloggad och behörig (Admin eller Supervisor för matchen)
     if (!umpireId) return; 
     if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
     try {
@@ -823,6 +834,43 @@ function MainApp() {
     if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
   };
 
+  const loadDemoData = async () => {
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      
+      const ump1Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump1Ref, { name: "Anna Andersson", level: "Elit", remindersEnabled: true });
+      const ump2Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump2Ref, { name: "Björn Borg", level: "Region", remindersEnabled: true });
+      const ump3Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump3Ref, { name: "Cecilia Carlsson", level: "Förening", remindersEnabled: true });
+      
+      const loc1Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Örvallen');
+      batch.set(loc1Ref, { address: 'Örvallen 1, Sundbyberg', facilities: ['Omklädningsrum', 'Kiosk', 'Toalett'] });
+      const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
+      batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
+
+      const game1Id = `m-${today.replace(/-/g,'')}-1200-rattvik-sundbyberg`;
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game1Id), {
+        date: today, time: '12:00', league: 'Elitserien', away: 'Rättvik', home: 'Sundbyberg', location: 'Örvallen', requiredUmpires: 2
+      });
+      
+      const dTomorrow = new Date(); dTomorrow.setDate(dTomorrow.getDate() + 1);
+      const tomorrow = `${dTomorrow.getFullYear()}-${String(dTomorrow.getMonth() + 1).padStart(2, '0')}-${String(dTomorrow.getDate()).padStart(2, '0')}`;
+      const game2Id = `m-${tomorrow.replace(/-/g,'')}-1400-leksand-stockholm`;
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game2Id), {
+        date: tomorrow, time: '14:00', league: 'Regionserien', away: 'Leksand', home: 'Stockholm', location: 'Skarpnäck', requiredUmpires: 2
+      });
+
+      await batch.commit();
+      if(typeof window !== 'undefined') alert("Testdata har laddats in i Sandboxen!");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // ==========================================
   // RENDER FUNCTIONS (INLINE FOR SCOPE)
@@ -998,6 +1046,11 @@ function MainApp() {
           <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
             <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
             <p className="text-slate-500 font-medium mb-6">{t.noGames}</p>
+            {isDemoEnv && (
+               <button onClick={loadDemoData} disabled={syncing} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs hover:bg-blue-700 shadow-md transition-colors">
+                 {syncing ? <RefreshCw className="w-4 h-4 animate-spin inline-block" /> : 'Ladda in testdata (Sandbox)'}
+               </button>
+            )}
           </div>
         ) : (
           filteredGames.map(game => {
@@ -1403,11 +1456,14 @@ function MainApp() {
   // --- 7. MAIN RENDER ---
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
+      
+      {/* NYTT: Tydlig varning så du alltid vet när Sandboxen är aktiv */}
       {isDemoEnv && (
-        <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+        <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm z-50 relative">
           <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
         </div>
       )}
+
       <header onClick={() => { setView('schedule'); scrollToTop(); }} className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-20 cursor-pointer">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div className="flex items-center justify-between w-full sm:w-auto">
