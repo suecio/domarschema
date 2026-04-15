@@ -408,19 +408,10 @@ function MainApp() {
      }
   }, []);
 
-const appId = useMemo(() => {
-    const base = typeof window !== 'undefined' && window.__app_id 
-      ? String(window.__app_id).replace(/[\/\\]/g, '-') 
-      : 'baseball-umpire-scheduler';
-      
-    // NYTT: Om vi är i Sandbox (isDemoEnv är true), peka på en helt isolerad databas
-    if (isDemoEnv) {
-      return `${base}-sandbox-${federation}-${selectedYear}`;
-    }
-    
-    // Annars, använd den riktiga live-databasen
+  const appId = useMemo(() => {
+    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\/\\]/g, '-') : 'baseball-umpire-scheduler';
     return federation === 'swe' ? `${base}-${selectedYear}` : `${base}-${federation}-${selectedYear}`;
-  }, [federation, selectedYear, isDemoEnv]);
+  }, [federation, selectedYear]);
 
 
   // --- 3. DERIVED DATA (USEMEMO) ---
@@ -597,7 +588,6 @@ const appId = useMemo(() => {
     let unsubscribeProfile = () => {};
 
     if (user && user.email) {
-      // FIX: Ensure case-insensitive comparison for Master Admin
       const isMaster = user.email.toLowerCase() === 'suecio@tryempire.com';
       setIsSuperAdmin(isMaster);
       setContactEmail(user.email);
@@ -833,47 +823,6 @@ const appId = useMemo(() => {
     if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
   };
 
-  // Laddar in fejkad data i Sandbox-läget så det finns något att arbeta med!
-  const loadDemoData = async () => {
-    setSyncing(true);
-    try {
-      const batch = writeBatch(db);
-      
-      // Add Umpires
-      const ump1Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
-      batch.set(ump1Ref, { name: "Anna Andersson", level: "Elit", remindersEnabled: true });
-      const ump2Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
-      batch.set(ump2Ref, { name: "Björn Borg", level: "Region", remindersEnabled: true });
-      const ump3Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
-      batch.set(ump3Ref, { name: "Cecilia Carlsson", level: "Förening", remindersEnabled: true });
-      
-      // Add Locations
-      const loc1Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Örvallen');
-      batch.set(loc1Ref, { address: 'Örvallen 1, Sundbyberg', facilities: ['Omklädningsrum', 'Kiosk', 'Toalett'] });
-      const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
-      batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
-
-      // Add Games
-      const game1Id = `m-${today.replace(/-/g,'')}-1200-rattvik-sundbyberg`;
-      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game1Id), {
-        date: today, time: '12:00', league: 'Elitserien', away: 'Rättvik', home: 'Sundbyberg', location: 'Örvallen', requiredUmpires: 2
-      });
-      const dTomorrow = new Date(); dTomorrow.setDate(dTomorrow.getDate() + 1);
-      const tomorrow = `${dTomorrow.getFullYear()}-${String(dTomorrow.getMonth() + 1).padStart(2, '0')}-${String(dTomorrow.getDate()).padStart(2, '0')}`;
-      const game2Id = `m-${tomorrow.replace(/-/g,'')}-1400-leksand-stockholm`;
-      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game2Id), {
-        date: tomorrow, time: '14:00', league: 'Regionserien', away: 'Leksand', home: 'Stockholm', location: 'Skarpnäck', requiredUmpires: 2
-      });
-
-      await batch.commit();
-      if(typeof window !== 'undefined') alert("Testdata har laddats in!");
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
 
   // ==========================================
   // RENDER FUNCTIONS (INLINE FOR SCOPE)
@@ -1049,11 +998,6 @@ const appId = useMemo(() => {
           <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
             <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
             <p className="text-slate-500 font-medium mb-6">{t.noGames}</p>
-            {isDemoEnv && (
-               <button onClick={loadDemoData} disabled={syncing} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs hover:bg-blue-700 shadow-md transition-colors">
-                 {syncing ? <RefreshCw className="w-4 h-4 animate-spin inline-block" /> : 'Ladda in testdata (Sandbox)'}
-               </button>
-            )}
           </div>
         ) : (
           filteredGames.map(game => {
@@ -1166,7 +1110,6 @@ const appId = useMemo(() => {
         <div className="flex gap-2 mt-3"><button onClick={saveGlobalNote} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.saveAnnouncement}</button><button onClick={clearGlobalNote} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.clearAnnouncement}</button></div>
       </div>
 
-      {/* FIX: Restored Master List Section */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users className="w-4 h-4" /> {t.masterList}</h3>
@@ -1218,75 +1161,29 @@ const appId = useMemo(() => {
       </div>
       
       {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
-        const applicants = applications.filter(a => a.gameId === game.id);
         const gameAssignments = groupedAssignments[game.id] || [];
         const required = game.requiredUmpires || 2;
-        const isEditingThisGame = editingGameData?.id === game.id;
         const isFullyStaffed = gameAssignments.length >= required;
 
         return (
-          <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed && !isEditingThisGame ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
+          <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
             <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer" onClick={() => setSelectedGameDetails(game)}>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
                 <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={(e) => { e.stopPropagation(); setEditingGameData(isEditingThisGame ? null : { ...game }); }} className={`p-2 transition-colors ${isEditingThisGame ? 'text-blue-600' : 'text-slate-400 hover:text-blue-500'}`}><Edit2 className="w-4 h-4" /></button>
-                <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-              </div>
+              <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
             </div>
-            
-            {isEditingThisGame && (
-              <div className="p-4 bg-blue-50/30 border-b border-slate-100 flex flex-col gap-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.date}</label><input type="date" value={editingGameData.date || ''} onChange={e => setEditingGameData({...editingGameData, date: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.time}</label><input type="time" value={editingGameData.time || ''} onChange={e => setEditingGameData({...editingGameData, time: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.league}</label><input type="text" value={editingGameData.league || ''} onChange={e => setEditingGameData({...editingGameData, league: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.requiredUmpires}</label><select value={editingGameData.requiredUmpires || 2} onChange={(e) => setEditingGameData({ ...editingGameData, requiredUmpires: parseInt(e.target.value) })} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold">{[1, 2, 3, 4, 6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.away}</label><input type="text" value={editingGameData.away || ''} onChange={e => setEditingGameData({...editingGameData, away: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400">{t.home}</label><input type="text" value={editingGameData.home || ''} onChange={e => setEditingGameData({...editingGameData, home: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                  <div className="space-y-1 sm:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400">{t.location}</label><input type="text" value={editingGameData.location || ''} onChange={e => setEditingGameData({...editingGameData, location: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" /></div>
-                </div>
-                <div className="flex gap-2"><button onClick={saveEditedGame} className="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold text-xs uppercase shadow-sm hover:bg-green-700">{t.saveChanges}</button><button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-600 py-2.5 rounded-lg font-bold text-xs uppercase hover:bg-slate-300">{t.cancel}</button></div>
-              </div>
-            )}
             
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                 {gameAssignments.map(asg => {
-                   const m = masterUmpires.find(mu => mu.id === asg.userId);
-                   return (
-                     <div key={asg.userId} className={`flex items-center justify-between p-2 rounded-xl border ${asg.pendingChange ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 bg-green-50/30'}`}>
-                       <div className="flex items-center gap-2">
-                         {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <Users className="w-3 h-3 text-green-600" />}
-                         <span className="text-xs font-bold text-slate-700 text-left flex items-center">{asg.userName}{asg.pendingChange && <span className="ml-2 text-[9px] text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded-md uppercase tracking-widest">{t.pendingReply}</span>}</span>
-                         {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLeagueStyles(m.level)}`}>{m.level}</span>}
-                       </div>
-                       <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
-                     </div>
-                   );
-                 })}
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t.interests}</p>
-                {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).length === 0 ? <p className="text-xs text-slate-400 italic">{t.noInterest}</p> : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {applicants.filter(app => !gameAssignments.some(asg => asg.userId === app.userId)).map(app => { 
-                      const m = masterUmpires.find(mu => mu.id === app.userId); 
-                      return (
-                        <div key={app.userId} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white hover:border-blue-300 transition-all">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold">{app.userName}</span>
-                            {m?.level && <span className={`text-[8px] font-black px-1 rounded border uppercase ${getLeagueStyles(m.level)}`}>{m.level}</span>}
-                          </div>
-                          <button disabled={isFullyStaffed} onClick={(e) => { e.stopPropagation(); assignUmpire(game.id, app.userId, app.userName); }} className="bg-blue-600 text-white hover:bg-blue-700 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"><UserPlus className="w-3 h-3" /> Assign</button>
-                        </div>
-                      ); 
-                    })}
-                  </div>
-                )}
+                 {gameAssignments.map(asg => (
+                   <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                     <div className="flex items-center gap-2"><Users className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div>
+                     <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
+                   </div>
+                 ))}
               </div>
             </div>
           </div>
@@ -1365,6 +1262,15 @@ const appId = useMemo(() => {
               <Shield className="w-5 h-5 text-blue-600" /><div><p className="text-xs font-black text-blue-800 uppercase">Admin</p><p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p></div>
             </div>
           )}
+          {isSuperAdmin && (
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <h4 className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2 mb-4"><Sliders className="w-4 h-4" /> {t.superAdminSettings}</h4>
+              <button onClick={() => toggleSystemFeature('marketplace')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100"><span className="text-xs font-bold text-purple-900">{t.featureMarketplace}</span><div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.marketplace ? 'bg-purple-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.marketplace ? 'translate-x-5' : 'translate-x-0'}`} /></div></button>
+              <button onClick={() => toggleSystemFeature('evaluations')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100"><span className="text-xs font-bold text-purple-900">{t.featureEvaluations}</span><div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.evaluations ? 'bg-purple-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.evaluations ? 'translate-x-5' : 'translate-x-0'}`} /></div></button>
+              <button onClick={() => toggleSystemFeature('reminders')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100"><span className="text-xs font-bold text-purple-900">{t.featureReminders}</span><div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.reminders ? 'bg-purple-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.reminders ? 'translate-x-5' : 'translate-x-0'}`} /></div></button>
+              {features.reminders && <button onClick={forceRunRemindersNow} className="w-full mt-2 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"><RefreshCw className="w-3.5 h-3.5" /> {t.runRemindersNow}</button>}
+            </div>
+          )}
         </div>
         <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px]">{t.close}</button>
       </div>
@@ -1376,7 +1282,7 @@ const appId = useMemo(() => {
     const gameAssignments = groupedAssignments[game.id] || [];
     const gameApplications = applications.filter(a => a.gameId === game.id);
     
-    // Fix: umpireId måste existera (vara inloggad), annars kan ett tomt inloggat ID råka matcha ett tomt Supervisor-ID.
+    // Säkerställ att vi är inloggade och kolla därefter om vi är supervisor för just denna match
     const isGameSupervisor = Boolean(umpireId && game.supervisorId === umpireId);
     const canEvaluate = Boolean(umpireId && (isAdmin || isGameSupervisor));
 
@@ -1600,17 +1506,17 @@ const appId = useMemo(() => {
 
       {user?.email ? (
         umpireId ? (
-          <button onClick={() => setShowAdminModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md">
+          <button onClick={() => setShowAdminModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-5 z-50 border border-blue-800/50 backdrop-blur-md hover:scale-105 transition-transform">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase">{userName ? userName.charAt(0) : '?'}</div>
-              <div className="text-left"><p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{t.userSettings}</p><span className="text-sm font-bold leading-none">{userName}</span></div>
+              <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[11px] font-black uppercase shadow-inner">{userName ? userName.charAt(0) : '?'}</div>
+              <div className="text-left"><p className="text-[8px] font-black uppercase text-blue-300 leading-none mb-0.5">{t.userSettings}</p><span className="text-sm font-bold whitespace-nowrap leading-none">{userName}</span></div>
             </div>
           </button>
         ) : (
-          <button onClick={() => setShowNamePrompt(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-50 backdrop-blur-md animate-pulse"><UserCheck className="w-5 h-5" /><span className="text-sm font-black uppercase">{t.saveName}</span></button>
+          <button onClick={() => setShowNamePrompt(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-50 backdrop-blur-md animate-pulse"><UserCheck className="w-5 h-5" /><span className="text-sm font-black uppercase tracking-widest">{t.saveName}</span></button>
         )
       ) : (
-        <button onClick={() => setShowAuthModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-800/50 backdrop-blur-md"><User className="w-5 h-5" /><span className="text-sm font-black uppercase">{t.login}</span></button>
+        <button onClick={() => setShowAuthModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 z-50 border border-blue-800/50 backdrop-blur-md hover:bg-blue-800 transition-colors"><User className="w-5 h-5" /><span className="text-sm font-black uppercase tracking-widest">{t.login}</span></button>
       )}
 
       {/* Modals */}
