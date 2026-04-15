@@ -24,7 +24,7 @@ import {
 /**
  * Firebase Configuration
  */
-const firebaseConfig = {
+let firebaseConfig = {
   apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
   authDomain: "baseball-umpire-portal.firebaseapp.com",
   projectId: "baseball-umpire-portal",
@@ -33,6 +33,15 @@ const firebaseConfig = {
   appId: "1:163069788280:web:0d236c7ff9710a306c2d8d",
   measurementId: "G-VSWDNDQKE5"
 };
+
+// Sandbox / Canvas override - Byter automatiskt till testdatabas när appen körs i denna miljö
+if (typeof window !== 'undefined' && typeof window.__firebase_config !== 'undefined') {
+  try {
+    firebaseConfig = JSON.parse(window.__firebase_config);
+  } catch (e) {
+    console.error("Failed to parse sandbox config");
+  }
+}
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
@@ -399,10 +408,19 @@ function MainApp() {
      }
   }, []);
 
-  const appId = useMemo(() => {
-    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\/\\]/g, '-') : 'baseball-umpire-scheduler';
+const appId = useMemo(() => {
+    const base = typeof window !== 'undefined' && window.__app_id 
+      ? String(window.__app_id).replace(/[\/\\]/g, '-') 
+      : 'baseball-umpire-scheduler';
+      
+    // NYTT: Om vi är i Sandbox (isDemoEnv är true), peka på en helt isolerad databas
+    if (isDemoEnv) {
+      return `${base}-sandbox-${federation}-${selectedYear}`;
+    }
+    
+    // Annars, använd den riktiga live-databasen
     return federation === 'swe' ? `${base}-${selectedYear}` : `${base}-${federation}-${selectedYear}`;
-  }, [federation, selectedYear]);
+  }, [federation, selectedYear, isDemoEnv]);
 
 
   // --- 3. DERIVED DATA (USEMEMO) ---
@@ -790,8 +808,70 @@ function MainApp() {
 
   const handleDownloadBackup = () => {
     if (!isAdmin || typeof window === 'undefined') return;
-    const blob = new Blob([JSON.stringify({ timestamp: new Date().toISOString(), year: selectedYear, appId, collections: { games, applications, assignments, umpires: masterUmpires, adminUmpireIds, evaluations, locations: locationsData } }, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `umpire-backup-${selectedYear}-${new Date().toISOString().split('T')[0]}.json`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      year: selectedYear,
+      appId: appId,
+      collections: {
+        games,
+        applications,
+        assignments,
+        umpires: masterUmpires,
+        adminUmpireIds,
+        evaluations,
+        locations: locationsData
+      }
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `umpire-backup-${selectedYear}-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
+  };
+
+  // Laddar in fejkad data i Sandbox-läget så det finns något att arbeta med!
+  const loadDemoData = async () => {
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      
+      // Add Umpires
+      const ump1Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump1Ref, { name: "Anna Andersson", level: "Elit", remindersEnabled: true });
+      const ump2Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump2Ref, { name: "Björn Borg", level: "Region", remindersEnabled: true });
+      const ump3Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump3Ref, { name: "Cecilia Carlsson", level: "Förening", remindersEnabled: true });
+      
+      // Add Locations
+      const loc1Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Örvallen');
+      batch.set(loc1Ref, { address: 'Örvallen 1, Sundbyberg', facilities: ['Omklädningsrum', 'Kiosk', 'Toalett'] });
+      const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
+      batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
+
+      // Add Games
+      const game1Id = `m-${today.replace(/-/g,'')}-1200-rattvik-sundbyberg`;
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game1Id), {
+        date: today, time: '12:00', league: 'Elitserien', away: 'Rättvik', home: 'Sundbyberg', location: 'Örvallen', requiredUmpires: 2
+      });
+      const dTomorrow = new Date(); dTomorrow.setDate(dTomorrow.getDate() + 1);
+      const tomorrow = `${dTomorrow.getFullYear()}-${String(dTomorrow.getMonth() + 1).padStart(2, '0')}-${String(dTomorrow.getDate()).padStart(2, '0')}`;
+      const game2Id = `m-${tomorrow.replace(/-/g,'')}-1400-leksand-stockholm`;
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game2Id), {
+        date: tomorrow, time: '14:00', league: 'Regionserien', away: 'Leksand', home: 'Stockholm', location: 'Skarpnäck', requiredUmpires: 2
+      });
+
+      await batch.commit();
+      if(typeof window !== 'undefined') alert("Testdata har laddats in!");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
   };
 
 
@@ -966,7 +1046,15 @@ function MainApp() {
         </div>
       ) : (
         filteredGames.length === 0 ? (
-          <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200"><Info className="w-12 h-12 text-slate-200 mx-auto mb-4" /><p className="text-slate-500 font-medium">{t.noGames}</p></div>
+          <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
+            <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-500 font-medium mb-6">{t.noGames}</p>
+            {isDemoEnv && (
+               <button onClick={loadDemoData} disabled={syncing} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs hover:bg-blue-700 shadow-md transition-colors">
+                 {syncing ? <RefreshCw className="w-4 h-4 animate-spin inline-block" /> : 'Ladda in testdata (Sandbox)'}
+               </button>
+            )}
+          </div>
         ) : (
           filteredGames.map(game => {
             const gameAssignments = groupedAssignments[game.id] || [];
@@ -1409,6 +1497,11 @@ function MainApp() {
   // --- 7. MAIN RENDER ---
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 selection:bg-blue-100">
+      {isDemoEnv && (
+        <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+          <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
+        </div>
+      )}
       <header onClick={() => { setView('schedule'); scrollToTop(); }} className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-20 cursor-pointer">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div className="flex items-center justify-between w-full sm:w-auto">
