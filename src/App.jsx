@@ -396,8 +396,14 @@ function MainApp() {
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [visibleGamesCount, setVisibleGamesCount] = useState(20);
 
   const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+
+  // Återställ pagineringen till 20 om vi byter vy, söker, eller ändrar ett filter
+  useEffect(() => {
+    setVisibleGamesCount(20);
+  }, [searchQuery, filterLeague, filterLocation, filterStatus, showHistory, scheduleViewMode, view]);
 
   // Environment Logic
   useEffect(() => {
@@ -652,7 +658,16 @@ function MainApp() {
 
   useEffect(() => {
     if (analytics) logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
-    const handleScroll = () => { if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); };
+    const handleScroll = () => { 
+      if(typeof window !== 'undefined') {
+         setShowBackToTop(window.scrollY > 300); 
+         
+         // Infinite scroll: Om användaren är 800 pixlar från botten, ladda 20 fler matcher
+         if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 800) {
+            setVisibleGamesCount(prev => prev + 20);
+         }
+      }
+    };
     if (typeof window !== 'undefined') { window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }
   }, [view, selectedYear, lang]);
 
@@ -851,20 +866,36 @@ function MainApp() {
       const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
       batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
 
-      const game1Id = `m-${today.replace(/-/g,'')}-1200-rattvik-sundbyberg`;
-      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game1Id), {
-        date: today, time: '12:00', league: 'Elitserien', away: 'Rättvik', home: 'Sundbyberg', location: 'Örvallen', requiredUmpires: 2
-      });
+      // Skapa 50 slumpmässiga matcher över en tidsperiod
+      const teams = ['Rättvik', 'Sundbyberg', 'Leksand', 'Stockholm', 'Sölvesborg', 'Karlskoga', 'Gefle', 'Tranås'];
+      const locs = ['Örvallen', 'Skarpnäck', 'Leksand IP', 'Shark Park'];
+      const leagues = ['Elitserien', 'Regionserien'];
       
-      const dTomorrow = new Date(); dTomorrow.setDate(dTomorrow.getDate() + 1);
-      const tomorrow = `${dTomorrow.getFullYear()}-${String(dTomorrow.getMonth() + 1).padStart(2, '0')}-${String(dTomorrow.getDate()).padStart(2, '0')}`;
-      const game2Id = `m-${tomorrow.replace(/-/g,'')}-1400-leksand-stockholm`;
-      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', game2Id), {
-        date: tomorrow, time: '14:00', league: 'Regionserien', away: 'Leksand', home: 'Stockholm', location: 'Skarpnäck', requiredUmpires: 2
-      });
+      let currentDate = new Date();
+      for (let i = 0; i < 50; i++) {
+         const gameDate = new Date(currentDate);
+         // Sprid ut datumen framåt i tiden (ca 2 matcher per dag i snitt)
+         gameDate.setDate(currentDate.getDate() + Math.floor(i / 2));
+         const dateStr = `${gameDate.getFullYear()}-${String(gameDate.getMonth() + 1).padStart(2, '0')}-${String(gameDate.getDate()).padStart(2, '0')}`;
+         
+         const t1 = teams[Math.floor(Math.random() * teams.length)];
+         let t2 = teams[Math.floor(Math.random() * teams.length)];
+         while(t1 === t2) t2 = teams[Math.floor(Math.random() * teams.length)]; // Förhindra att ett lag möter sig självt
+         
+         const loc = locs[Math.floor(Math.random() * locs.length)];
+         const l = leagues[Math.floor(Math.random() * leagues.length)];
+         const timeHour = 10 + Math.floor(Math.random() * 8); // Tider mellan kl 10 och 17
+         const timeStr = `${timeHour}:00`;
+         
+         const gameId = `m-${dateStr.replace(/-/g,'')}-${timeStr.replace(':','')}-${t1}-${t2}`.replace(/\s+/g, '').toLowerCase();
+         
+         batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), {
+           date: dateStr, time: timeStr, league: l, away: t1, home: t2, location: loc, requiredUmpires: 2
+         });
+      }
 
       await batch.commit();
-      if(typeof window !== 'undefined') alert("Testdata har laddats in i Sandboxen!");
+      if(typeof window !== 'undefined') alert("50 test-matcher har laddats in i Sandboxen!");
     } catch (e) {
       console.error(e);
     } finally {
@@ -1053,7 +1084,7 @@ function MainApp() {
             )}
           </div>
         ) : (
-          filteredGames.map(game => {
+          filteredGames.slice(0, visibleGamesCount).map(game => {
             const gameAssignments = groupedAssignments[game.id] || [];
             const appsCount = applications.filter(a => a.gameId === game.id).length;
             const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
@@ -1213,7 +1244,7 @@ function MainApp() {
         <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
       </div>
       
-      {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
+      {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).slice(0, visibleGamesCount).map(game => {
         const gameAssignments = groupedAssignments[game.id] || [];
         const required = game.requiredUmpires || 2;
         const isFullyStaffed = gameAssignments.length >= required;
