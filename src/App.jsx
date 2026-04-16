@@ -2239,6 +2239,104 @@ function MainApp() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.facilities}</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={newFacility} 
+                        onChange={(e) => setNewFacility(e.target.value)}
+                        placeholder={t.addFacility}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if(newFacility.trim()){
+                              setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
+                              setNewFacility('');
+                            }
+                          }
+                        }}
+                        className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" 
+                      />
+                      <button 
+                        onClick={() => {
+                          if(newFacility.trim()){
+                            setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
+                            setNewFacility('');
+                          }
+                        }}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xl hover:bg-blue-700"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(editingLocation.facilities || []).map((fac, idx) => (
+                        <div key={idx} className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium text-slate-700">
+                          {fac}
+                          <button onClick={() => {
+                            const newFacs = [...editingLocation.facilities];
+                            newFacs.splice(idx, 1);
+                            setEditingLocation({...editingLocation, facilities: newFacs});
+                          }} className="text-slate-400 hover:text-red-500"><X className="w-3.5 h-3.5"/></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-4 border-t border-slate-100">
+                    <button onClick={saveLocation} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-xs shadow-sm hover:bg-green-700">{t.saveChanges}</button>
+                    <button onClick={() => setEditingLocation(null)} className="flex-1 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-xs hover:bg-slate-300">{t.cancel}</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-800 pr-8 leading-tight">{locDetail.id}</h3>
+                    {locDetail.address && (
+                      <p className="text-slate-500 mt-2 flex items-start gap-2">
+                        <MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {locDetail.address}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t.facilities}</h4>
+                    {locDetail.facilities && locDetail.facilities.length > 0 ? (
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {locDetail.facilities.map((fac, idx) => (
+                          <li key={idx} className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                            <CheckCircle className="w-4 h-4 text-green-500" /> {fac}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm font-medium text-slate-500 italic">{t.noFacilities}</p>
+                    )}
+                  </div>
+
+                  <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-center shadow-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Map className="w-4 h-4" /> {t.mapDirections}
+                    </a>
+                    {isAdmin && (
+                      <button 
+                        onClick={() => setEditingLocation({ ...locDetail })} 
+                        className="sm:flex-none px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" /> {t.editLocation}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {selectedGameDetails && (() => {
         const game = selectedGameDetails;
         const gameAssignments = groupedAssignments[game.id] || [];
