@@ -35,8 +35,11 @@ import {
   CalendarPlus, UserCheck, Edit2, Check, LogOut, ChevronRight, List, ChevronLeft, 
   ArrowUpDown, ArrowUp, Users2, Github, X, AlertTriangle, ArrowLeft, Megaphone, 
   HelpCircle, BookOpen, MessageCircle, Code, Mail, Send, Share2, Map, 
-  ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders, Calculator, Printer, Car, CreditCard
+  ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders
 } from 'lucide-react';
+
+// Import our new component
+import TravelInvoice from './TravelInvoice';
 
 /**
  * Firebase Configuration
@@ -294,7 +297,321 @@ const translations = {
     receiveReminders: "Få e-postpåminnelser om mina kommande matcher",
     runRemindersNow: "Kör Påminnelser Nu",
     reminderEmailSubject: "Påminnelse: Kommande Matcher / Upcoming Games",
-    reminderEmailBody: "Hej {name},\n\nDetta är en automatisk påminnelse om att du är tillsatt på följande matcher under de kommande dagarna:\n\n{gamesListSv}\n\nGlöm inte att logga in i domarportalen om du behöver byta bort en match i sista minuten.\n\n---\n\nHello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement."
+    reminderEmailBody: "Hej {name},\n\nDetta är en automatisk påminnelse om att du är tillsatt på följande matcher under de kommande dagarna:\n\n{gamesListSv}\n\nGlöm inte att logga in i domarportalen om du behöver byta bort en match i sista minuten.\n\n---\n\nHello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement.",
+    
+    // Travel Invoice Translations
+    invoiceTitle: "Reseräkning",
+    digitalSubmission: "Digital inlämning",
+    personalInfo: "Personuppgifter",
+    pnr: "Personnummer",
+    streetAddress: "Gatuadress",
+    zipCity: "Postnummer & Ort",
+    bankAccount: "Bank & Kontonummer",
+    tripsAllowance: "Resor (Milersättning & Restid)",
+    assignmentDetails: "Ändamål (Vilka lag spelade?)",
+    travelFrom: "Resa Från",
+    travelTo: "Resa Till",
+    roundTrip: "Tur & Retur",
+    distanceMil: "Antal Mil",
+    calcAuto: "Beräkna avstånd (Auto)",
+    calculating: "Beräknar...",
+    addTrip: "Lägg till ytterligare en resa",
+    expensesAllowance: "Övriga Utlägg & Traktamente",
+    description: "Beskrivning",
+    amount: "Belopp (kr)",
+    addExpense: "Lägg till utlägg",
+    overnightNights: "Övernattningstraktamente (Antal nätter)",
+    advanceDeduction: "Avgår förskott (kr)",
+    summary: "Sammanställning",
+    mileageComp: "Milersättning",
+    travelTimeComp: "Restidsersättning",
+    overnightComp: "Övernattningstraktamente",
+    otherExpenses: "Övriga Utlägg",
+    totalToReceive: "Totalt att erhålla",
+    createPdf: "Skapa PDF / Skriv ut",
+    sendToFed: "Skicka in till Förbundet",
+    sentSuccess: "Insänt & Klart!",
+    sentSuccessDesc: "Din reseräkning har skickats till Förbundet.",
+    newInvoice: "Skapa ny reseräkning",
+    selectGame: "-- Välj en av dina matcher --",
+    homeLocation: "Hem",
+    homeAddressLabel: "Hemadress",
+    foundAssignments: "Hittade uppdrag:"
+  },
+  en: {
+    appTitle: "Umpire Portal",
+    season: "Season",
+    schedule: "Schedule",
+    myGames: "My Games",
+    umpireList: "Umpire List",
+    staffing: "Staffing",
+    analytics: "Analytics",
+    history: "History",
+    upcoming: "Upcoming",
+    archived: "Archived Games",
+    activeSchedule: "Active Schedule",
+    searchPlaceholder: "Search...",
+    allSeries: "All Series",
+    allLocations: "All Locations",
+    noGames: "No games found.",
+    syncNow: "Sync Federation Data Now",
+    applied: "Interested",
+    interested: "Interested",
+    withdraw: "Withdraw",
+    assignedTo: "Crew",
+    staffed: "Fully Staffed",
+    partiallyStaffed: "Partially Staffed",
+    needsUmpire: "Needs Umpire",
+    bulkImport: "Bulk Import",
+    pendingAssignments: "Staffing Desk",
+    staffingControl: "Staffing Control",
+    hideStaffed: "Hide Fully Staffed",
+    showAll: "Show All Games",
+    removeAssignment: "Remove",
+    deleteGame: "Delete Game",
+    deleteConfirm: "Are you sure you want delete this game?",
+    deleteAllGames: "Clear Entire Season",
+    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
+    deleteAllSuccess: "Season cleared successfully.",
+    downloadBackup: "Download Backup (JSON)",
+    umpire: "Umpire",
+    interests: "Interests",
+    gamesAssigned: "Games Assigned",
+    assignmentRate: "Assignment Rate",
+    noStats: "No engagement data recorded yet.",
+    mySchedule: "My Schedule",
+    noInterest: "You have no confirmed assignments yet.",
+    noPendingInterest: "You haven't marked interest in any matches.",
+    confirmed: "Confirmed",
+    settings: "Settings",
+    userSettings: "User Settings",
+    profileAccess: "Configure profile & access",
+    displayName: "Display Name",
+    namePlaceholder: "Search or type name...",
+    logout: "Logout",
+    close: "Close",
+    status: "Status",
+    setProfile: "Select Your Profile",
+    pasteSheet: "Paste from Google Sheets",
+    addGames: "Add Games",
+    importSuccess: "Import Successful",
+    cancel: "Cancel",
+    date: "Date",
+    crew: "Umpire Crew",
+    addToCalendar: "Add to Calendar",
+    downloadFullSchedule: "Download (.ics)",
+    confirmedGames: "Confirmed Assignments",
+    interestedGames: "Interested Matches",
+    nameRequiredTitle: "Who are you?",
+    nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.",
+    saveName: "Select Profile",
+    addNewName: "Can't find your name?",
+    createUmpire: "Create new profile",
+    masterList: "Umpire Master List",
+    editName: "Edit Name",
+    save: "Save",
+    selectFromList: "Select from list",
+    changeUser: "Change User",
+    editMatch: "Edit Match Details",
+    home: "Home",
+    away: "Away",
+    time: "Time",
+    location: "Location",
+    league: "League",
+    saveChanges: "Save Changes",
+    listView: "List",
+    calendarView: "Calendar",
+    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    requiredUmpires: "Crew Size",
+    level: "Level",
+    name: "Name",
+    sortBy: "Sort by",
+    week: "W.",
+    systemUpdates: "System Updates",
+    fetchError: "Could not fetch data",
+    login: "Login",
+    register: "Register",
+    email: "Email Address",
+    password: "Password",
+    forgotPassword: "Forgot Password?",
+    loginToContinue: "Login to continue",
+    createAnAccount: "Create a new account",
+    noAccount: "No account? Register here",
+    hasAccount: "Already have an account? Login",
+    loginRequiredMsg: "You must be logged in to view this.",
+    adminManagement: "Admin Roles",
+    addAdmin: "Add Admin",
+    adminAdded: "Admin added",
+    adminRemoved: "Admin removed",
+    masterAdminInfo: "You are logged in as Master Admin.",
+    linkedAccount: "Account:",
+    notLinked: "No account",
+    linkEmailPlaceholder: "Link email...",
+    selectEmail: "-- Select Email --",
+    otherEmail: "+ Enter other...",
+    umpireProfile: "Umpire Profile",
+    back: "Back",
+    assignedMatches: "Assigned Matches",
+    noAssignedMatches: "No assigned matches yet.",
+    totalAssignments: "Assignments",
+    totalInterests: "Interests",
+    deleteUmpireConfirm: "Are you sure you want to remove",
+    umpireDeletedSubject: "Your umpire profile has been removed",
+    umpireDeletedBody: "Hello,\n\nAn admin has removed your umpire profile from the scheduling system.",
+    assignmentEmailSubject: "New Match Assignment",
+    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}.",
+    myGamesReminder: "Important! If you need to cancel an assigned game, it is your responsibility to find a replacement and notify the elite umpire group.",
+    globalAnnouncement: "Global Announcement",
+    saveAnnouncement: "Publish",
+    clearAnnouncement: "Clear",
+    announcementPlaceholder: "Type an important message to display to everyone...",
+    helpAndInfo: "Help & Info",
+    guide: "Getting Started",
+    faq: "FAQ",
+    about: "About App",
+    guideStep1Title: "1. Create an account",
+    guideStep1Desc: "Click the login icon and select 'Create a new account'. Fill in your email address and a secure password.",
+    guideStep2Title: "2. Search for your profile",
+    guideStep2Desc: "Immediately after logging in, the 'Who are you?' prompt appears. Type your name into the search bar.",
+    guideStep3Title: "3. Confirm & Link",
+    guideStep3Desc: "Click your name in the list. This permanently links your account to the official profile, syncing your schedule across devices.",
+    guideStep4Title: "4. Name Missing?",
+    guideStep4Desc: "If you are completely new and not in the list, click 'Can't find your name?' to create a brand new profile from scratch.",
+    faq1Q: "Can I change my linked profile if I made a mistake?",
+    faq1A: "No, for security reasons your account is locked to the chosen profile. Contact an administrator to reset the link.",
+    faq2Q: "How do I apply to umpire a game?",
+    faq2A: "Navigate to 'Schedule' and click the blue 'Interested' button next to the games you are available for.",
+    faq3Q: "Who assigns the games?",
+    faq3A: "You mark your interest, but the Elite Umpire Group/Administrators make the final staffing assignments.",
+    faq4Q: "Why is my stats page empty?",
+    faq4A: "Your statistics will be generated as soon as you mark interest for a game or receive an assignment.",
+    faq5Q: "How does the marketplace work?",
+    faq5A: "If you cannot umpire a game, click 'Give Away' under My Games. It will be listed on the Marketplace. You are responsible for the game until someone else clicks 'Take Game'.",
+    loadingReadme: "Fetching README from GitHub...",
+    contactUs: "Contact Us",
+    contactDesc: "Need help or have a question? Send us a message and we'll assist you.",
+    subject: "Subject",
+    message: "Message",
+    sendMsg: "Send Message",
+    sending: "Sending...",
+    msgSentTitle: "Message Sent!",
+    msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
+    sendAnother: "Send another message",
+    shareGuide: "Share Guide",
+    linkCopied: "Link copied to clipboard!",
+    sendSchedules: "Send Schedules",
+    reviewEmails: "Review Emails",
+    customEmailMessage: "Custom Message (Optional)",
+    customEmailPlaceholder: "Type a message to appear at the top of the email for everyone...",
+    sendAllEmails: "Send to {count} umpires",
+    missingEmailWarning: "{count} umpires have assignments but no email linked:",
+    emailPreview: "Email Preview",
+    emailsSentSuccess: "All schedules have been sent successfully!",
+    bookedIn: "Booked in",
+    filterStatusAll: "All Statuses",
+    noInterests: "No Interests",
+    coUmpires: "Co-umpires:",
+    noCoUmpires: "No co-umpires",
+    calendarColumn: "Calendar",
+    gameDetails: "Game Details",
+    mapDirections: "Open Map",
+    officials: "Officials",
+    supervisor: "Supervisor",
+    techComm: "Technical Commissioner",
+    notAssigned: "Not Assigned",
+    yourGame: "Your Game",
+    marketplace: "Marketplace",
+    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires. Taking a game immediately assigns it to you.",
+    tradeGame: "Give Away",
+    cancelTrade: "Cancel Give Away",
+    takeGame: "Take Game",
+    gamesForTrade: "Games Up For Trade",
+    noMarketplaceGames: "No games are up for trade right now.",
+    tradeSuccess: "You have taken over the game! Your schedule is updated.",
+    tradeConfirm: "Are you sure you want to take over this game?",
+    downloadCalendar: "Download",
+    formatICS: ".ICS File",
+    subtextICS: "For Apple & Outlook",
+    formatCSV: ".CSV File",
+    subtextCSV: "For Google Calendar",
+    evaluate: "Evaluate",
+    grade: "Grade",
+    feedback: "Feedback / Comment",
+    saveEval: "Save Evaluation",
+    evalSaved: "Evaluation Saved",
+    yourEval: "Evaluation",
+    selectAdmin: "Select Admin...",
+    selectUmpire: "Select Umpire...",
+    enterTCName: "Enter TC name...",
+    umpireShort: "UMP",
+    supShort: "SUP",
+    tcShort: "TC",
+    locations: "Locations",
+    address: "Address",
+    facilities: "Facilities",
+    noFacilities: "No facilities listed",
+    addFacility: "Add facility...",
+    editLocation: "Edit Location",
+    noLocationsInfo: "Click on a location to view details or add an address and facilities.",
+    matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
+    acceptTime: "Accept New Time",
+    declineTime: "Cannot Make It",
+    timeChangedBadge: "Time Changed",
+    pendingReply: "Pending Reply",
+    emailMatchMovedSubject: "Schedule Updated ({count} games) / Spelschema uppdaterat",
+    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma nämnda matcher, eller om du måste lämna återbud.",
+    pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games.",
+    sendQueuedNow: "Send Now",
+    actionRequired: "Action Required",
+    superAdminSettings: "System Architecture (Super Admin)",
+    featureMarketplace: "Enable Marketplace (Trade Board)",
+    featureEvaluations: "Enable Evaluation System",
+    featureReminders: "Automated Email Reminders (Upcoming Games)",
+    reminderPreferences: "My Notifications",
+    receiveReminders: "Receive email reminders for my upcoming games",
+    runRemindersNow: "Run Reminders Cron",
+    reminderEmailSubject: "Upcoming Games Reminder / Påminnelse om kommande matcher",
+    reminderEmailBody: "Hello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement.\n\n---\n\nHej {name},\n\nDetta är en automatisk påminnelse om att du är tillsatt på följande matcher under de kommande dagarna:\n\n{gamesListSv}\n\nGlöm inte att logga in i domarportalen om du behöver byta bort en match i sista minuten.",
+    
+    // Travel Invoice Translations
+    invoiceTitle: "Travel Invoice",
+    digitalSubmission: "Digital Submission",
+    personalInfo: "Personal Information",
+    pnr: "Personal ID (PNR)",
+    streetAddress: "Street Address",
+    zipCity: "Zip Code & City",
+    bankAccount: "Bank Account",
+    tripsAllowance: "Trips (Mileage & Travel Time)",
+    assignmentDetails: "Assignment (Which teams played?)",
+    travelFrom: "Travel From",
+    travelTo: "Travel To",
+    roundTrip: "Round Trip",
+    distanceMil: "Distance (Mil)",
+    calcAuto: "Calculate Distance (Auto)",
+    calculating: "Calculating...",
+    addTrip: "Add another trip",
+    expensesAllowance: "Other Expenses & Allowance",
+    description: "Description",
+    amount: "Amount (SEK)",
+    addExpense: "Add Expense",
+    overnightNights: "Overnight Allowance (Nights)",
+    advanceDeduction: "Advance Deduction (SEK)",
+    summary: "Summary",
+    mileageComp: "Mileage Compensation",
+    travelTimeComp: "Travel Time Compensation",
+    overnightComp: "Overnight Allowance",
+    otherExpenses: "Other Expenses",
+    totalToReceive: "Total to Receive",
+    createPdf: "Create PDF / Print",
+    sendToFed: "Send to Federation",
+    sentSuccess: "Submitted Successfully!",
+    sentSuccessDesc: "Your travel invoice has been sent to the Federation.",
+    newInvoice: "Create new invoice",
+    selectGame: "-- Select an assigned game --",
+    homeLocation: "Home",
+    homeAddressLabel: "Home Address",
+    foundAssignments: "Found assignments:"
   }
 };
 
@@ -388,531 +705,6 @@ class ErrorBoundary extends Component {
     }
     return this.props.children; 
   }
-}
-
-// ==========================================
-// TRAVEL INVOICE COMPONENT (Inbakad för Sandboxen)
-// ==========================================
-function TravelInvoiceView({ db, appId, locationsData }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [calculatingIndex, setCalculatingIndex] = useState(null);
-
-  // Form State
-  const [personalInfo, setPersonalInfo] = useState({
-    name: '', pnr: '', address: '', zipCity: '', bank: ''
-  });
-
-  const [trips, setTrips] = useState([
-    { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true }
-  ]);
-
-  const [expenses, setExpenses] = useState([
-    { id: Date.now(), description: '', amount: '' }
-  ]);
-
-  const [advance, setAdvance] = useState('');
-  const [overnightCount, setOvernightCount] = useState('');
-
-  const handlePersonalInfoChange = (e) => {
-    setPersonalInfo({ ...personalInfo, [e.target.name]: e.target.value });
-  };
-
-  const handleTripChange = (id, field, value) => {
-    setTrips(trips.map(trip => trip.id === id ? { ...trip, [field]: value } : trip));
-  };
-
-  const addTrip = () => {
-    setTrips([...trips, { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true }]);
-  };
-
-  const removeTrip = (id) => {
-    if (trips.length > 1) setTrips(trips.filter(trip => trip.id !== id));
-  };
-
-  const handleExpenseChange = (id, field, value) => {
-    setExpenses(expenses.map(exp => exp.id === id ? { ...exp, [field]: value } : exp));
-  };
-
-  const addExpense = () => {
-    setExpenses([...expenses, { id: Date.now(), description: '', amount: '' }]);
-  };
-
-  const removeExpense = (id) => {
-    setExpenses(expenses.filter(exp => exp.id !== id));
-  };
-
-  // --- Auto Calculate Distance (OpenStreetMap/OSRM) ---
-  const calculateDistance = async (index) => {
-    const trip = trips[index];
-    if (!trip.from || !trip.to) {
-      alert("Fyll i både 'Från' och 'Till' för att kunna beräkna avståndet automatiskt.");
-      return;
-    }
-
-    setCalculatingIndex(index);
-    try {
-      const resolveAddress = (input) => {
-        const found = locationsData.find(l => l.id.toLowerCase() === input.toLowerCase());
-        return found && found.address ? found.address : input;
-      };
-
-      const fromAddress = resolveAddress(trip.from);
-      const toAddress = resolveAddress(trip.to);
-
-      const fromRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fromAddress + ', Sweden')}`);
-      const fromData = await fromRes.json();
-      
-      const toRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(toAddress + ', Sweden')}`);
-      const toData = await toRes.json();
-
-      if (fromData.length === 0 || toData.length === 0) {
-        throw new Error("Kunde inte hitta exakta koordinater för angivna platser.");
-      }
-
-      const lon1 = fromData[0].lon; const lat1 = fromData[0].lat;
-      const lon2 = toData[0].lon; const lat2 = toData[0].lat;
-
-      const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`);
-      const routeData = await routeRes.json();
-
-      if (routeData.routes && routeData.routes.length > 0) {
-        const distanceMeters = routeData.routes[0].distance;
-        let mil = distanceMeters / 10000; 
-        if (trip.roundTrip) mil *= 2;
-        
-        handleTripChange(trip.id, 'distance', mil.toFixed(1));
-      } else {
-         throw new Error("Kunde inte hitta en giltig körrutt.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Automatisk beräkning misslyckades. Vänligen skriv in avståndet manuellt.");
-    } finally {
-      setCalculatingIndex(null);
-    }
-  };
-
-  const calculated = useMemo(() => {
-    let totalMilage = 0;
-    let travelBonus = 0;
-
-    trips.forEach(trip => {
-      const dist = parseFloat(trip.distance) || 0;
-      totalMilage += dist;
-      if (dist >= 20) travelBonus += 200;
-      else if (dist >= 10) travelBonus += 100;
-    });
-
-    const milageCost = totalMilage * 25; 
-    const overnightCost = (parseInt(overnightCount) || 0) * 150;
-    
-    let totalExpenses = 0;
-    expenses.forEach(exp => { totalExpenses += (parseFloat(exp.amount) || 0); });
-
-    const advanceNum = parseFloat(advance) || 0;
-    const total = (milageCost + travelBonus + overnightCost + totalExpenses) - advanceNum;
-
-    return { totalMilage, milageCost, travelBonus, overnightCost, totalExpenses, advance: advanceNum, total };
-  }, [trips, expenses, overnightCount, advance]);
-
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const tripsText = trips.map(t => `- ${t.date}: ${t.from} till ${t.to} (${t.roundTrip ? 'T&R' : 'Enkel'}), ${t.distance} mil. Ändamål: ${t.assignment}`).join('\n');
-      const expensesText = expenses.filter(e => e.description && e.amount).map(e => `- ${e.description}: ${e.amount} kr`).join('\n') || 'Inga övriga utlägg';
-
-      const emailBody = `
-NY RESERÄKNING INSKICKAD
---------------------------------------------------
-PERSONUPPGIFTER
-Namn: ${personalInfo.name}
-Personnummer: ${personalInfo.pnr}
-Adress: ${personalInfo.address}, ${personalInfo.zipCity}
-Bankkonto: ${personalInfo.bank}
-
-RESOR
-${tripsText}
-
-ERSÄTTNING ATT UTBETALA
-Milersättning (${calculated.totalMilage} mil á 25 kr): ${calculated.milageCost} kr
-Restidsersättning: ${calculated.travelBonus} kr
-Övernattningstraktamente (${overnightCount || 0} st): ${calculated.overnightCost} kr
-
-ÖVRIGA UTLÄGG
-${expensesText}
-Totalt utlägg: ${calculated.totalExpenses} kr
-
-AVDRAG FÖRSKOTT: -${calculated.advance} kr
---------------------------------------------------
-TOTALT ATT ERHÅLLA: ${calculated.total} kr
-      `;
-
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: 'info@sbslf.se',
-        message: {
-          subject: `Reseräkning: ${personalInfo.name} (${calculated.total} kr)`,
-          text: emailBody
-        },
-        createdAt: Date.now()
-      });
-      setSuccess(true);
-    } catch (err) {
-      console.error(err);
-      alert("Ett fel uppstod. Vänligen försök igen eller skriv ut som PDF.");
-    }
-    setIsSubmitting(false);
-  };
-
-  if (success) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center p-4">
-        <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center">
-          <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
-          <h2 className="text-2xl font-black text-slate-800 mb-2">Insänt & Klart!</h2>
-          <p className="text-slate-600 mb-8 font-medium">Din reseräkning har skickats till Förbundet (info@sbslf.se).</p>
-          <button onClick={() => setSuccess(false)} className="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-black uppercase text-xs hover:bg-slate-200 transition-colors">
-            Skapa ny reseräkning
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full font-sans print:bg-white print:p-0">
-      <div className="max-w-4xl mx-auto space-y-6 p-4 sm:p-8 print:hidden pt-20 sm:pt-8">
-        
-        <div className="text-center space-y-2 mb-8">
-          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
-            <FileText className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-black text-slate-800">SBSF Reseräkning</h1>
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Digital inlämning</p>
-        </div>
-
-        <datalist id="location-list">
-          {locationsData.map((loc, i) => <option key={i} value={loc.id}>{loc.address || loc.id}</option>)}
-        </datalist>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <User className="w-4 h-4" /> Personuppgifter
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Namn</label>
-                <input required type="text" name="name" value={personalInfo.name} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Personnummer</label>
-                <input required type="text" name="pnr" value={personalInfo.pnr} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Gatuadress</label>
-                <input required type="text" name="address" value={personalInfo.address} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Postnummer & Ort</label>
-                <input required type="text" name="zipCity" value={personalInfo.zipCity} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Bank & Kontonummer</label>
-                <input required type="text" name="bank" value={personalInfo.bank} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                <Car className="w-4 h-4" /> Resor (Milersättning & Restid)
-              </h2>
-            </div>
-            
-            <div className="space-y-6">
-              {trips.map((trip, index) => (
-                <div key={trip.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative">
-                  {trips.length > 1 && (
-                    <button type="button" onClick={() => removeTrip(trip.id)} className="absolute -top-3 -right-3 bg-red-100 text-red-600 p-2 rounded-full hover:bg-red-200">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                    <div className="sm:col-span-3 space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Datum</label>
-                      <input required type="date" value={trip.date} onChange={(e) => handleTripChange(trip.id, 'date', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
-                    </div>
-                    <div className="sm:col-span-9 space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Ändamål (Vilka lag spelade?)</label>
-                      <input required type="text" value={trip.assignment} onChange={(e) => handleTripChange(trip.id, 'assignment', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
-                    </div>
-                    
-                    <div className="sm:col-span-4 space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Resa Från</label>
-                      <input required type="text" list="location-list" value={trip.from} onChange={(e) => handleTripChange(trip.id, 'from', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
-                    </div>
-                    <div className="sm:col-span-4 space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Resa Till</label>
-                      <input required type="text" list="location-list" value={trip.to} onChange={(e) => handleTripChange(trip.id, 'to', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
-                    </div>
-                    <div className="sm:col-span-2 space-y-1 flex flex-col justify-end">
-                      <label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]">
-                        <input type="checkbox" checked={trip.roundTrip} onChange={(e) => handleTripChange(trip.id, 'roundTrip', e.target.checked)} className="w-4 h-4 text-blue-600" />
-                        <span className="text-[10px] font-black uppercase text-slate-600">Tur & Retur</span>
-                      </label>
-                    </div>
-                    <div className="sm:col-span-2 space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Antal Mil</label>
-                      <input required type="number" step="0.1" value={trip.distance} onChange={(e) => handleTripChange(trip.id, 'distance', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-blue-600" />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex justify-end">
-                    <button 
-                      type="button" 
-                      onClick={() => calculateDistance(index)}
-                      disabled={calculatingIndex === index}
-                      className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-colors"
-                    >
-                      {calculatingIndex === index ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
-                      {calculatingIndex === index ? 'Beräknar...' : 'Beräkna avstånd (Auto)'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-              
-              <button type="button" onClick={addTrip} className="w-full py-3 border-2 border-dashed border-slate-200 text-slate-500 rounded-xl font-black uppercase text-xs hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center justify-center gap-2">
-                <Plus className="w-4 h-4" /> Lägg till ytterligare en resa
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <CreditCard className="w-4 h-4" /> Övriga Utlägg & Traktamente
-            </h2>
-            
-            <div className="space-y-4 mb-6">
-              {expenses.map((exp) => (
-                <div key={exp.id} className="flex items-center gap-4">
-                  <input type="text" placeholder="Beskrivning (t.ex. Tågbiljett, Parkering)" value={exp.description} onChange={(e) => handleExpenseChange(exp.id, 'description', e.target.value)} className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                  <input type="number" placeholder="Belopp (kr)" value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-32 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                  {expenses.length > 1 && (
-                    <button type="button" onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-red-500"><X className="w-5 h-5"/></button>
-                  )}
-                </div>
-              ))}
-              <button type="button" onClick={addExpense} className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1 hover:underline">
-                <Plus className="w-3 h-3" /> Lägg till utlägg
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Övernattningstraktamente (Antal nätter)</label>
-                <div className="relative">
-                  <input type="number" min="0" value={overnightCount} onChange={(e) => setOvernightCount(e.target.value)} placeholder="0" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">á 150 kr</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">Avgår förskott (kr)</label>
-                <input type="number" value={advance} onChange={(e) => setAdvance(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-800 text-white p-6 sm:p-8 rounded-3xl shadow-xl">
-            <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <Calculator className="w-4 h-4" /> Sammanställning
-            </h2>
-            
-            <div className="space-y-3 text-sm font-medium">
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">Milersättning ({calculated.totalMilage} mil á 25 kr)</span>
-                <span>{calculated.milageCost} kr</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">Restidsersättning (>10 mil/resa: 100kr, >20 mil: 200kr)</span>
-                <span>{calculated.travelBonus} kr</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">Övernattningstraktamente ({overnightCount || 0} st)</span>
-                <span>{calculated.overnightCost} kr</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">Övriga Utlägg</span>
-                <span>{calculated.totalExpenses} kr</span>
-              </div>
-              {calculated.advance > 0 && (
-                <div className="flex justify-between items-center border-b border-slate-700 pb-2 text-red-400">
-                  <span>Avgår förskott</span>
-                  <span>-{calculated.advance} kr</span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 pt-4 flex justify-between items-end">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">Totalt att erhålla</span>
-              <span className="text-4xl font-black text-green-400">{calculated.total} <span className="text-xl">kr</span></span>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 pt-4 print:hidden">
-            <button 
-              type="button" 
-              onClick={() => window.print()}
-              className="flex-1 py-4 bg-white border-2 border-slate-200 text-slate-700 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
-            >
-              <Printer className="w-4 h-4" /> Skapa PDF / Skriv ut
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="flex-1 py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 
-              Skicka in till Förbundet
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* PRINT VIEW (A4 Optimized Template) */}
-      <div className="hidden print:block w-[190mm] mx-auto text-black p-4 text-[12px] leading-snug">
-        <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-4">
-          <div>
-            <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
-            <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
-          </div>
-          <div className="text-right text-[10px]">
-            <p>Datum: {new Date().toLocaleDateString('sv-SE')}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-6">
-          <div><span className="font-bold">Namn:</span> {personalInfo.name}</div>
-          <div><span className="font-bold">Personnummer:</span> {personalInfo.pnr}</div>
-          <div><span className="font-bold">Gatuadress:</span> {personalInfo.address}</div>
-          <div><span className="font-bold">Postnummer & Ort:</span> {personalInfo.zipCity}</div>
-          <div className="col-span-2"><span className="font-bold">Bank & Kontonummer:</span> {personalInfo.bank}</div>
-        </div>
-
-        <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Uppdrag & Resor</h3>
-        <table className="w-full border-collapse border border-black mb-6 text-[11px]">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-black p-1.5 text-left">Datum</th>
-              <th className="border border-black p-1.5 text-left">Ändamål</th>
-              <th className="border border-black p-1.5 text-left">Från</th>
-              <th className="border border-black p-1.5 text-left">Till</th>
-              <th className="border border-black p-1.5 text-center">T&R</th>
-              <th className="border border-black p-1.5 text-right">Mil</th>
-            </tr>
-          </thead>
-          <tbody>
-            {trips.map((trip, idx) => (
-              <tr key={idx}>
-                <td className="border border-black p-1.5">{trip.date}</td>
-                <td className="border border-black p-1.5">{trip.assignment}</td>
-                <td className="border border-black p-1.5">{trip.from}</td>
-                <td className="border border-black p-1.5">{trip.to}</td>
-                <td className="border border-black p-1.5 text-center">{trip.roundTrip ? 'Ja' : 'Nej'}</td>
-                <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {expenses.some(e => e.description && e.amount) && (
-          <>
-            <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Utlägg</h3>
-            <table className="w-full border-collapse border border-black mb-6 text-[11px]">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-black p-1.5 text-left">Beskrivning</th>
-                  <th className="border border-black p-1.5 text-right w-32">Belopp (kr)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.filter(e => e.description && e.amount).map((exp, idx) => (
-                  <tr key={idx}>
-                    <td className="border border-black p-1.5">{exp.description}</td>
-                    <td className="border border-black p-1.5 text-right">{exp.amount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
-
-        <div className="flex justify-end mb-8 page-break-inside-avoid">
-          <div className="w-1/2">
-            <table className="w-full border-collapse border border-black text-[11px]">
-              <tbody>
-                <tr>
-                  <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.milageCost} kr</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-1.5">Restidsersättning</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.travelBonus} kr</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 150kr)</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.overnightCost} kr</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-1.5">Övriga Utlägg</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.totalExpenses} kr</td>
-                </tr>
-                {calculated.advance > 0 && (
-                  <tr>
-                    <td className="border border-black p-1.5">Avgår förskott</td>
-                    <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
-                  </tr>
-                )}
-                <tr className="bg-gray-100 font-bold text-sm">
-                  <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.total} kr</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="page-break-inside-avoid mt-8">
-          <div className="mb-12">
-            <p className="font-bold mb-6">Underskrift resenär:</p>
-            <div className="border-b border-black w-1/2"></div>
-            <p className="text-[10px] mt-1 text-gray-500">Signatur & Namnförtydligande</p>
-          </div>
-
-          <div className="border-2 border-black p-4">
-            <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
-            <div className="grid grid-cols-4 gap-4 text-xs h-16">
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Konto</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Kostnadsställe</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Projekt</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Fritt</div>
-            </div>
-            <div className="grid grid-cols-3 gap-6 text-xs mt-8 h-16">
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Belopp (kr)</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Attesteras (Sign/Datum)</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Beslutas (Sign/Datum)</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ==========================================
@@ -1482,7 +1274,7 @@ function MainApp() {
     let unsubscribeProfile = () => {};
 
     if (user && user.email) {
-      const isMaster = user.email === 'suecio@tryempire.com';
+      const isMaster = user.email.toLowerCase() === 'suecio@tryempire.com';
       setIsSuperAdmin(isMaster);
       setContactEmail(user.email);
       
@@ -2053,17 +1845,20 @@ function MainApp() {
   if (view === 'invoice') {
     return (
       <div className="relative bg-slate-100 min-h-screen">
-        {isDemoEnv && (
-          <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm z-50 relative print:hidden">
-            <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
-          </div>
-        )}
         <div className="absolute top-4 sm:top-8 left-4 sm:left-8 z-10 print:hidden">
           <button onClick={() => setView('schedule')} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200 text-xs font-black text-slate-600 uppercase tracking-widest hover:text-blue-600 hover:border-blue-200 transition-all">
             <ArrowLeft className="w-4 h-4" /> Tillbaka till Portalen
           </button>
         </div>
-        <TravelInvoiceView db={db} appId={appId} locationsData={locationsData} />
+        <TravelInvoice 
+          db={db} 
+          appId={appId} 
+          locationsData={locationsData} 
+          user={user} 
+          userName={userName} 
+          t={t} 
+          myAssignedGames={myAssignedGames} 
+        />
       </div>
     );
   }
@@ -2083,11 +1878,6 @@ function MainApp() {
             <button onClick={() => setShowAdminModal(true)} className="sm:hidden p-1.5"><Settings className="w-5 h-5" /></button>
           </div>
           <div className="flex items-center gap-2">
-            {isDemoEnv && (
-              <select value={federation} onChange={(e) => { setFederation(e.target.value); const newFed = federations.find(f => f.id === e.target.value); if (newFed) setLang(newFed.defaultLang); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none">
-                {federations.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
-            )}
             <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none">
               <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
             </select>
@@ -2112,7 +1902,7 @@ function MainApp() {
                 { id: 'my-apps', label: t.myGames, icon: CheckCircle }
               ] : []),
               ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
-              { id: 'invoice', label: 'Reseräkning', icon: FileText }
+              { id: 'invoice', label: t.invoiceTitle, icon: FileText }
             ].map(tab => (
               <button key={tab.id} onClick={() => setView(tab.id)} className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${view === tab.id ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-400'}`}>
                 <tab.icon className="w-4 h-4" />{tab.label}
