@@ -877,8 +877,13 @@ function MainApp() {
     const base = typeof window !== 'undefined' && window.__app_id 
       ? String(window.__app_id).replace(/[\/\\]/g, '-') 
       : 'baseball-umpire-scheduler';
+      
+    // ÅTERSTÄLLT: Använder en sandbox-databas om vi körs lokalt
+    if (isDemoEnv) {
+      return `${base}-sandbox-${federation}-${selectedYear}`;
+    }
     return `${base}-${federation}-${selectedYear}`;
-  }, [federation, selectedYear]);
+  }, [federation, selectedYear, isDemoEnv]);
 
   // Derived state that needs to be declared BEFORE it's used
   const calendarWeeks = useMemo(() => {
@@ -1840,6 +1845,59 @@ function MainApp() {
     if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
   };
 
+  // ÅTERSTÄLLT: Funktionen för att skapa testdata
+  const loadDemoData = async () => {
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      
+      const ump1Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump1Ref, { name: "Anna Andersson", level: "Elit", remindersEnabled: true });
+      const ump2Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump2Ref, { name: "Björn Borg", level: "Region", remindersEnabled: true });
+      const ump3Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump3Ref, { name: "Cecilia Carlsson", level: "Förening", remindersEnabled: true });
+      
+      const loc1Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Örvallen');
+      batch.set(loc1Ref, { address: 'Örvallen 1, Sundbyberg', facilities: ['Omklädningsrum', 'Kiosk', 'Toalett'] });
+      const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
+      batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
+
+      const teams = ['Rättvik', 'Sundbyberg', 'Leksand', 'Stockholm', 'Sölvesborg', 'Karlskoga', 'Gefle', 'Tranås'];
+      const locs = ['Örvallen', 'Skarpnäck', 'Leksand IP', 'Shark Park'];
+      const leagues = ['Elitserien', 'Regionserien'];
+      
+      let currentDate = new Date();
+      for (let i = 0; i < 50; i++) {
+         const gameDate = new Date(currentDate);
+         gameDate.setDate(currentDate.getDate() + Math.floor(i / 2));
+         const dateStr = `${gameDate.getFullYear()}-${String(gameDate.getMonth() + 1).padStart(2, '0')}-${String(gameDate.getDate()).padStart(2, '0')}`;
+         
+         const t1 = teams[Math.floor(Math.random() * teams.length)];
+         let t2 = teams[Math.floor(Math.random() * teams.length)];
+         while(t1 === t2) t2 = teams[Math.floor(Math.random() * teams.length)];
+         
+         const loc = locs[Math.floor(Math.random() * locs.length)];
+         const l = leagues[Math.floor(Math.random() * leagues.length)];
+         const timeHour = 10 + Math.floor(Math.random() * 8);
+         const timeStr = `${timeHour}:00`;
+         
+         const gameId = `m-${dateStr.replace(/-/g,'')}-${timeStr.replace(':','')}-${t1}-${t2}`.replace(/\s+/g, '').toLowerCase();
+         
+         batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), {
+           date: dateStr, time: timeStr, league: l, away: t1, home: t2, location: loc, requiredUmpires: 2
+         });
+      }
+
+      await batch.commit();
+      if(typeof window !== 'undefined') alert("50 test-matcher har laddats in i din lokala Sandbox!");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
   if (view === 'invoice') {
@@ -1917,23 +1975,35 @@ function MainApp() {
               <h2 className="text-lg font-black uppercase">{showHistory ? t.archived : t.activeSchedule}</h2>
               <button onClick={() => setShowHistory(!showHistory)} className="text-[10px] font-black uppercase px-3 py-1 bg-slate-100 rounded-full">{showHistory ? t.upcoming : t.history}</button>
             </div>
-            {filteredGames.map(game => (
-              <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-300">
-                <div className="flex gap-4">
-                  <div className="bg-slate-50 p-2 rounded-xl text-center min-w-[60px] border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400">{safeDateDay(game.date)}</p>
-                    <p className="text-xl font-black">{safeDateNum(game.date)}</p>
-                    <p className="text-[8px] font-black text-slate-400">{safeDateMonth(game.date)}</p>
-                  </div>
-                  <div>
-                    <span className={`text-[9px] font-black px-1.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                    <h3 className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</h3>
-                    <p className="text-xs text-slate-500 mt-1">{game.time} • {game.location}</p>
-                    {renderOfficialsRow(game, groupedAssignments[game.id] || [], masterUmpires)}
+            {filteredGames.length === 0 ? (
+              <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
+                <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                <p className="text-slate-500 font-medium mb-6">{t.noGames}</p>
+                {isDemoEnv && (
+                   <button onClick={loadDemoData} disabled={syncing} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs hover:bg-blue-700 shadow-md transition-colors">
+                     {syncing ? <RefreshCw className="w-4 h-4 animate-spin inline-block" /> : 'Ladda in testdata (Sandbox)'}
+                   </button>
+                )}
+              </div>
+            ) : (
+              filteredGames.map(game => (
+                <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-300">
+                  <div className="flex gap-4">
+                    <div className="bg-slate-50 p-2 rounded-xl text-center min-w-[60px] border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400">{safeDateDay(game.date)}</p>
+                      <p className="text-xl font-black">{safeDateNum(game.date)}</p>
+                      <p className="text-[8px] font-black text-slate-400">{safeDateMonth(game.date)}</p>
+                    </div>
+                    <div>
+                      <span className={`text-[9px] font-black px-1.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                      <h3 className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</h3>
+                      <p className="text-xs text-slate-500 mt-1">{game.time} • {game.location}</p>
+                      {renderOfficialsRow(game, groupedAssignments[game.id] || [], masterUmpires)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 
