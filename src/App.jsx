@@ -852,6 +852,12 @@ function MainApp() {
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [visibleGamesCount, setVisibleGamesCount] = useState(20);
+
+  // Återställ pagineringen till 20 om vi byter vy eller filter
+  useEffect(() => {
+    setVisibleGamesCount(20);
+  }, [searchQuery, filterLeague, filterLocation, filterStatus, showHistory, scheduleViewMode, view]);
 
   // Localized today
   const today = (() => {
@@ -1371,7 +1377,12 @@ function MainApp() {
       logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
     }
     const handleScroll = () => { 
-      if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); 
+      if(typeof window !== 'undefined') {
+         setShowBackToTop(window.scrollY > 300); 
+         if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 800) {
+            setVisibleGamesCount(prev => prev + 20);
+         }
+      }
     };
     if (typeof window !== 'undefined') {
       window.addEventListener('scroll', handleScroll);
@@ -1986,23 +1997,56 @@ function MainApp() {
                 )}
               </div>
             ) : (
-              filteredGames.map(game => (
-                <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-300">
-                  <div className="flex gap-4">
-                    <div className="bg-slate-50 p-2 rounded-xl text-center min-w-[60px] border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400">{safeDateDay(game.date)}</p>
-                      <p className="text-xl font-black">{safeDateNum(game.date)}</p>
-                      <p className="text-[8px] font-black text-slate-400">{safeDateMonth(game.date)}</p>
-                    </div>
-                    <div>
-                      <span className={`text-[9px] font-black px-1.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                      <h3 className="font-bold text-slate-900 text-base">{game.away} @ {game.home}</h3>
-                      <p className="text-xs text-slate-500 mt-1">{game.time} • {game.location}</p>
-                      {renderOfficialsRow(game, groupedAssignments[game.id] || [], masterUmpires)}
+              filteredGames.slice(0, visibleGamesCount).map(game => {
+                const gameAssignments = groupedAssignments[game.id] || [];
+                const appsCount = applications.filter(a => a.gameId === game.id).length;
+                const isApplied = umpireId && applications.some(a => a.gameId === game.id && a.userId === umpireId);
+                const isAssignedToThisGame = umpireId && gameAssignments.some(asg => asg.userId === umpireId);
+                const required = game.requiredUmpires || 2;
+
+                return (
+                  <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white rounded-2xl shadow-sm border overflow-hidden cursor-pointer hover:border-blue-300 group ${showHistory ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+                    <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex gap-4">
+                        <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border group-hover:bg-blue-50">
+                          <p className="text-[10px] font-black text-slate-400 uppercase">{safeDateDay(game.date)}</p>
+                          <p className="text-2xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase mt-0.5">{safeDateMonth(game.date)}</p>
+                        </div>
+                        <div>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                          <h3 className="font-bold text-slate-900 mt-1 text-base group-hover:text-blue-700">{game.away} @ {game.home}</h3>
+                          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
+                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
+                            <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
+                          </div>
+                          {renderOfficialsRow(game, gameAssignments, masterUmpires)}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0">
+                        {!showHistory && (
+                          <>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[10px] font-black text-slate-400 uppercase">{appsCount} {t.applied}</span>
+                              {gameAssignments.length > 0 && (<span className="text-[10px] font-black text-green-600 uppercase mt-0.5">{gameAssignments.length}/{required} {t.staffed}</span>)}
+                            </div>
+                            {isAssignedToThisGame ? (
+                              <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5">
+                                <CheckCircle className="w-4 h-4" /> {t.yourGame}
+                              </div>
+                            ) : (
+                              <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className={`px-6 py-2 rounded-xl text-xs font-black uppercase ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                {isApplied ? t.withdraw : t.interested}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -2041,19 +2085,116 @@ function MainApp() {
 
         {view === 'admin' && (
           <div className="space-y-6 animate-in fade-in">
-             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-               <h2 className="text-xl font-black mb-4 uppercase">{t.staffingControl}</h2>
-               <div className="flex gap-2 flex-wrap">
-                 <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 px-4 py-2 rounded-xl text-[10px] font-black uppercase">{t.bulkImport}</button>
-                 <button onClick={() => setShowEmailPreview(true)} className="bg-blue-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">{t.sendSchedules}</button>
+             <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+               <div className="text-center sm:text-left">
+                 <h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2>
+                 <p className="text-xs text-slate-500">{selectedYear} Season</p>
+               </div>
+               <div className="flex flex-wrap items-center gap-2">
+                 <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 flex items-center gap-2"><Download className="w-4 h-4" /> Backup</button>
+                 <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-slate-200"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
                </div>
              </div>
+
              {showImportTool && (
-               <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200">
-                 <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} className="w-full h-40 p-4 rounded-xl border border-blue-200 mb-4 font-mono text-xs" placeholder="Klistra in spelschema..."/>
-                 <button onClick={handleBulkImport} className="w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button>
+               <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 animate-in slide-in-from-top">
+                 <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3>
+                 <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder="YYYY-MM-DD	HH:MM	Serie	Borta	Hemma	Plats" className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
+                 <div className="flex gap-3">
+                   <button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button>
+                   <button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button>
+                 </div>
                </div>
              )}
+
+             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Megaphone className="w-4 h-4" /> {t.globalAnnouncement}</h3>
+               <textarea value={editNoteText} onChange={(e) => setEditNoteText(e.target.value)} placeholder={t.announcementPlaceholder} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none min-h-[80px]" />
+               <div className="flex gap-2 mt-3">
+                 <button onClick={saveGlobalNote} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.saveAnnouncement}</button>
+                 <button onClick={clearGlobalNote} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">{t.clearAnnouncement}</button>
+               </div>
+             </div>
+
+             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+               <div className="flex items-center justify-between mb-4">
+                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users2 className="w-4 h-4" /> {t.masterList}</h3>
+                 {isSuperAdmin && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1"><Shield className="w-3 h-3" /> Master Admin</span>}
+               </div>
+               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                 {masterUmpires.map(u => (
+                   <div key={u.id} className="flex flex-col gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                     {editingUmpireId === u.id ? (
+                       <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
+                         <input type="text" value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} className="flex-1 min-w-[120px] bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-bold outline-none" />
+                         <select value={tempEditLevel} onChange={(e) => setTempEditLevel(e.target.value)} className="w-32 bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none"><option value="">- {t.level} -</option>{['Internationell', 'Elit', 'Nationell', 'Region', 'Förening'].map(l => <option key={l} value={l}>{l}</option>)}</select>
+                         {!showManualEmailInput ? (
+                           <select value={tempEditEmail} onChange={(e) => { if (e.target.value === 'MANUAL_ENTRY') { setShowManualEmailInput(true); setTempEditEmail(''); } else { setTempEditEmail(e.target.value); } }} className="flex-1 min-w-[150px] bg-white border border-blue-300 px-2 py-1.5 rounded-lg text-sm font-bold outline-none">
+                             <option value="">{t.selectEmail}</option>{unconnectedEmails.map(email => <option key={email} value={email}>{email}</option>)}{tempEditEmail && !unconnectedEmails.includes(tempEditEmail) && tempEditEmail !== 'MANUAL_ENTRY' && <option value={tempEditEmail}>{tempEditEmail}</option>}<option value="MANUAL_ENTRY">{t.otherEmail}</option>
+                           </select>
+                         ) : (
+                           <div className="flex-1 flex items-center min-w-[150px] relative">
+                             <input type="email" value={tempEditEmail} onChange={(e) => setTempEditEmail(e.target.value)} placeholder={t.linkEmailPlaceholder} className="w-full bg-white border border-blue-300 px-3 py-1.5 pr-8 rounded-lg text-sm font-bold outline-none" />
+                             <button onClick={() => { setShowManualEmailInput(false); setTempEditEmail(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600"><X className="w-3 h-3" /></button>
+                           </div>
+                         )}
+                         <div className="flex gap-1 items-center">
+                           <button onClick={async () => { await updateMasterUmpire(u.id, tempEditName, tempEditLevel, tempEditEmail); setEditingUmpireId(null); }} className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"><Check className="w-4 h-4" /></button>
+                           <button onClick={() => setEditingUmpireId(null)} className="bg-slate-200 text-slate-600 p-2 rounded-lg hover:bg-slate-300 transition-colors"><X className="w-4 h-4" /></button>
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="flex items-center justify-between">
+                         <div className="flex flex-col">
+                           <div className="flex items-center gap-2"><span className="text-sm font-bold text-slate-700">{u.name}</span>{u.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLeagueStyles(u.level)}`}>{u.level}</span>}{(adminUmpireIds || []).includes(u.id) && <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase font-black ml-1 flex items-center gap-0.5"><Shield className="w-2 h-2" /> Admin</span>}</div>
+                           <div className="flex items-center gap-4 mt-1">{u.linkedEmail ? <span className="text-[10px] text-green-600 font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t.linkedAccount} {u.linkedEmail}</span> : <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1"><Info className="w-3 h-3" /> {t.notLinked}</span>}</div>
+                         </div>
+                         <div className="flex gap-1 items-start">
+                           {isSuperAdmin && <button onClick={() => toggleUmpireAdmin(u.id)} className={`p-1.5 rounded-lg transition-colors ${(adminUmpireIds || []).includes(u.id) ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-blue-600'}`}><Shield className="w-4 h-4" /></button>}
+                           <button onClick={() => { setEditingUmpireId(u.id); setTempEditName(u.name || ''); setTempEditLevel(u.level || ''); setTempEditEmail(u.linkedEmail || ''); setShowManualEmailInput(false); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Edit2 className="w-4 h-4" /></button>
+                           <button onClick={() => deleteMasterUmpire(u.id, u.name, u.linkedEmail)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 ))}
+               </div>
+             </div>
+
+             <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+               <h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}</h3>
+               <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
+             </div>
+             
+             {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).slice(0, visibleGamesCount).map(game => {
+               const gameAssignments = groupedAssignments[game.id] || [];
+               const required = game.requiredUmpires || 2;
+               const isFullyStaffed = gameAssignments.length >= required;
+
+               return (
+                 <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
+                   <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer" onClick={() => setSelectedGameDetails(game)}>
+                     <div className="flex items-center gap-3 flex-wrap">
+                       <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                       <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
+                       <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
+                     </div>
+                     <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                   </div>
+                   
+                   <div className="p-4 space-y-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {gameAssignments.map(asg => (
+                          <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
+                            <div className="flex items-center gap-2"><Users2 className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div>
+                            <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
+                          </div>
+                        ))}
+                     </div>
+                   </div>
+                 </div>
+               );
+             })}
           </div>
         )}
       </main>
@@ -2098,131 +2239,131 @@ function MainApp() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.facilities}</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={newFacility} 
-                        onChange={(e) => setNewFacility(e.target.value)}
-                        placeholder={t.addFacility}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if(newFacility.trim()){
-                              setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
-                              setNewFacility('');
-                            }
-                          }
-                        }}
-                        className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" 
-                      />
-                      <button 
-                        onClick={() => {
-                          if(newFacility.trim()){
-                            setEditingLocation({...editingLocation, facilities: [...(editingLocation.facilities || []), newFacility.trim()]});
-                            setNewFacility('');
-                          }
-                        }}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xl hover:bg-blue-700"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(editingLocation.facilities || []).map((fac, idx) => (
-                        <div key={idx} className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium text-slate-700">
-                          {fac}
-                          <button onClick={() => {
-                            const newFacs = [...editingLocation.facilities];
-                            newFacs.splice(idx, 1);
-                            setEditingLocation({...editingLocation, facilities: newFacs});
-                          }} className="text-slate-400 hover:text-red-500"><X className="w-3.5 h-3.5"/></button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex gap-3 pt-4 border-t border-slate-100">
-                    <button onClick={saveLocation} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-xs shadow-sm hover:bg-green-700">{t.saveChanges}</button>
-                    <button onClick={() => setEditingLocation(null)} className="flex-1 bg-slate-200 text-slate-600 py-3 rounded-xl font-black uppercase text-xs hover:bg-slate-300">{t.cancel}</button>
-                  </div>
+      {selectedGameDetails && (() => {
+        const game = selectedGameDetails;
+        const gameAssignments = groupedAssignments[game.id] || [];
+        const gameApplications = applications.filter(a => a.gameId === game.id);
+        const isGameSupervisor = Boolean(umpireId && game.supervisorId === umpireId);
+        const canEvaluate = Boolean(umpireId && (isAdmin || isGameSupervisor));
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-0 sm:p-4">
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto relative">
+              <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5"/></button>
+              
+              <div className="space-y-6 pt-4">
+                <div>
+                  <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                  <h3 className="text-2xl font-black mt-3">{game.away} @ {game.home}</h3>
+                  <p className="text-sm text-slate-500 font-bold uppercase mt-1">{game.date} @ {game.time}</p>
                 </div>
-              ) : (
-                <div className="space-y-6">
+                
+                <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center">
+                  <div><p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p><p className="font-bold text-blue-900">{game.location}</p></div>
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.location)}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2 hover:bg-blue-700 transition-colors"><Map className="w-4 h-4"/> {t.mapDirections}</a>
+                </div>
+
+                <div className="space-y-4 mt-6">
                   <div>
-                    <h3 className="text-2xl font-black text-slate-800 pr-8 leading-tight">{locDetail.id}</h3>
-                    {locDetail.address && (
-                      <p className="text-slate-500 mt-2 flex items-start gap-2">
-                        <MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {locDetail.address}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-3">
-                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t.facilities}</h4>
-                    {locDetail.facilities && locDetail.facilities.length > 0 ? (
-                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {locDetail.facilities.map((fac, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                            <CheckCircle className="w-4 h-4 text-green-500" /> {fac}
-                          </li>
-                        ))}
-                      </ul>
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2">{t.crew}</h4>
+                    {gameAssignments.length > 0 ? (
+                      <div className="grid gap-2">
+                        {gameAssignments.map(asg => {
+                          const m = masterUmpires.find(mu => mu.id === asg.userId);
+                          const existingEval = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
+                          
+                          return (
+                            <div key={asg.userId} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-sm text-slate-800">{asg.userName}</span>
+                                  {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                                </div>
+                              </div>
+                              
+                              {features.evaluations && canEvaluate && !existingEval && (
+                                <div className="mt-2 pt-3 border-t border-slate-200">
+                                  <p className="text-[10px] font-black uppercase text-purple-600 mb-2">{t.evaluate}</p>
+                                  <div className="flex flex-col gap-2">
+                                    <select onChange={(e) => setEvalGrade(parseInt(e.target.value))} className="p-2 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-purple-400">
+                                      <option value="0">{t.grade}...</option>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                                    </select>
+                                    <textarea placeholder={t.feedback} onChange={(e) => setEvalComment(e.target.value)} className="p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-purple-400 min-h-[60px]" />
+                                    <button onClick={() => { if(evalGrade > 0) submitEvaluation(game.id, asg.userId, evalGrade, evalComment); }} className="bg-purple-600 hover:bg-purple-700 transition-colors text-white py-2 rounded-lg text-[10px] font-black uppercase shadow-sm">
+                                      {t.saveEval}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {existingEval && Boolean(umpireId && (isAdmin || isGameSupervisor || asg.userId === umpireId)) && (
+                                <div className="mt-2 pt-2 border-t border-slate-200 bg-purple-50 p-3 rounded-lg flex flex-col gap-1">
+                                  <p className="text-[10px] font-black uppercase text-purple-600">{t.yourEval}</p>
+                                  <div className="flex items-start gap-3 mt-1">
+                                    <span className="bg-purple-600 text-white w-6 h-6 shrink-0 flex items-center justify-center rounded-full text-xs font-black">{existingEval.grade}</span>
+                                    <span className="text-xs text-purple-900 font-medium italic leading-relaxed">"{existingEval.comment}"</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     ) : (
-                      <p className="text-sm font-medium text-slate-500 italic">{t.noFacilities}</p>
+                      <p className="text-xs italic text-slate-400">{t.notAssigned || "Inga domare tillsatta än."}</p>
                     )}
                   </div>
 
-                  <div className="pt-2 flex flex-col sm:flex-row gap-3">
-                    <a 
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-center shadow-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Map className="w-4 h-4" /> {t.mapDirections}
-                    </a>
-                    {isAdmin && (
-                      <button 
-                        onClick={() => setEditingLocation({ ...locDetail })} 
-                        className="sm:flex-none px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Edit2 className="w-4 h-4" /> {t.editLocation}
-                      </button>
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2">{t.interests} ({gameApplications.length})</h4>
+                    {gameApplications.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {gameApplications.map(app => {
+                          const m = masterUmpires.find(mu => mu.id === app.userId);
+                          return (
+                            <div key={app.userId} className="px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg flex items-center gap-2">
+                              <span className="text-xs font-bold text-blue-800">{app.userName}</span>
+                              {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                              {isAdmin && (
+                                <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="ml-2 text-blue-600 hover:text-blue-800 font-black text-xs uppercase">
+                                  Tilldela
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs italic text-slate-400">{t.noInterests}</p>
                     )}
                   </div>
+
+                  {isAdmin && (
+                    <div className="pt-4 border-t border-slate-100 space-y-3 bg-slate-50 p-4 rounded-2xl border">
+                      <h4 className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1"><Shield className="w-3 h-3" /> {t.officials} (Admin)</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500">{t.supervisor}</label>
+                          <select value={game.supervisorId || ''} onChange={(e) => assignOfficial(game.id, 'supervisor', e.target.value)} className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none">
+                            <option value="">{t.selectAdmin}</option>
+                            {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500">{t.techComm}</label>
+                          <input type="text" value={game.tcName || ''} onChange={(e) => assignOfficial(game.id, 'tc', e.target.value)} placeholder={t.enterTCName} className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 mt-6 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-xs hover:bg-slate-200 transition-colors">{t.close}</button>
+              </div>
             </div>
           </div>
         );
       })()}
-
-      {selectedGameDetails && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-0 sm:p-4">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
-            <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full"><X className="w-5 h-5"/></button>
-            <div className="space-y-6 pt-4">
-              <div>
-                <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(selectedGameDetails.league)}`}>{selectedGameDetails.league}</span>
-                <h3 className="text-2xl font-black mt-3">{selectedGameDetails.away} @ {selectedGameDetails.home}</h3>
-                <p className="text-sm text-slate-500 font-bold uppercase mt-1">{selectedGameDetails.date} @ {selectedGameDetails.time}</p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center">
-                <div><p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p><p className="font-bold text-blue-900">{selectedGameDetails.location}</p></div>
-                <a href={`https://www.google.com/maps/search/?api=1&query=$?q=${selectedGameDetails.location}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2"><Map className="w-4 h-4"/> {t.mapDirections}</a>
-              </div>
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black uppercase text-slate-400">{t.crew}</h4>
-                {(groupedAssignments[selectedGameDetails.id] || []).map(asg => (
-                  <div key={asg.userId} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                    <span className="font-bold">{asg.userName}</span>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-xs">{t.close}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
