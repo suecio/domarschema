@@ -250,8 +250,12 @@ const translations = {
     overnightComp: "Övernattningstraktamente",
     otherExpenses: "Övriga Utlägg",
     totalToReceive: "Totalt att erhålla",
-    createPdf: "Skapa PDF / Skriv ut",
+    downloadPDF: "Ladda ner PDF",
+    sendToFed: "Skicka till Förbundet",
+    sendToSelf: "Skicka test till mig",
     sentSuccess: "Insänt & Klart!",
+    sentSuccessFed: "Din reseräkning har skickats in till Förbundet.",
+    sentSuccessSelf: "En kopia har skickats till din e-post.",
     newInvoice: "Skapa ny reseräkning",
     selectGame: "-- Välj en av dina matcher --",
     homeLocation: "Hem",
@@ -285,7 +289,7 @@ const translations = {
     conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.",
     sandboxLoaded: "50 test-matcher har laddats in i din lokala Sandbox!",
     downloadICS: "Ladda ner (.ICS)",
-    availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag (2026-04-05).",
+    availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.",
     availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.",
     availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.",
     assigned: "TILLSATTA",
@@ -301,12 +305,7 @@ const translations = {
     unknown: "Okänd",
     sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
     deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?",
-    deleteAvatar: "Ta bort bild",
-    downloadPDF: "Ladda ner PDF",
-    sendToFed: "Skicka till Förbundet",
-    sendToSelf: "Skicka test till mig",
-    sentSuccessFed: "Din reseräkning har skickats in till Förbundet (info@sbslf.se).",
-    sentSuccessSelf: "Ett test har skickats till din egen e-post."
+    deleteAvatar: "Ta bort bild"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -514,8 +513,12 @@ const translations = {
     overnightComp: "Overnight Allowance",
     otherExpenses: "Other Expenses",
     totalToReceive: "Total to Receive",
-    createPdf: "Create PDF / Print",
+    downloadPDF: "Download PDF",
+    sendToFed: "Send to Federation",
+    sendToSelf: "Send Test to Me",
     sentSuccess: "Submitted Successfully!",
+    sentSuccessFed: "Your invoice has been submitted to the Federation.",
+    sentSuccessSelf: "A copy has been sent to your email.",
     newInvoice: "Create new invoice",
     selectGame: "-- Select an assigned game --",
     homeLocation: "Home",
@@ -549,7 +552,7 @@ const translations = {
     conflictAssign: "Cannot assign! {name} is already booked in {location} on this day.",
     sandboxLoaded: "50 test games have been loaded into your local Sandbox!",
     downloadICS: "Download (.ICS)",
-    availabilityWarningTitle: "The deadline for submitting availability is today (2026-04-05).",
+    availabilityWarningTitle: "The deadline for submitting availability is today.",
     availabilityWarningDesc1: "If you have not submitted your availability, you will not receive any games this coming season.",
     availabilityWarningDesc2: "We are assigning games until the end of June.",
     assigned: "ASSIGNED",
@@ -565,12 +568,7 @@ const translations = {
     unknown: "Unknown",
     sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED TO PRODUCTION",
     deleteAvatarConfirm: "Are you sure you want to remove your profile picture?",
-    deleteAvatar: "Remove picture",
-    downloadPDF: "Download PDF",
-    sendToFed: "Send to Federation",
-    sendToSelf: "Send Test to Me",
-    sentSuccessFed: "Your invoice has been submitted to the Federation (info@sbslf.se).",
-    sentSuccessSelf: "A test copy has been sent to your email."
+    deleteAvatar: "Remove picture"
   }
 };
 
@@ -981,8 +979,26 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     const advanceNum = parseFloat(advance) || 0;
     const total = (milageCost + travelBonus + overnightCost + totalExpenses) - advanceNum;
 
-    return { totalMilage, milageCost, travelBonus, overnightCost, totalExpenses, advance: advanceNum, total };
+    return { 
+      totalMilage: Number(totalMilage.toFixed(1)), 
+      milageCost: Number(milageCost.toFixed(2)), 
+      travelBonus, 
+      overnightCost, 
+      totalExpenses: Number(totalExpenses.toFixed(2)), 
+      advance: advanceNum, 
+      total: Number(total.toFixed(2)) 
+    };
   }, [trips, expenses, overnightCount, advance]);
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (window.confirm("Vill du verkligen ta bort denna reseräkning från historiken?")) {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'invoices', invoiceId));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   const handleDownloadPDF = () => {
     const form = document.getElementById('invoice-form');
@@ -1007,10 +1023,22 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      window.html2pdf().set(opt).from(element).save().then(() => {
+      window.html2pdf().set(opt).from(element).save().then(async () => {
         element.classList.add('hidden');
         element.classList.add('print:block');
         setIsSubmitting(false);
+
+        // Spara i historiken vid nedladdning av PDF
+        if (user && user.uid) {
+           try {
+              await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), {
+                 createdAt: Date.now(),
+                 total: calculated.total,
+                 trips: trips.map(tr => ({ date: tr.date, assignment: tr.assignment })),
+                 status: "Nedladdad (PDF)"
+              });
+           } catch(e) {}
+        }
       });
     };
     document.body.appendChild(script);
@@ -1152,14 +1180,17 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
              <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                {pastInvoices.map(inv => (
                  <div key={inv.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                   <div>
+                   <div className="flex-1">
                      <span className="text-xs font-bold text-slate-700">{new Date(inv.createdAt).toLocaleDateString('sv-SE')}</span>
                      <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[200px]">{inv.trips?.map(tr => tr.assignment).join(', ')}</p>
                    </div>
-                   <div className="text-right">
+                   <div className="text-right mr-3">
                      <span className="text-sm font-black text-blue-600">{inv.total} kr</span>
                      <p className="text-[9px] font-black uppercase text-green-600 mt-0.5">{inv.status}</p>
                    </div>
+                   <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors" title="Ta bort">
+                     <Trash2 className="w-4 h-4" />
+                   </button>
                  </div>
                ))}
              </div>
@@ -1939,26 +1970,6 @@ function MainApp() {
   }, [globalNote]);
 
   useEffect(() => {
-    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
-      setReadmeLoading(true);
-      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.content) {
-            const text = decodeURIComponent(escape(atob(data.content)));
-            setReadmeContent(text);
-          } else {
-            setReadmeContent(t.fetchError);
-          }
-        })
-        .catch(err => {
-          setReadmeContent(t.fetchError);
-        })
-        .finally(() => setReadmeLoading(false));
-    }
-  }, [view, helpTab, readmeContent, t.fetchError]);
-
-  useEffect(() => {
     setEvaluatingUmpire(null);
     setEvalGrade(0);
     setEvalComment('');
@@ -2164,6 +2175,7 @@ function MainApp() {
     }
   }, [view, selectedYear, lang]);
 
+  // 6. HJÄLPFUNKTIONER FÖR UI
   const safeDateMonth = (dateString) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -2280,6 +2292,7 @@ function MainApp() {
     </div>
   );
 
+  // 7. FUNKTIONER FÖR DATABAS OCH INTERAKTION
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -3223,7 +3236,7 @@ function MainApp() {
              <div>
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> {t.missingUmpires}</h3>
                 {games.filter(g => !showHistory && g.date >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).length === 0 ? (
-                  <p className="text-slate-400 text-sm italic">{t.noMarketplaceGames}</p>
+                  <p className="text-slate-400 text-sm italic">Inga matcher saknar domare just nu.</p>
                 ) : (
                   <div className="grid gap-4">
                     {games.filter(g => !showHistory && g.date >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
@@ -3457,7 +3470,7 @@ function MainApp() {
                           <span className="text-xs font-bold text-slate-500">| {safeDateDay(game.date)} {game.date} @ {game.time}</span>
                        </div>
                        <div className="flex items-center gap-4 justify-between sm:justify-end">
-                          <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assigned}</span>
+                          <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} TILLSATTA</span>
                           <button onClick={() => handleDeleteGame(game.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4"/></button>
                        </div>
                     </div>
@@ -3480,7 +3493,7 @@ function MainApp() {
 
                                   if (conflictGame) {
                                     return (
-                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`${t.bookedIn} ${conflictGame.location}`}>
+                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`Bokad i ${conflictGame.location}`}>
                                          <span className="text-xs font-bold text-red-900 line-through decoration-red-500 truncate">{app.userName}</span>
                                          <span className="text-[9px] font-black uppercase text-red-600 px-2 text-right truncate max-w-[100px]">{conflictGame.location}</span>
                                       </div>
@@ -3490,29 +3503,29 @@ function MainApp() {
                                   return (
                                     <div key={app.userId} className="flex justify-between items-center bg-blue-50 p-2.5 rounded-xl border border-blue-100">
                                        <span className="text-xs font-bold text-blue-900">{app.userName}</span>
-                                       <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">{t.assignBtn}</button>
+                                       <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Tilldela</button>
                                     </div>
                                   );
                                 })}
                              </div>
                           ) : (
-                             <p className="text-xs text-slate-400 italic">{t.noInterestsYet}</p>
+                             <p className="text-xs text-slate-400 italic">Inga intresseanmälningar ännu.</p>
                           )}
                        </div>
 
                        <div className="space-y-3">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.currentCrew}</h4>
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aktuellt Domarteam</h4>
                           {gameAssignments.length > 0 ? (
                              <div className="flex flex-col gap-2 mb-3">
                                 {gameAssignments.map(asg => (
                                    <div key={asg.userId} className="flex justify-between items-center bg-green-50 p-2.5 rounded-xl border border-green-200">
                                       <span className="text-xs font-bold text-green-900 flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-600"/> {asg.userName}</span>
-                                      <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-[9px] font-black tracking-widest uppercase text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">{t.removeBtn}</button>
+                                      <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-[9px] font-black tracking-widest uppercase text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">Ta bort</button>
                                    </div>
                                 ))}
                              </div>
                           ) : (
-                             <p className="text-xs text-slate-400 italic mb-3">{t.noUmpiresAssigned}</p>
+                             <p className="text-xs text-slate-400 italic mb-3">Inga domare tillsatta.</p>
                           )}
 
                           {!isFullyStaffed && (
@@ -3520,11 +3533,11 @@ function MainApp() {
                                 <select 
                                   value="" 
                                   onChange={(e) => { 
-                                    if(e.target.value) { assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || t.unknown)); } 
+                                    if(e.target.value) { assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || 'Okänd')); } 
                                   }} 
                                   className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none text-slate-600 focus:ring-2 focus:ring-blue-500/20"
                                 >
-                                  <option value="">{t.manualAssign}</option>
+                                  <option value="">+ Manuell tilldelning...</option>
                                   {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name} ({u.level})</option>)}
                                 </select>
                              </div>
@@ -3669,7 +3682,7 @@ function MainApp() {
                                   <span className="text-xs font-bold text-blue-800">{app.userName}</span>
                                   {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                   <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="ml-2 text-white bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-700 font-black text-[9px] uppercase tracking-widest shadow-sm transition-colors">
-                                    {t.assignBtn}
+                                    Tilldela
                                   </button>
                                 </div>
                               );
