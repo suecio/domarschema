@@ -63,6 +63,7 @@ const translations = {
     season: "Säsong",
     schedule: "Spelschema",
     myGames: "Mina Matcher",
+    myProfile: "Min profil",
     umpireList: "Domarlista",
     staffing: "Bemanning",
     analytics: "Statistik",
@@ -267,6 +268,7 @@ const translations = {
     season: "Season",
     schedule: "Schedule",
     myGames: "My Games",
+    myProfile: "My Profile",
     umpireList: "Umpire List",
     staffing: "Staffing",
     analytics: "Analytics",
@@ -295,7 +297,10 @@ const translations = {
     showAll: "Show All Games",
     removeAssignment: "Remove",
     deleteGame: "Delete Game",
+    deleteConfirm: "Are you sure you want delete this game?",
     deleteAllGames: "Clear Entire Season",
+    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
+    deleteAllSuccess: "Season cleared successfully.",
     downloadBackup: "Download Backup (JSON)",
     umpire: "Umpire",
     interests: "Interests",
@@ -310,10 +315,12 @@ const translations = {
     userSettings: "User Settings",
     profileAccess: "Configure profile & access",
     displayName: "Display Name",
+    namePlaceholder: "Search or type name...",
     logout: "Logout",
     close: "Close",
     status: "Status",
     setProfile: "Select Your Profile",
+    pasteSheet: "Paste from Google Sheets",
     addGames: "Add Games",
     importSuccess: "Import Successful",
     cancel: "Cancel",
@@ -404,9 +411,14 @@ const translations = {
     noMarketplaceGames: "No games are up for trade right now.",
     tradeSuccess: "You have taken over the game!",
     tradeConfirm: "Are you sure you want to take over this game?",
+    downloadCalendar: "Download",
+    formatICS: ".ICS File",
+    subtextICS: "For Apple & Outlook",
+    formatCSV: ".CSV File",
+    subtextCSV: "For Google Calendar",
     evaluate: "Evaluate",
     grade: "Grade",
-    feedback: "Feedback",
+    feedback: "Feedback / Comment",
     saveEval: "Save Evaluation",
     evalSaved: "Evaluation Saved",
     yourEval: "Evaluation",
@@ -425,6 +437,7 @@ const translations = {
     acceptTime: "Accept New Time",
     declineTime: "Cannot Make It",
     timeChangedBadge: "Time Changed",
+    pendingReply: "Pending Reply",
     actionRequired: "Action Required",
     superAdminSettings: "System Architecture (Super Admin)",
     featureMarketplace: "Enable Marketplace (Trade Board)",
@@ -526,7 +539,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
   const [advance, setAdvance] = useState('');
   const [overnightCount, setOvernightCount] = useState('');
 
-  // Fetch saved personal info & past invoices
   useEffect(() => {
     if (user && user.uid) {
       const fetchProfile = async () => {
@@ -726,9 +738,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         </div>
       `;
 
-      // Skicka mail - BYT DETTA TILL info@sbslf.se NÄR NI GÅR LIVE
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: personalInfo.email, // Testläge - skickar till den inloggades mail just nu
+        to: personalInfo.email,
         message: {
           subject: `Reseräkning: ${personalInfo.name} (${calculated.total} kr) - TEST`,
           text: "Ny reseräkning inskickad. Vänligen läs mailet i en HTML-kompatibel e-postklient.",
@@ -976,7 +987,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                 <span>{calculated.milageCost} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">{t.travelTimeComp} (>10 mil: 100kr, >20 mil: 200kr)</span>
+                <span className="text-slate-300">{t.travelTimeComp} (>10 mil/resa: 100kr, >20 mil: 200kr)</span>
                 <span>{calculated.travelBonus} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
@@ -1327,7 +1338,7 @@ function MainApp() {
     const selected = translations[languageCode] || translations['en'];
     const fallback = translations['en'];
     return new Proxy(selected, {
-      get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop]
+      get: (target, prop) => target[prop] !== undefined ? target[prop] : (fallback[prop] || '')
     });
   };
   const t = getTranslation(lang);
@@ -1558,32 +1569,26 @@ function MainApp() {
   }, [view, helpTab, readmeContent, t.fetchError]);
 
   useEffect(() => {
+    setEvaluatingUmpire(null);
     setEvalGrade(0);
     setEvalComment('');
   }, [selectedGameDetails]);
 
-  // Firebase Real-time listeners
+  // Firebase Real-time listeners (MED FIX FÖR UTLOGGNING VID REFRESH)
   useEffect(() => {
-    const initAuth = async () => {
-      try { 
-        if (typeof window !== 'undefined' && window.__initial_auth_token) {
-          try {
-            await signInWithCustomToken(auth, window.__initial_auth_token);
-          } catch (customErr) {
-            await signInAnonymously(auth);
-          }
-        } else {
-          await signInAnonymously(auth); 
-        }
-      } catch (err) { }
-    };
-    initAuth();
-    
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        setUser(u);
+        setLoading(false);
+      } else {
+        try { 
+          if (typeof window !== 'undefined' && window.__initial_auth_token) {
+            try { await signInWithCustomToken(auth, window.__initial_auth_token); } 
+            catch (e) { await signInAnonymously(auth); }
+          } else { await signInAnonymously(auth); }
+        } catch (err) { setLoading(false); }
+      }
     });
-    
     return () => unsubscribe();
   }, []);
 
@@ -1723,6 +1728,7 @@ function MainApp() {
 
   useEffect(() => {
     if (!isAdmin || mailQueue.length === 0) return;
+    
     const interval = setInterval(() => {
        const now = Date.now();
        const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
@@ -1731,6 +1737,7 @@ function MainApp() {
            readyToProcess.forEach(async (queueItem) => {
               const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
               const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
+              
               const emailBody = t.emailMatchMovedBody
                  .replace(/\{name\}/g, queueItem.userName)
                  .replace(/\{changesListSv\}/g, changesTextSv)
@@ -1750,12 +1757,20 @@ function MainApp() {
            });
        }
     }, 30000);
+    
     return () => clearInterval(interval);
   }, [isAdmin, mailQueue, appId, t]);
 
   useEffect(() => {
     if (analytics) {
       logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
+    }
+    const handleScroll = () => { 
+      if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); 
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
     }
   }, [view, selectedYear, lang]);
 
@@ -2425,8 +2440,8 @@ function MainApp() {
     return (
       <div className="min-h-screen bg-slate-50 p-4 pt-12 sm:p-8">
         <div className="max-w-2xl mx-auto space-y-6">
-          <button onClick={() => setView('umpire-list')} className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Tillbaka till Domarlistan
+          <button onClick={() => setView(isMe ? 'schedule' : 'umpire-list')} className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors">
+            <ArrowLeft className="w-4 h-4" /> {isMe ? t.back : "Tillbaka till Domarlistan"}
           </button>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 text-center relative overflow-hidden">
@@ -2517,6 +2532,20 @@ function MainApp() {
     );
   }
 
+  // --- TOP NAVIGATION TABS DEFINITION ---
+  const tabs = [
+    { id: 'schedule', label: t.schedule, icon: CalendarIcon },
+    { id: 'locations', label: t.locations, icon: MapPin },
+    { id: 'umpire-list', label: t.umpireList, icon: Users2 },
+    ...(user?.email ? [
+      ...(features.marketplace ? [{ id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft }] : []),
+      { id: 'my-apps', label: t.myGames, icon: CheckCircle },
+      ...(umpireId ? [{ id: 'my-profile', label: t.myProfile || 'Min profil', icon: User }] : [])
+    ] : []),
+    ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
+    { id: 'invoice', label: t.invoiceTitle, icon: FileText }
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24">
       {isDemoEnv && (
@@ -2535,7 +2564,7 @@ function MainApp() {
                 <p className="text-[8px] sm:text-[10px] uppercase text-blue-300">{t.season} {selectedYear}</p>
               </div>
             </div>
-            <button onClick={() => setShowAdminModal(true)} className="sm:hidden p-1.5"><Settings className="w-5 h-5" /></button>
+            <button onClick={() => user?.email ? setShowAdminModal(true) : setShowAuthModal(true)} className="sm:hidden p-1.5"><Settings className="w-5 h-5" /></button>
           </div>
           <div className="flex items-center gap-2">
             {isDemoEnv && (
@@ -2550,7 +2579,7 @@ function MainApp() {
               <button onClick={() => setLang('sv')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'sv' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇸🇪</button>
               <button onClick={() => setLang('en')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'en' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇬🇧</button>
             </div>
-            <button onClick={() => setShowAdminModal(true)} className="hidden sm:block p-1.5"><Settings className="w-5 h-5 text-white" /></button>
+            <button onClick={() => user?.email ? setShowAdminModal(true) : setShowAuthModal(true)} className="hidden sm:block p-1.5"><Settings className="w-5 h-5 text-white" /></button>
           </div>
         </div>
       </header>
@@ -2567,21 +2596,31 @@ function MainApp() {
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         {view !== 'help' && (
           <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar sticky top-[68px] z-20">
-            {[
-              { id: 'schedule', label: t.schedule, icon: CalendarIcon },
-              { id: 'locations', label: t.locations, icon: MapPin },
-              { id: 'umpire-list', label: t.umpireList, icon: Users2 },
-              ...(user?.email ? [
-                ...(features.marketplace ? [{ id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft }] : []),
-                { id: 'my-apps', label: t.myGames, icon: CheckCircle }
-              ] : []),
-              ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
-              { id: 'invoice', label: t.invoiceTitle, icon: FileText }
-            ].map(tab => (
-              <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); }} className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${view === tab.id ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>
-                <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
-              </button>
-            ))}
+            {tabs.map(tab => {
+              const isActive = tab.id === 'my-profile' 
+                ? (view === 'umpire-profile' && selectedProfileId === umpireId)
+                : tab.id === 'umpire-list' 
+                ? (view === 'umpire-list' || (view === 'umpire-profile' && selectedProfileId !== umpireId))
+                : (view === tab.id);
+
+              return (
+                <button 
+                  key={tab.id} 
+                  onClick={() => { 
+                    if (tab.id === 'my-profile') {
+                      setSelectedProfileId(umpireId);
+                      setView('umpire-profile');
+                    } else {
+                      setView(tab.id); 
+                      setSelectedProfileId(null); 
+                    }
+                  }} 
+                  className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${isActive ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
+                >
+                  <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -3098,11 +3137,15 @@ function MainApp() {
         )}
       </main>
 
+      {/* FLOAT BUTTON / BOTTOM BAR */}
       {user?.email && (
-        <button onClick={() => setShowAdminModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-blue-800 z-40 hover:scale-105 transition-transform">
-          <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[10px] font-black uppercase">{(userName || '?').charAt(0)}</div>
-          <span className="text-sm font-bold">{userName || 'Välj profil'}</span>
-        </button>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-40">
+          <button onClick={() => setShowAdminModal(true)} className="bg-blue-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-blue-800 hover:scale-105 transition-transform">
+            <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[10px] font-black uppercase">{(userName || '?').charAt(0)}</div>
+            <span className="text-sm font-bold">{userName || 'Välj profil'}</span>
+            <Settings className="w-4 h-4 opacity-50 ml-1" />
+          </button>
+        </div>
       )}
 
       {!user?.email && (
