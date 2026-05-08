@@ -1391,6 +1391,38 @@ function MainApp() {
     });
   }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
 
+  // LÄGG TILL DETTA SAKNADE BLOCK:
+  const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
+  
+  const allLocationNames = useMemo(() => {
+    const fromGames = games.map(g => g.location);
+    const fromData = locationsData.map(l => l.id);
+    return [...new Set([...fromGames, ...fromData])].filter(Boolean).sort((a, b) => a.localeCompare(b, lang));
+  }, [games, locationsData, lang]);
+  
+  const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
+
+  const sortedUmpireList = useMemo(() => {
+    const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
+    let umps = masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+    if (umpireSort === 'level') {
+      umps.sort((a, b) => {
+        const orderA = levelOrder[(a.level || '').toLowerCase()] || 99;
+        const orderB = levelOrder[(b.level || '').toLowerCase()] || 99;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    } else {
+      umps.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+    return umps;
+  }, [masterUmpires, searchQuery, umpireSort]);
+
+  const filteredMasterUmpires = useMemo(() => {
+    return masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [masterUmpires, searchQuery]);
+  // SLUT PÅ DET SAKNADE BLOCKET
+
   const myAssignedGames = useMemo(() => {
     if (!umpireId) return [];
     const myGames = games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId));
