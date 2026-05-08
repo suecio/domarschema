@@ -1471,8 +1471,10 @@ function MainApp() {
     const base = typeof window !== 'undefined' && window.__app_id 
       ? String(window.__app_id).replace(/[\/\\]/g, '-') 
       : 'baseball-umpire-scheduler';
-    return isDemoEnv ? `${base}-sandbox-${federation}-${selectedYear}` : `${base}-${federation}-${selectedYear}`;
-  }, [federation, selectedYear, isDemoEnv]);
+    
+    // RÄTTELSE: Ta bort "federation" (-swe-) så att vi kopplar upp mot din befintliga, riktiga databas igen!
+    return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
+  }, [selectedYear, isDemoEnv]);
 
   const calendarWeeks = useMemo(() => {
     const year = currentDate.getFullYear();
