@@ -761,6 +761,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
+             // Fall-back på profilens Gatuadress/Ort om tomt i invoiceData
             setPersonalInfo(prev => ({ 
                ...prev, 
                ...docSnap.data(), 
@@ -1581,6 +1582,8 @@ function MainApp() {
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [tempEditPhone, setTempEditPhone] = useState('');
+  const [tempHistoricalGames, setTempHistoricalGames] = useState('');
 
   // Localized today
   const today = (() => {
@@ -1686,6 +1689,7 @@ function MainApp() {
       const matchesSearch = hName.includes(search) || aName.includes(search);
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
+      
       const isHistorical = (game.date || '') < today;
       
       let statusMatch = true;
@@ -1697,25 +1701,23 @@ function MainApp() {
           statusMatch = applicants.length === 0;
       }
       
-      return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch : !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
+      if (showHistory) {
+        return isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
+      } else {
+        return !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
+      }
     });
   }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
+  
   const allLocationNames = useMemo(() => {
     const fromGames = games.map(g => g.location);
     const fromData = locationsData.map(l => l.id);
     return [...new Set([...fromGames, ...fromData])].filter(Boolean).sort((a, b) => a.localeCompare(b, lang));
   }, [games, locationsData, lang]);
+  
   const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
-  const uiDays = useMemo(() => {
-    const arr = [...(t.days || [])];
-    if (arr.length > 0) {
-      const sunday = arr.shift();
-      arr.push(sunday);
-    }
-    return arr;
-  }, [t.days]);
 
   const sortedUmpireList = useMemo(() => {
     const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
@@ -1739,8 +1741,13 @@ function MainApp() {
 
   const myAssignedGames = useMemo(() => {
     if (!umpireId) return [];
-    return games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId))
-                .filter(game => showHistory ? (game.date < today) : (game.date >= today));
+    const myGames = games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId));
+    
+    return myGames.filter(game => {
+      const isHistorical = (game.date || '') < today;
+      if (showHistory) return isHistorical;
+      return !isHistorical;
+    });
   }, [games, groupedAssignments, umpireId, showHistory, today]);
 
   const myInterestedGames = useMemo(() => {
@@ -1778,6 +1785,13 @@ function MainApp() {
     return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
   }, [registeredEmails, masterUmpires]);
 
+  const uiDays = useMemo(() => {
+    const arr = [...(t.days || [])];
+    if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
+    return arr;
+  }, [t.days]);
+
+  // 5. YTTERLIGARE EFFECTS
   useEffect(() => {
     setEditNoteText(globalNote);
   }, [globalNote]);
@@ -2124,6 +2138,7 @@ function MainApp() {
     </div>
   );
 
+  // 7. FUNKTIONER FÖR DATABAS OCH INTERAKTION
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -2323,6 +2338,7 @@ function MainApp() {
   const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
     
+    // KROCK-SKYDD: Kolla om domaren redan är bokad på annan ort samma dag
     const game = games.find(g => g.id === gameId);
     if (game) {
       const umpireAssignedGamesToday = assignments
@@ -3094,6 +3110,13 @@ function MainApp() {
 
         {view === 'my-apps' && (
           <div className="space-y-6 animate-in fade-in">
+            <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl shadow-sm flex items-start gap-4">
+               <Info className="w-6 h-6 text-blue-600 shrink-0" />
+               <p className="text-sm text-blue-800 font-medium leading-relaxed">
+                 {t.myGamesReminder}
+               </p>
+            </div>
+
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
               <h2 className="text-xl font-black uppercase text-slate-800">{t.mySchedule}</h2>
               <div className="flex items-center gap-2 flex-wrap">
@@ -3664,4 +3687,61 @@ function MainApp() {
                   <Shield className="w-5 h-5 text-blue-600" />
                   <div>
                     <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Admin</p>
-                    <p className="text-[10px] text-blue-6
+                    <p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p>
+                  </div>
+                </div>
+              )}
+
+              {isSuperAdmin && (
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <h4 className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2 mb-4">
+                    <Sliders className="w-4 h-4" /> {t.superAdminSettings}
+                  </h4>
+                  
+                  <button onClick={() => toggleSystemFeature('marketplace')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
+                    <span className="text-xs font-bold text-purple-900">{t.featureMarketplace}</span>
+                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.marketplace ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.marketplace ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </button>
+                  
+                  <button onClick={() => toggleSystemFeature('evaluations')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
+                    <span className="text-xs font-bold text-purple-900">{t.featureEvaluations}</span>
+                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.evaluations ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.evaluations ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </button>
+                  
+                  <button onClick={() => toggleSystemFeature('reminders')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
+                    <span className="text-xs font-bold text-purple-900">{t.featureReminders}</span>
+                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.reminders ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.reminders ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </button>
+
+                  {features.reminders && (
+                    <button onClick={forceRunRemindersNow} className="w-full mt-2 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5" /> {t.runRemindersNow}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">
+              {t.close}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
+  );
+}
