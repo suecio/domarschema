@@ -261,6 +261,278 @@ const translations = {
     historicalStats: "Historisk Statistik (Tidigare säsonger)",
     historicalGames: "Totalt dömda matcher",
     historicalNote: "Datan kan redigeras av administratörer."
+  },
+  en: {
+    appTitle: "Umpire Portal",
+    season: "Season",
+    schedule: "Schedule",
+    myGames: "My Games",
+    umpireList: "Umpire List",
+    staffing: "Staffing",
+    analytics: "Analytics",
+    history: "History",
+    upcoming: "Upcoming",
+    archived: "Archived Games",
+    activeSchedule: "Active Schedule",
+    searchPlaceholder: "Search...",
+    allSeries: "All Series",
+    allLocations: "All Locations",
+    filterStatusAll: "All Statuses",
+    needsUmpire: "Needs Umpire",
+    noInterests: "No Interests",
+    noGames: "No games found.",
+    syncNow: "Sync Federation Data Now",
+    applied: "Interested",
+    interested: "Interested",
+    withdraw: "Withdraw",
+    assignedTo: "Crew",
+    staffed: "Fully Staffed",
+    partiallyStaffed: "Partially Staffed",
+    bulkImport: "Bulk Import",
+    pendingAssignments: "Staffing Desk",
+    staffingControl: "Staffing Control",
+    hideStaffed: "Hide Fully Staffed",
+    showAll: "Show All Games",
+    removeAssignment: "Remove",
+    deleteGame: "Delete Game",
+    deleteAllGames: "Clear Entire Season",
+    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
+    deleteAllSuccess: "Season cleared successfully.",
+    downloadBackup: "Download Backup (JSON)",
+    umpire: "Umpire",
+    interests: "Interests",
+    gamesAssigned: "Games Assigned",
+    assignmentRate: "Assignment Rate",
+    noStats: "No engagement data recorded yet.",
+    mySchedule: "My Schedule",
+    noAssignedMatches: "You have no confirmed assignments yet.",
+    noPendingInterest: "You haven't marked interest in any matches.",
+    confirmed: "Confirmed",
+    settings: "Settings",
+    userSettings: "User Settings",
+    profileAccess: "Configure profile & access",
+    displayName: "Display Name",
+    namePlaceholder: "Search or type name...",
+    logout: "Logout",
+    close: "Close",
+    status: "Status",
+    setProfile: "Select Your Profile",
+    pasteSheet: "Paste from Google Sheets",
+    addGames: "Add Games",
+    importSuccess: "Import Successful",
+    cancel: "Cancel",
+    date: "Date",
+    crew: "Umpire Crew",
+    addToCalendar: "Add to Calendar",
+    downloadFullSchedule: "Download (.ics)",
+    confirmedGames: "Confirmed Assignments",
+    interestedGames: "Interested Matches",
+    nameRequiredTitle: "Who are you?",
+    nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.",
+    saveName: "Select Profile",
+    addNewName: "Can't find your name?",
+    createUmpire: "Create new profile",
+    masterList: "Umpire Master List",
+    editName: "Edit Name",
+    save: "Save",
+    selectFromList: "Select from list",
+    changeUser: "Change User",
+    editMatch: "Edit Match Details",
+    home: "Home",
+    away: "Away",
+    time: "Time",
+    location: "Location",
+    locations: "Locations",
+    league: "League",
+    saveChanges: "Save Changes",
+    listView: "List",
+    calendarView: "Calendar",
+    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    requiredUmpires: "Crew Size",
+    level: "Level",
+    name: "Name",
+    sortBy: "Sort by",
+    week: "W.",
+    systemUpdates: "System Updates",
+    fetchError: "Could not fetch data",
+    login: "Login",
+    register: "Register",
+    email: "Email Address",
+    password: "Password",
+    forgotPassword: "Forgot Password?",
+    loginToContinue: "Login to continue",
+    createAnAccount: "Create a new account",
+    noAccount: "No account? Register here",
+    hasAccount: "Already have an account? Login",
+    loginRequiredMsg: "You must be logged in to view this.",
+    adminManagement: "Admin Roles",
+    addAdmin: "Add Admin",
+    adminAdded: "Admin added",
+    adminRemoved: "Admin removed",
+    masterAdminInfo: "You are logged in as Master Admin.",
+    linkedAccount: "Account:",
+    notLinked: "No account",
+    linkEmailPlaceholder: "Link email...",
+    selectEmail: "-- Select Email --",
+    otherEmail: "+ Enter other...",
+    umpireProfile: "Umpire Profile",
+    back: "Back",
+    assignedMatches: "Assigned Matches",
+    totalAssignments: "Assignments",
+    totalInterests: "Interests",
+    deleteUmpireConfirm: "Are you sure you want to remove",
+    umpireDeletedSubject: "Your umpire profile has been removed",
+    umpireDeletedBody: "Hello,\n\nAn admin has removed your umpire profile from the scheduling system.",
+    assignmentEmailSubject: "New Match Assignment",
+    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}.",
+    myGamesReminder: "Important! If you need to cancel an assigned game, it is your responsibility to find a replacement and notify the elite umpire group.",
+    globalAnnouncement: "Global Announcement",
+    saveAnnouncement: "Publish",
+    clearAnnouncement: "Clear",
+    announcementPlaceholder: "Type an important message to display to everyone...",
+    helpAndInfo: "Help & Info",
+    guide: "Getting Started",
+    faq: "FAQ",
+    about: "About App",
+    guideStep1Title: "1. Create an account",
+    guideStep1Desc: "Click the login icon and select 'Create a new account'. Fill in your email address and a secure password.",
+    guideStep2Title: "2. Search for your profile",
+    guideStep2Desc: "Immediately after logging in, the 'Who are you?' prompt appears. Type your name into the search bar.",
+    guideStep3Title: "3. Confirm & Link",
+    guideStep3Desc: "Click your name in the list. This permanently links your account to the official profile, syncing your schedule across devices.",
+    guideStep4Title: "4. Name Missing?",
+    guideStep4Desc: "If you are completely new and not in the list, click 'Can't find your name?' to create a brand new profile from scratch.",
+    faq1Q: "Can I change my linked profile if I made a mistake?",
+    faq1A: "No, for security reasons your account is locked to the chosen profile. Contact an administrator to reset the link.",
+    faq2Q: "How do I apply to umpire a game?",
+    faq2A: "Navigate to 'Schedule' and click the blue 'Interested' button next to the games you are available for.",
+    faq3Q: "Who assigns the games?",
+    faq3A: "You mark your interest, but the Elite Umpire Group/Administrators make the final staffing assignments.",
+    faq4Q: "Why is my stats page empty?",
+    faq4A: "Your statistics will be generated as soon as you mark interest for a game or receive an assignment.",
+    faq5Q: "How does the marketplace work?",
+    faq5A: "If you cannot umpire a game, click 'Give Away' under My Games. It will be listed on the Marketplace. You are responsible for the game until someone else clicks 'Take Game'.",
+    loadingReadme: "Fetching README from GitHub...",
+    contactUs: "Contact Us",
+    contactDesc: "Need help or have a question? Send us a message and we'll assist you.",
+    subject: "Subject",
+    message: "Message",
+    sendMsg: "Send Message",
+    sending: "Sending...",
+    msgSentTitle: "Message Sent!",
+    msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
+    sendAnother: "Send another message",
+    shareGuide: "Share Guide",
+    linkCopied: "Link copied to clipboard!",
+    sendSchedules: "Send Schedules",
+    reviewEmails: "Review Emails",
+    customEmailMessage: "Custom Message (Optional)",
+    customEmailPlaceholder: "Type a message to appear at the top of the email for everyone...",
+    sendAllEmails: "Send to {count} umpires",
+    missingEmailWarning: "{count} umpires have assignments but no email linked:",
+    emailPreview: "Email Preview",
+    emailsSentSuccess: "All schedules have been sent successfully!",
+    bookedIn: "Booked in",
+    coUmpires: "Co-umpires:",
+    noCoUmpires: "No co-umpires",
+    calendarColumn: "Calendar",
+    gameDetails: "Game Details",
+    mapDirections: "Open Map",
+    officials: "Officials",
+    supervisor: "Supervisor",
+    techComm: "Technical Commissioner",
+    notAssigned: "Not Assigned",
+    yourGame: "Your Game",
+    marketplace: "Marketplace",
+    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires. Taking a game immediately assigns it to you.",
+    tradeGame: "Give Away",
+    cancelTrade: "Cancel Give Away",
+    takeGame: "Take Game",
+    gamesForTrade: "Games Up For Trade",
+    noMarketplaceGames: "No games are up for trade right now.",
+    tradeSuccess: "You have taken over the game! Your schedule is updated.",
+    tradeConfirm: "Are you sure you want to take over this game?",
+    downloadCalendar: "Download",
+    formatICS: ".ICS File",
+    subtextICS: "For Apple & Outlook",
+    formatCSV: ".CSV File",
+    subtextCSV: "For Google Calendar",
+    evaluate: "Evaluate",
+    grade: "Grade",
+    feedback: "Feedback / Comment",
+    saveEval: "Save Evaluation",
+    evalSaved: "Evaluation Saved",
+    yourEval: "Evaluation",
+    selectAdmin: "Select Admin...",
+    selectUmpire: "Select Umpire...",
+    enterTCName: "Enter TC name...",
+    umpireShort: "UMP",
+    supShort: "SUP",
+    tcShort: "TC",
+    address: "Address",
+    facilities: "Facilities",
+    noFacilities: "No facilities listed",
+    addFacility: "Add facility...",
+    editLocation: "Edit Location",
+    matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
+    acceptTime: "Accept New Time",
+    declineTime: "Cannot Make It",
+    timeChangedBadge: "Time Changed",
+    pendingReply: "Pending Reply",
+    emailMatchMovedSubject: "Schedule Updated ({count} games)",
+    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.",
+    pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games.",
+    sendQueuedNow: "Send Now",
+    actionRequired: "Action Required",
+    superAdminSettings: "System Architecture (Super Admin)",
+    featureMarketplace: "Enable Marketplace (Trade Board)",
+    featureEvaluations: "Enable Evaluation System",
+    featureReminders: "Automated Email Reminders (Upcoming Games)",
+    reminderPreferences: "My Notifications",
+    receiveReminders: "Receive email reminders for my upcoming games",
+    runRemindersNow: "Run Reminders Cron",
+    reminderEmailSubject: "Upcoming Games Reminder",
+    reminderEmailBody: "Hello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement.",
+    invoiceTitle: "Travel Invoice",
+    digitalSubmission: "Digital Submission",
+    personalInfo: "Personal Information",
+    pnr: "Personal ID (PNR)",
+    streetAddress: "Street Address",
+    zipCity: "Zip Code & City",
+    bankAccount: "Bank Account",
+    tripsAllowance: "Trips (Mileage & Travel Time)",
+    assignmentDetails: "Assignment (Which teams played?)",
+    travelFrom: "Travel From",
+    travelTo: "Travel To",
+    roundTrip: "Round Trip",
+    distanceMil: "Distance (Mil)",
+    calcAuto: "Calculate Distance (Auto)",
+    calculating: "Calculating...",
+    addTrip: "Add another trip",
+    expensesAllowance: "Other Expenses & Allowance",
+    description: "Description",
+    amount: "Amount (SEK)",
+    addExpense: "Add Expense",
+    overnightNights: "Overnight Allowance (Nights)",
+    advanceDeduction: "Advance Deduction (SEK)",
+    summary: "Summary",
+    mileageComp: "Mileage Compensation",
+    travelTimeComp: "Travel Time Compensation",
+    overnightComp: "Overnight Allowance",
+    otherExpenses: "Other Expenses",
+    totalToReceive: "Total to Receive",
+    createPdf: "Create PDF / Print",
+    sentSuccess: "Submitted Successfully!",
+    newInvoice: "Create new invoice",
+    selectGame: "-- Select an assigned game --",
+    homeLocation: "Home",
+    homeAddressLabel: "Home Address",
+    foundAssignments: "Found assignments:",
+    pastInvoices: "Past Invoices",
+    historicalStats: "Historical Stats",
+    historicalGames: "Total officiated games",
+    historicalNote: "Data can be edited by an admin."
   }
 };
 
@@ -808,6 +1080,133 @@ function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssigned
           </div>
         </form>
       </div>
+
+      {/* PRINT VIEW */}
+      <div className="hidden print:block w-[190mm] mx-auto text-black p-4 text-[12px] leading-snug">
+        <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-4">
+          <div>
+            <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
+            <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
+          </div>
+          <div className="text-right text-[10px]">
+            <p>{t.date}: {new Date().toLocaleDateString('sv-SE')}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-6">
+          <div><span className="font-bold">{t.name}:</span> {personalInfo.name}</div>
+          <div><span className="font-bold">{t.pnr}:</span> {personalInfo.pnr}</div>
+          <div><span className="font-bold">{t.streetAddress}:</span> {personalInfo.address}</div>
+          <div><span className="font-bold">{t.zipCity}:</span> {personalInfo.zipCity}</div>
+          <div className="col-span-2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo.bank}</div>
+        </div>
+
+        <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Uppdrag & Resor</h3>
+        <table className="w-full border-collapse border border-black mb-6 text-[11px]">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-black p-1.5 text-left">{t.date}</th>
+              <th className="border border-black p-1.5 text-left">Ändamål</th>
+              <th className="border border-black p-1.5 text-left">Från</th>
+              <th className="border border-black p-1.5 text-left">Till</th>
+              <th className="border border-black p-1.5 text-center">T&R</th>
+              <th className="border border-black p-1.5 text-right">Mil</th>
+            </tr>
+          </thead>
+          <tbody>
+            {trips.map((trip, idx) => (
+              <tr key={idx}>
+                <td className="border border-black p-1.5">{trip.date}</td>
+                <td className="border border-black p-1.5">{trip.assignment}</td>
+                <td className="border border-black p-1.5">{trip.from}</td>
+                <td className="border border-black p-1.5">{trip.to}</td>
+                <td className="border border-black p-1.5 text-center">{trip.roundTrip ? 'Ja' : 'Nej'}</td>
+                <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {expenses.some(e => e.description && e.amount) && (
+          <>
+            <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Utlägg</h3>
+            <table className="w-full border-collapse border border-black mb-6 text-[11px]">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-black p-1.5 text-left">Beskrivning</th>
+                  <th className="border border-black p-1.5 text-right w-32">Belopp (kr)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.filter(e => e.description && e.amount).map((exp, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-black p-1.5">{exp.description}</td>
+                    <td className="border border-black p-1.5 text-right">{exp.amount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        <div className="flex justify-end mb-8 page-break-inside-avoid">
+          <div className="w-1/2">
+            <table className="w-full border-collapse border border-black text-[11px]">
+              <tbody>
+                <tr>
+                  <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
+                  <td className="border border-black p-1.5 text-right">{calculated.milageCost} kr</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1.5">Restidsersättning</td>
+                  <td className="border border-black p-1.5 text-right">{calculated.travelBonus} kr</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 150kr)</td>
+                  <td className="border border-black p-1.5 text-right">{calculated.overnightCost} kr</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1.5">Övriga Utlägg</td>
+                  <td className="border border-black p-1.5 text-right">{calculated.totalExpenses} kr</td>
+                </tr>
+                {calculated.advance > 0 && (
+                  <tr>
+                    <td className="border border-black p-1.5">Avgår förskott</td>
+                    <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
+                  </tr>
+                )}
+                <tr className="bg-gray-100 font-bold text-sm">
+                  <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
+                  <td className="border border-black p-1.5 text-right">{calculated.total} kr</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="page-break-inside-avoid mt-8">
+          <div className="mb-12">
+            <p className="font-bold mb-6">Underskrift resenär:</p>
+            <div className="border-b border-black w-1/2"></div>
+            <p className="text-[10px] mt-1 text-gray-500">Signatur & Namnförtydligande</p>
+          </div>
+
+          <div className="border-2 border-black p-4">
+            <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
+            <div className="grid grid-cols-4 gap-4 text-xs h-16">
+              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Konto</div>
+              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Kostnadsställe</div>
+              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Projekt</div>
+              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Fritt</div>
+            </div>
+            <div className="grid grid-cols-3 gap-6 text-xs mt-8 h-16">
+              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Belopp (kr)</div>
+              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Attesteras (Sign/Datum)</div>
+              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Beslutas (Sign/Datum)</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -815,18 +1214,31 @@ function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssigned
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, errorInfo) { console.error("Critical React Crash:", error, errorInfo); }
+  componentDidCatch(error, errorInfo) { 
+    console.error("Critical React Crash:", error, errorInfo); 
+    this.setState({ errorInfo });
+  }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full text-center border border-red-100">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-2xl w-full text-center border border-red-100">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-black text-slate-800 mb-2">Ett oväntat fel uppstod</h2>
-            <button onClick={() => window.location.reload()} className="mt-4 bg-slate-800 text-white px-6 py-3 rounded-xl font-bold">Ladda om sidan</button>
+            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade. Felet var:</p>
+            
+            <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap bg-red-50 p-4 rounded-xl text-left overflow-auto max-h-60 border border-red-200">
+              {this.state.error?.toString()}
+              {'\n'}
+              {this.state.errorInfo?.componentStack}
+            </pre>
+
+            <button onClick={() => window.location.reload()} className="mt-8 bg-slate-800 text-white px-8 py-4 rounded-xl font-black uppercase text-xs hover:bg-black transition-colors">
+              Ladda om sidan
+            </button>
           </div>
         </div>
       );
@@ -857,11 +1269,10 @@ function MainApp() {
   
   const [isDemoEnv, setIsDemoEnv] = useState(true);
   const [federation, setFederation] = useState('swe');
-  const federations = [{ id: 'swe', name: '🇸🇪 Sweden', defaultLang: 'sv' }];
 
   const [lang, setLang] = useState('sv');
   const t = new Proxy(translations[lang], {
-      get: (target, prop) => target[prop] !== undefined ? target[prop] : translations['en'][prop]
+      get: (target, prop) => target[prop] !== undefined ? target[prop] : (translations['en'] ? translations['en'][prop] : undefined)
   });
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -982,8 +1393,13 @@ function MainApp() {
 
   const myAssignedGames = useMemo(() => {
     if (!umpireId) return [];
-    return games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId))
-                .filter(game => showHistory ? (game.date < today) : (game.date >= today));
+    const myGames = games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId));
+    
+    return myGames.filter(game => {
+      const isHistorical = (game.date || '') < today;
+      if (showHistory) return isHistorical;
+      return !isHistorical;
+    });
   }, [games, groupedAssignments, umpireId, showHistory, today]);
 
   const myInterestedGames = useMemo(() => {
@@ -1042,7 +1458,7 @@ function MainApp() {
     if (!user) return; 
     const handleDbError = (err) => { if (err.code === 'permission-denied') setFirebaseError('permission-denied'); };
 
-    const unsubGames = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'games'), (snap) => setGames(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b)=>a.date.localeCompare(b.date))), handleDbError);
+    const unsubGames = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'games'), (snap) => setGames(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b)=>(a.date || '').localeCompare(b.date || ''))), handleDbError);
     const unsubApps = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'applications'), (snap) => setApplications(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), handleDbError);
     const unsubAssign = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), (snap) => setAssignments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), handleDbError);
     const unsubUmpires = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), (snap) => setMasterUmpires(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b)=>(a.name||'').localeCompare(b.name||''))), handleDbError);
@@ -1106,12 +1522,20 @@ function MainApp() {
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
   };
 
+  const handleDeleteGame = async (gameId) => {
+    if (!isAdmin) return;
+    if (typeof window !== 'undefined' && !window.confirm(t.deleteConfirm)) return;
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
+    } catch(e) {}
+  };
+
   const takeTrade = async (oldAsg, game) => {
     if (!user || !user.email) { setShowAuthModal(true); return; }
     if (!umpireId) { setShowNamePrompt(true); return; }
     if (oldAsg && oldAsg.userId === umpireId) return; 
 
-    if (!window.confirm(t.tradeConfirm)) return;
+    if (typeof window !== 'undefined' && !window.confirm(t.tradeConfirm)) return;
     
     try {
       const batch = writeBatch(db);
@@ -1129,7 +1553,7 @@ function MainApp() {
     if (!umpireId) { setShowNamePrompt(true); return; }
     await toggleApplication(game.id);
     alert("Intresse anmält! Administratörerna kan nu se att du vill ta matchen.");
-    // Skickar notis till admin
+    
     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
        to: 'suecio@tryempire.com',
        message: {
@@ -1146,6 +1570,20 @@ function MainApp() {
     if (isNaN(d.getTime())) return '-';
     const dayIndex = d.getDay(); 
     return (t.days && t.days[dayIndex]) ? t.days[dayIndex] : '-';
+  };
+
+  const safeDateNum = (dateString) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    return d.getDate();
+  };
+
+  const safeDateMonth = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString; 
+    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
   };
 
   const getLeagueStyles = (league) => {
@@ -1165,11 +1603,48 @@ function MainApp() {
     return 'bg-slate-200 text-slate-500 border-slate-300';
   };
 
+  const getAssignmentStatusStyles = (count, required) => {
+    const req = required || 2;
+    if (count === 0) return 'bg-red-100 text-red-700 border-red-200';
+    if (count < req) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-green-100 text-green-700 border-green-200';
+  };
+
+  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
+    const hasOfficials = gameAssignments.length > 0 || game.supervisorName || game.tcName;
+    if (!hasOfficials) return null;
+
+    return (
+      <div className="flex flex-wrap gap-1 mt-3 items-center">
+        {gameAssignments.map(asg => {
+            const m = masterUmpires.find(mu => mu.id === asg.userId);
+            return (
+              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
+                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} 
+                  {t.umpireShort}: {asg.userName} 
+                  {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+              </div>
+            );
+        })}
+        {game.supervisorName && (
+          <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1">
+              <Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}
+          </div>
+        )}
+        {game.tcName && (
+          <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1">
+              <FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderCalendar = (gamesToRender) => (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 overflow-hidden animate-in fade-in">
       <div className="flex justify-between items-center mb-4 px-2">
          <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
-         <h3 className="font-black text-lg text-slate-800 uppercase">{t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+         <h3 className="font-black text-lg text-slate-800 uppercase">{t.months && t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
          <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight className="w-5 h-5"/></button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center mb-2">
@@ -1191,7 +1666,7 @@ function MainApp() {
                        </span>
                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
                          {gamesOnDay.map(g => (
-                            <div key={g.id} onClick={() => setSelectedGameDetails(g)} className="text-[8px] sm:text-[9px] font-bold bg-blue-50 text-blue-800 rounded px-1.5 py-1 truncate cursor-pointer hover:bg-blue-100">
+                            <div key={g.id} onClick={() => setSelectedGameDetails(g)} className="text-[8px] sm:text-[9px] font-bold bg-blue-50 text-blue-800 rounded px-1.5 py-1 truncate cursor-pointer hover:bg-blue-100 transition-colors">
                                {g.away}
                             </div>
                          ))}
@@ -1204,6 +1679,199 @@ function MainApp() {
       </div>
     </div>
   );
+
+  const toggleTradeStatus = async (asgId, status) => {
+    if (!umpireId && !isAdmin) return; 
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
+      forTrade: status
+    });
+  };
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      if (isLoginMode) {
+        await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      } else {
+        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      }
+      setShowAuthModal(false);
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
+  const updateProfile = async (name, id) => {
+    if (!user || !user.email) return;
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
+  };
+
+  const logoutUmpire = async () => {
+    await signOut(auth);
+    try { await signInAnonymously(auth); } catch (e) { }
+    setShowAdminModal(false);
+    setView('schedule');
+  };
+
+  const saveGlobalNote = async () => {
+    if (!isAdmin) return;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: editNoteText }, { merge: true });
+  };
+  
+  const clearGlobalNote = async () => {
+    if (!isAdmin) return;
+    setEditNoteText('');
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: '' }, { merge: true });
+  };
+
+  const toggleSystemFeature = async (featureKey) => {
+    if (!isSuperAdmin) return;
+    const newFeatures = { ...features, [featureKey]: !features[featureKey] };
+    setFeatures(newFeatures);
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { features: newFeatures }, { merge: true });
+  };
+
+  const toggleUmpireReminderPref = async (uId, currentStatus) => {
+     if (uId !== umpireId && !isAdmin) return;
+     const newStatus = currentStatus === false ? true : false;
+     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', uId), { remindersEnabled: newStatus }, { merge: true });
+  };
+
+  const addMasterUmpire = async (name, level = "") => {
+    if (!name.trim()) return "";
+    const exists = masterUmpires.find(u => (u.name || '').toLowerCase() === name.toLowerCase());
+    if (exists) return exists.id;
+    const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name, level, remindersEnabled: true });
+    return docRef.id;
+  };
+
+  const handleBulkImport = async () => {
+    if (!isAdmin || !bulkInput.trim()) return;
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      const rows = bulkInput.trim().split('\n');
+      rows.forEach((row) => {
+        const columns = row.split(/\t|,/);
+        if (columns.length >= 5) {
+          const gameData = { 
+            date: columns[0].trim(), 
+            time: columns[1].trim(), 
+            league: columns[2].trim(), 
+            away: columns[3].trim(), 
+            home: columns[4].trim(), 
+            location: (columns[5] || 'Unknown').trim(), 
+            requiredUmpires: 2 
+          };
+          const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
+          batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
+        }
+      });
+      await batch.commit();
+      setBulkInput(''); 
+      setShowImportTool(false);
+      if(typeof window !== 'undefined') alert(t.importSuccess);
+    } catch (e) { } finally { 
+      setSyncing(false); 
+    }
+  };
+
+  const confirmScheduleChange = async (asgId) => {
+     if (!umpireId) return;
+     try {
+       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
+          pendingChange: false
+       });
+     } catch (e) { }
+  };
+
+  const assignOfficial = async (gameId, role, value) => {
+    if (!isAdmin) return;
+    const updateObj = {};
+    if (role === 'supervisor') {
+        const uName = value ? masterUmpires.find(u => u.id === value)?.name : '';
+        updateObj.supervisorId = value;
+        updateObj.supervisorName = uName;
+    } else {
+        updateObj.tcName = value;
+    }
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), updateObj);
+      if (selectedGameDetails?.id === gameId) {
+        setSelectedGameDetails(prev => ({ ...prev, ...updateObj }));
+      }
+    } catch (e) { }
+  };
+
+  const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
+    if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
+    const evalId = `${gameId}_${targetUmpireId}`;
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', evalId), {
+          gameId,
+          umpireId: targetUmpireId,
+          evaluatorId: umpireId,
+          grade,
+          comment,
+          timestamp: Date.now()
+      });
+      if (typeof window !== 'undefined') alert(t.evalSaved);
+    } catch (e) { }
+  };
+
+  const loadDemoData = async () => {
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      
+      const ump1Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump1Ref, { name: "Anna Andersson", level: "Elit", remindersEnabled: true });
+      const ump2Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump2Ref, { name: "Björn Borg", level: "Region", remindersEnabled: true });
+      const ump3Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump3Ref, { name: "Cecilia Carlsson", level: "Förening", remindersEnabled: true });
+      
+      const loc1Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Örvallen');
+      batch.set(loc1Ref, { address: 'Örvallen 1, Sundbyberg', facilities: ['Omklädningsrum', 'Kiosk', 'Toalett'] });
+      const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
+      batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
+
+      const teams = ['Rättvik', 'Sundbyberg', 'Leksand', 'Stockholm', 'Sölvesborg', 'Karlskoga', 'Gefle', 'Tranås'];
+      const locs = ['Örvallen', 'Skarpnäck', 'Leksand IP', 'Shark Park'];
+      const leagues = ['Elitserien', 'Regionserien'];
+      
+      let currentDate = new Date();
+      for (let i = 0; i < 50; i++) {
+         const gameDate = new Date(currentDate);
+         gameDate.setDate(currentDate.getDate() + Math.floor(i / 2));
+         const dateStr = `${gameDate.getFullYear()}-${String(gameDate.getMonth() + 1).padStart(2, '0')}-${String(gameDate.getDate()).padStart(2, '0')}`;
+         
+         const t1 = teams[Math.floor(Math.random() * teams.length)];
+         let t2 = teams[Math.floor(Math.random() * teams.length)];
+         while(t1 === t2) t2 = teams[Math.floor(Math.random() * teams.length)];
+         
+         const loc = locs[Math.floor(Math.random() * locs.length)];
+         const l = leagues[Math.floor(Math.random() * leagues.length)];
+         const timeHour = 10 + Math.floor(Math.random() * 8);
+         const timeStr = `${timeHour}:00`;
+         
+         const gameId = `m-${dateStr.replace(/-/g,'')}-${timeStr.replace(':','')}-${t1}-${t2}`.replace(/\s+/g, '').toLowerCase();
+         
+         batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), {
+           date: dateStr, time: timeStr, league: l, away: t1, home: t2, location: loc, requiredUmpires: 2
+         });
+      }
+
+      await batch.commit();
+      if(typeof window !== 'undefined') alert("50 test-matcher har laddats in i din lokala Sandbox!");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
@@ -1220,14 +1888,13 @@ function MainApp() {
     );
   }
 
-  // UMPIRE PROFILE VIEW (NEW)
+  // UMPIRE PROFILE VIEW
   if (view === 'umpire-profile' && selectedProfileId) {
     const umpireData = masterUmpires.find(u => u.id === selectedProfileId);
     if (!umpireData) return null;
     const isMe = umpireId === selectedProfileId;
     const canEdit = isAdmin || isMe;
     
-    // Calculate stats
     const currentSeasonGames = assignments.filter(a => a.userId === selectedProfileId).length;
     const historicalGamesCount = parseInt(umpireData.historicGames || 0);
 
@@ -1237,7 +1904,7 @@ function MainApp() {
           phone: tempEditPhone.trim(),
           historicGames: parseInt(tempHistoricalGames) || 0
        }, { merge: true });
-       alert("Sparat!");
+       if (typeof window !== 'undefined') alert("Sparat!");
     };
 
     return (
@@ -1251,12 +1918,11 @@ function MainApp() {
              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-900 to-blue-600"></div>
              
              <div className="relative z-10">
-               {/* Avatar Placeholder */}
                <div className="w-32 h-32 bg-white rounded-full mx-auto border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-4">
                   {umpireData.avatarUrl ? (
                      <img src={umpireData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                     <span className="text-4xl font-black text-blue-900">{umpireData.name.charAt(0)}</span>
+                     <span className="text-4xl font-black text-blue-900">{(umpireData.name || '?').charAt(0)}</span>
                   )}
                </div>
                
@@ -1426,6 +2092,11 @@ function MainApp() {
               <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
                 <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                 <p className="text-slate-500 font-medium">{t.noGames}</p>
+                {isDemoEnv && (
+                   <button onClick={loadDemoData} disabled={syncing} className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs hover:bg-blue-700 shadow-md transition-colors">
+                     {syncing ? <RefreshCw className="w-4 h-4 animate-spin inline-block" /> : 'Ladda in testdata (Sandbox)'}
+                   </button>
+                )}
               </div>
             ) : scheduleViewMode === 'calendar' ? (
               renderCalendar(filteredGames)
@@ -1466,7 +2137,7 @@ function MainApp() {
                                 gameApplications.length > 0 ? (
                                    <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">
                                      {gameApplications.map(app => (
-                                        <span key={app.userId} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded font-bold uppercase">{app.userName.split(' ')[0]}</span>
+                                        <span key={app.userId} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded font-bold uppercase">{(app.userName || '').split(' ')[0]}</span>
                                      ))}
                                    </div>
                                 ) : (
@@ -1512,7 +2183,7 @@ function MainApp() {
                     <div key={locName} onClick={() => setSelectedLocation(locName)} className="bg-white p-6 rounded-2xl border border-slate-200 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all group">
                        <h3 className="font-black text-lg text-slate-800 group-hover:text-blue-600">{locName}</h3>
                        {locData.address && <p className="text-xs font-medium text-slate-500 mt-2 truncate flex items-center gap-1"><MapPin className="w-3 h-3"/>{locData.address}</p>}
-                       <div className="mt-4"><span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">{locData.facilities.length || 0} {t.facilities}</span></div>
+                       <div className="mt-4"><span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">{(locData.facilities || []).length} {t.facilities}</span></div>
                     </div>
                   );
                })}
@@ -1538,11 +2209,11 @@ function MainApp() {
                 <div key={u.id} onClick={() => { setSelectedProfileId(u.id); setView('umpire-profile'); }} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 hover:shadow-md transition-all group">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 group-hover:bg-blue-50">
-                       <span className="text-sm font-black text-slate-500 group-hover:text-blue-600">{u.name.charAt(0)}</span>
+                       <span className="text-sm font-black text-slate-500 group-hover:text-blue-600">{(u.name || '?').charAt(0)}</span>
                     </div>
                     <div>
                       <span className="font-bold text-slate-800 text-sm block group-hover:text-blue-700">{u.name}</span>
-                      {u.level && <span className={`text-[8px] font-black mt-1 inline-block uppercase ${u.level.toLowerCase().includes('elit') ? 'text-green-600' : 'text-slate-500'}`}>{u.level}</span>}
+                      {u.level && <span className={`text-[8px] font-black mt-1 inline-block uppercase ${(u.level || '').toLowerCase().includes('elit') ? 'text-green-600' : 'text-slate-500'}`}>{u.level}</span>}
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
@@ -1891,7 +2562,7 @@ function MainApp() {
                                 <select 
                                   value="" 
                                   onChange={(e) => { 
-                                    if(e.target.value) { assignUmpire(game.id, e.target.value, masterUmpires.find(u=>u.id===e.target.value).name); } 
+                                    if(e.target.value) { assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || 'Okänd')); } 
                                   }} 
                                   className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none text-slate-600 focus:ring-2 focus:ring-blue-500/20"
                                 >
@@ -1911,7 +2582,7 @@ function MainApp() {
 
       {user?.email && (
         <button onClick={() => setShowAdminModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-blue-800 z-40 hover:scale-105 transition-transform">
-          <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[10px] font-black uppercase">{userName ? userName.charAt(0) : '?'}</div>
+          <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[10px] font-black uppercase">{(userName || '?').charAt(0)}</div>
           <span className="text-sm font-bold">{userName || 'Välj profil'}</span>
         </button>
       )}
@@ -1964,11 +2635,11 @@ function MainApp() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-black text-xs">
-                                     {asg.userName.charAt(0)}
+                                     {(asg.userName || '?').charAt(0)}
                                   </div>
                                   <div>
                                     <span className="font-bold text-sm text-slate-800 block">{asg.userName}</span>
-                                    {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase ${m.level.toLowerCase().includes('elit') ? 'text-green-600' : 'text-slate-500'}`}>{m.level}</span>}
+                                    {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase ${(m.level || '').toLowerCase().includes('elit') ? 'text-green-600' : 'text-slate-500'}`}>{m.level}</span>}
                                   </div>
                                 </div>
                               </div>
