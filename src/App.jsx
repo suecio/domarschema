@@ -12,7 +12,6 @@ import {
   addDoc,
   updateDoc,
   query,
-  where,
   orderBy
 } from 'firebase/firestore';
 import { 
@@ -35,11 +34,11 @@ import {
   Calendar as CalendarIcon, Shield, CheckCircle, Clock, Settings, Trash2, 
   MapPin, RefreshCw, Trophy, FileText, Plus, ChevronDown, ChevronUp, Search, 
   BarChart3, History as HistoryIcon, Info, User, UserPlus, UserMinus, Download, 
-  CalendarPlus, UserCheck, Edit2, Check, LogOut, ChevronRight, List, ChevronLeft, 
-  ArrowUpDown, ArrowUp, Users2, Github, X, AlertTriangle, ArrowLeft, Megaphone, 
-  HelpCircle, BookOpen, MessageCircle, Code, Mail, Send, Share2, Map, 
+  UserCheck, Edit2, LogOut, ChevronRight, List, ChevronLeft, 
+  ArrowUp, Users2, X, AlertTriangle, ArrowLeft, Megaphone, 
+  MessageCircle, Code, Send, Share2, Map, 
   ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
-  Calculator, Printer, Car, CreditCard, Phone, Save, Camera
+  Calculator, Printer, Car, CreditCard, Save, Camera
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -378,9 +377,6 @@ const translations = {
     masterAdminInfo: "You are logged in as Master Admin.",
     linkedAccount: "Account:",
     notLinked: "No account",
-    linkEmailPlaceholder: "Link email...",
-    selectEmail: "-- Select Email --",
-    otherEmail: "+ Enter other...",
     umpireProfile: "Umpire Profile",
     back: "Back",
     assignedMatches: "Assigned Matches",
@@ -601,7 +597,7 @@ function UmpireProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
         {/* Modal Header */}
@@ -761,7 +757,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-             // Fall-back på profilens Gatuadress/Ort om tomt i invoiceData
             setPersonalInfo(prev => ({ 
                ...prev, 
                ...docSnap.data(), 
@@ -1256,7 +1251,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
               className="flex-1 py-4 bg-yellow-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-yellow-200 hover:bg-yellow-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 
-              Skicka in (TEST: Kvitto till din E-post)
+              Skicka in
             </button>
           </div>
         </form>
@@ -1477,7 +1472,7 @@ function MainApp() {
     const selected = translations[languageCode] || translations['en'];
     const fallback = translations['en'];
     return new Proxy(selected, {
-      get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop]
+      get: (target, prop) => target[prop] !== undefined ? target[prop] : (fallback[prop] || '')
     });
   };
   const t = getTranslation(lang);
@@ -2022,6 +2017,7 @@ function MainApp() {
     }
   }, [view, selectedYear, lang]);
 
+  // 6. HJÄLPFUNKTIONER FÖR UI
   const safeDateMonth = (dateString) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -2947,7 +2943,6 @@ function MainApp() {
                         {!showHistory && (
                           <>
                             <div className="flex flex-col items-end">
-                              {/* ADMINS SER NAMNEN, ANDRA SER BARA ANTALET */}
                               {isAdmin ? (
                                 gameApplications.length > 0 ? (
                                    <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">
@@ -3338,8 +3333,8 @@ function MainApp() {
                                   if (conflictGame) {
                                     return (
                                       <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`Bokad i ${conflictGame.location}`}>
-                                         <span className="text-xs font-bold text-red-900 line-through decoration-red-500">{app.userName}</span>
-                                         <span className="text-[9px] font-black uppercase text-red-600 px-2">Annan ort</span>
+                                         <span className="text-xs font-bold text-red-900 line-through decoration-red-500 truncate">{app.userName}</span>
+                                         <span className="text-[9px] font-black uppercase text-red-600 px-2 text-right truncate max-w-[100px]">{conflictGame.location}</span>
                                       </div>
                                     )
                                   }
