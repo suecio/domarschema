@@ -27,7 +27,7 @@ import {
   logEvent 
 } from 'firebase/analytics';
 
-// Import Icons
+// Import Icons (TravelInvoice removed from imports)
 import { 
   Calendar as CalendarIcon, Shield, CheckCircle, Clock, Settings, Trash2, 
   MapPin, RefreshCw, Trophy, FileText, Plus, ChevronDown, ChevronUp, Search, 
@@ -35,10 +35,9 @@ import {
   CalendarPlus, UserCheck, Edit2, Check, LogOut, ChevronRight, List, ChevronLeft, 
   ArrowUpDown, ArrowUp, Users2, Github, X, AlertTriangle, ArrowLeft, Megaphone, 
   HelpCircle, BookOpen, MessageCircle, Code, Mail, Send, Share2, Map, 
-  ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders
+  ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
+  Calculator, Printer, Car, CreditCard
 } from 'lucide-react';
-
-import TravelInvoice from './TravelInvoice';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
@@ -655,6 +654,7 @@ const renderMarkdown = (text) => {
   });
 };
 
+// TravelInvoice is now bundled inside App.jsx to prevent import errors
 function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssignedGames }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -843,11 +843,64 @@ AVDRAG FÖRSKOTT: -${calculated.advance} kr
 TOTALT ATT ERHÅLLA: ${calculated.total} kr
       `;
 
+      const emailHtml = `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+          <h2 style="color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px;">Reseräkning - ${personalInfo.name}</h2>
+          
+          <h3 style="color: #475569; margin-top: 20px;">Personuppgifter</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc; width: 30%;"><strong>Namn</strong></td><td style="padding: 8px; border: 1px solid #cbd5e1;">${personalInfo.name}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;"><strong>Personnummer</strong></td><td style="padding: 8px; border: 1px solid #cbd5e1;">${personalInfo.pnr}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;"><strong>Adress</strong></td><td style="padding: 8px; border: 1px solid #cbd5e1;">${personalInfo.address}, ${personalInfo.zipCity}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;"><strong>Bankkonto</strong></td><td style="padding: 8px; border: 1px solid #cbd5e1;">${personalInfo.bank}</td></tr>
+          </table>
+
+          <h3 style="color: #475569; margin-top: 20px;">Resor</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr style="background: #f8fafc;">
+              <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Datum & Ändamål</th>
+              <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Sträcka</th>
+              <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Mil</th>
+            </tr>
+            ${trips.map(t => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${t.date}<br><small style="color: #64748b;">${t.assignment}</small></td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${t.from} &rarr; ${t.to}<br><small style="color: #64748b;">${t.roundTrip ? 'Tur & Retur' : 'Enkel'}</small></td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold;">${t.distance}</td>
+              </tr>
+            `).join('')}
+          </table>
+
+          ${expenses.some(e => e.description && e.amount) ? `
+          <h3 style="color: #475569; margin-top: 20px;">Övriga utlägg</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            ${expenses.filter(e => e.description && e.amount).map(e => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${e.description}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; width: 100px;">${e.amount} kr</td>
+              </tr>
+            `).join('')}
+          </table>
+          ` : ''}
+
+          <h3 style="color: #475569; margin-top: 20px;">Sammanställning</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Milersättning</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; width: 120px;">${calculated.milageCost} kr</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Restidsersättning</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${calculated.travelBonus} kr</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Övernattningstraktamente</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${calculated.overnightCost} kr</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Övriga utlägg</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${calculated.totalExpenses} kr</td></tr>
+            ${calculated.advance > 0 ? `<tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Avgår förskott</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; color: #ef4444;">-${calculated.advance} kr</td></tr>` : ''}
+            <tr style="background: #1e3a8a; color: white;"><td style="padding: 10px 8px; border: 1px solid #1e3a8a; font-weight: bold;">TOTALT ATT ERHÅLLA</td><td style="padding: 10px 8px; border: 1px solid #1e3a8a; text-align: right; font-weight: bold; font-size: 16px;">${calculated.total} kr</td></tr>
+          </table>
+        </div>
+      `;
+
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: personalInfo.email,
+        to: personalInfo.email, // TEST MODE: Går till inloggad e-post istället för förbundet
         message: {
-          subject: `TEST: Reseräkning ${personalInfo.name} (${calculated.total} kr)`,
-          text: emailBody
+          subject: `Reseräkning: ${personalInfo.name} (${calculated.total} kr) - TEST`,
+          text: emailBody,
+          html: emailHtml
         },
         createdAt: Date.now()
       });
