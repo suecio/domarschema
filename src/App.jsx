@@ -39,7 +39,7 @@ import {
   ArrowUpDown, ArrowUp, Users2, Github, X, AlertTriangle, ArrowLeft, Megaphone, 
   HelpCircle, BookOpen, MessageCircle, Code, Mail, Send, Share2, Map, 
   ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
-  Calculator, Printer, Car, CreditCard, Phone, Save
+  Calculator, Printer, Car, CreditCard, Phone, Save, Camera
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -261,7 +261,10 @@ const translations = {
     pastInvoices: "Tidigare reseräkningar",
     historicalStats: "Historisk Statistik (Tidigare säsonger)",
     historicalGames: "Totalt dömda matcher",
-    historicalNote: "Datan kan redigeras av administratörer."
+    historicalNote: "Datan kan redigeras av administratörer.",
+    streetAddressHidden: "Gatuadress (Dold för andra)",
+    cityPublic: "Ort (Offentlig)",
+    changePicture: "Byt bild"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -315,7 +318,6 @@ const translations = {
     userSettings: "User Settings",
     profileAccess: "Configure profile & access",
     displayName: "Display Name",
-    namePlaceholder: "Search or type name...",
     logout: "Logout",
     close: "Close",
     status: "Status",
@@ -484,7 +486,10 @@ const translations = {
     pastInvoices: "Past Invoices",
     historicalStats: "Historical Stats",
     historicalGames: "Total officiated games",
-    historicalNote: "Data can be edited by an admin."
+    historicalNote: "Data can be edited by an admin.",
+    streetAddressHidden: "Street Address (Hidden)",
+    cityPublic: "City (Public)",
+    changePicture: "Change Picture"
   }
 };
 
@@ -516,9 +521,205 @@ const generateCSV = (gamesToExport, selectedYear) => {
 };
 
 // ==========================================
+// UMPIRE PROFILE MODAL COMPONENT (NEW)
+// ==========================================
+function UmpireProfileModal({ 
+  selectedProfileId, setSelectedProfileId, masterUmpires, assignments, 
+  umpireId, isAdmin, selectedYear, t, getLevelStyles, db, appId 
+}) {
+  const umpireData = masterUmpires.find(u => u.id === selectedProfileId);
+  const isMe = umpireId === selectedProfileId;
+  const canEdit = isAdmin || isMe;
+  
+  const [editData, setEditData] = useState({
+     linkedEmail: '', phone: '', address: '', city: '', historicGames: 0
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+     if (umpireData) {
+        setEditData({
+           linkedEmail: umpireData.linkedEmail || '',
+           phone: umpireData.phone || '',
+           address: umpireData.address || '',
+           city: umpireData.city || '',
+           historicGames: parseInt(umpireData.historicGames || 0)
+        });
+     }
+  }, [umpireData]);
+
+  if (!umpireData) return null;
+
+  const currentSeasonGames = assignments.filter(a => a.userId === selectedProfileId).length;
+
+  const handleSave = async () => {
+     setIsSaving(true);
+     try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', selectedProfileId), {
+           linkedEmail: editData.linkedEmail.trim().toLowerCase(),
+           phone: editData.phone.trim(),
+           address: editData.address.trim(),
+           city: editData.city.trim(),
+           historicGames: parseInt(editData.historicGames) || 0
+        }, { merge: true });
+        if (typeof window !== 'undefined') alert("Sparat!");
+     } catch(e) {
+        if (typeof window !== 'undefined') alert("Ett fel uppstod.");
+     }
+     setIsSaving(false);
+  };
+
+  const handleAvatarUpload = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+         const img = new Image();
+         img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX = 256;
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+            else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Spara den förminskade bilden i Firestore
+            setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', selectedProfileId), { avatarUrl: dataUrl }, { merge: true });
+         };
+         img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[90] p-4">
+      <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
+        
+        {/* Modal Header med bakgrund */}
+        <div className="relative pt-12 pb-6 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
+           <button onClick={() => setSelectedProfileId(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
+           
+           <div className="relative w-32 h-32 mx-auto mb-4">
+              <div className="w-full h-full bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
+                 {umpireData.avatarUrl ? (
+                    <img src={umpireData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                 ) : (
+                    <span className="text-4xl font-black text-blue-900">{(umpireData.name || '?').charAt(0)}</span>
+                 )}
+              </div>
+              
+              {canEdit && (
+                <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2.5 rounded-full shadow-md cursor-pointer hover:bg-blue-700 transition-colors" title={t.changePicture}>
+                   <Camera className="w-4 h-4" />
+                   <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                </label>
+              )}
+           </div>
+           
+           <h2 className="text-3xl font-black text-slate-800">{umpireData.name}</h2>
+           {umpireData.city && !canEdit && (
+             <p className="text-sm font-bold text-slate-500 mt-1 flex items-center justify-center gap-1"><MapPin className="w-3.5 h-3.5"/> {umpireData.city}</p>
+           )}
+           <div className="mt-3 inline-block">
+             <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg border uppercase ${getLevelStyles(umpireData.level)}`}>{umpireData.level}</span>
+           </div>
+        </div>
+
+        {/* Modal Scrollable Body */}
+        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+             <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                 <User className="w-4 h-4" /> Kontaktuppgifter
+               </h3>
+               
+               <div className="space-y-4">
+                 <div>
+                   <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.email}</label>
+                   {canEdit ? (
+                     <input type="email" value={editData.linkedEmail} onChange={e => setEditData({...editData, linkedEmail: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
+                   ) : (
+                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1">{editData.linkedEmail || 'Ej angivet'}</p>
+                   )}
+                 </div>
+                 
+                 <div>
+                   <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.phone}</label>
+                   {canEdit ? (
+                     <input type="tel" value={editData.phone} onChange={e => setEditData({...editData, phone: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
+                   ) : (
+                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1">{editData.phone || 'Ej angivet'}</p>
+                   )}
+                 </div>
+
+                 {canEdit && (
+                   <>
+                     <div>
+                       <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.streetAddressHidden}</label>
+                       <input type="text" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} placeholder="Hemadress 1" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
+                     </div>
+                     <div>
+                       <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.cityPublic}</label>
+                       <input type="text" value={editData.city} onChange={e => setEditData({...editData, city: e.target.value})} placeholder="Stockholm" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
+                     </div>
+                     <button onClick={handleSave} disabled={isSaving} className="w-full py-3 mt-2 bg-blue-600 text-white font-black rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50">
+                       {isSaving ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />} Spara uppgifter
+                     </button>
+                   </>
+                 )}
+               </div>
+             </div>
+
+             <div className="space-y-6">
+               <div className="bg-blue-900 text-white p-6 rounded-3xl shadow-sm">
+                 <h3 className="text-xs font-black text-blue-300 uppercase tracking-widest mb-2 flex items-center gap-2">
+                   <CalendarIcon className="w-4 h-4" /> Säsongen {selectedYear}
+                 </h3>
+                 <div className="flex items-end gap-3">
+                   <span className="text-5xl font-black">{currentSeasonGames}</span>
+                   <span className="text-sm font-bold text-blue-200 pb-1">tillsatta matcher</span>
+                 </div>
+               </div>
+
+               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                   <HistoryIcon className="w-4 h-4" /> {t.historicalStats}
+                 </h3>
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.historicalGames}</label>
+                     {isAdmin ? (
+                       <input type="number" value={editData.historicGames} onChange={e => setEditData({...editData, historicGames: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-blue-600 outline-none mt-1 focus:border-blue-400" />
+                     ) : (
+                       <p className="p-3 bg-white border border-slate-200 rounded-xl text-xl font-black text-slate-700 mt-1">{editData.historicGames} st</p>
+                     )}
+                   </div>
+                   <p className="text-[10px] text-slate-400 italic font-medium leading-relaxed">
+                     Denna siffra visar matcher dömda under tidigare säsonger. {t.historicalNote}
+                   </p>
+                   {isAdmin && (
+                     <button onClick={handleSave} disabled={isSaving} className="w-full py-2 bg-slate-200 text-slate-700 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-300 disabled:opacity-50">
+                       Uppdatera historik
+                     </button>
+                   )}
+                 </div>
+               </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
 // TRAVEL INVOICE COMPONENT
 // ==========================================
-function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames }) {
+function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [calculatingIndex, setCalculatingIndex] = useState(null);
@@ -546,9 +747,23 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            setPersonalInfo(prev => ({ ...prev, ...docSnap.data(), email: user?.email || prev.email || '' }));
-          } else if (userName) {
-            setPersonalInfo(prev => ({ ...prev, name: userName, email: user?.email || '' }));
+             // Om det finns i databasen, fyll i, MEN fall-back på profilens Gatuadress/Ort om tomt
+            setPersonalInfo(prev => ({ 
+               ...prev, 
+               ...docSnap.data(), 
+               address: docSnap.data().address || myUmpireData?.address || '',
+               zipCity: docSnap.data().zipCity || myUmpireData?.city || '',
+               email: user?.email || docSnap.data().email || prev.email || '' 
+            }));
+          } else {
+             // Finns inte invoiceData, hämta adress från Umpire-profilen
+            setPersonalInfo(prev => ({ 
+               ...prev, 
+               name: userName || myUmpireData?.name || '', 
+               email: user?.email || '',
+               address: myUmpireData?.address || '',
+               zipCity: myUmpireData?.city || ''
+            }));
           }
         } catch(e) {}
       };
@@ -564,9 +779,11 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
       };
       fetchPastInvoices();
     } else if (userName) {
-       setPersonalInfo(prev => ({ ...prev, name: userName, email: user?.email || '' }));
+       setPersonalInfo(prev => ({ 
+          ...prev, name: userName, email: user?.email || '', address: myUmpireData?.address || '', zipCity: myUmpireData?.city || '' 
+       }));
     }
-  }, [user, appId, userName, db]);
+  }, [user, appId, userName, db, myUmpireData]);
 
   const handlePersonalInfoChange = (e) => {
     setPersonalInfo({ ...personalInfo, [e.target.name]: e.target.value });
@@ -987,7 +1204,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                 <span>{calculated.milageCost} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">{t.travelTimeComp} (>10 mil/resa: 100kr, >20 mil: 200kr)</span>
+                <span className="text-slate-300">{t.travelTimeComp} (>10 mil: 100kr, >20 mil: 200kr)</span>
                 <span>{calculated.travelBonus} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
@@ -2394,6 +2611,7 @@ function MainApp() {
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
   if (view === 'invoice') {
+    const myUmpireData = masterUmpires.find(u => u.id === umpireId);
     return (
       <div className="relative bg-slate-100 min-h-screen">
         {isDemoEnv && (
@@ -2414,120 +2632,8 @@ function MainApp() {
           userName={userName} 
           t={t} 
           myAssignedGames={myAssignedGames} 
+          myUmpireData={myUmpireData}
         />
-      </div>
-    );
-  }
-
-  if (view === 'umpire-profile' && selectedProfileId) {
-    const umpireData = masterUmpires.find(u => u.id === selectedProfileId);
-    if (!umpireData) return null;
-    const isMe = umpireId === selectedProfileId;
-    const canEdit = isAdmin || isMe;
-    
-    const currentSeasonGames = assignments.filter(a => a.userId === selectedProfileId).length;
-    const historicalGamesCount = parseInt(umpireData.historicGames || 0);
-
-    const saveProfileEdits = async () => {
-       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', selectedProfileId), {
-          linkedEmail: tempEditEmail.trim().toLowerCase(),
-          phone: tempEditPhone.trim(),
-          historicGames: parseInt(tempHistoricalGames) || 0
-       }, { merge: true });
-       if (typeof window !== 'undefined') alert("Sparat!");
-    };
-
-    return (
-      <div className="min-h-screen bg-slate-50 p-4 pt-12 sm:p-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <button onClick={() => setView(isMe ? 'schedule' : 'umpire-list')} className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors">
-            <ArrowLeft className="w-4 h-4" /> {isMe ? t.back : "Tillbaka till Domarlistan"}
-          </button>
-
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 text-center relative overflow-hidden">
-             <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-900 to-blue-600"></div>
-             
-             <div className="relative z-10">
-               <div className="w-32 h-32 bg-white rounded-full mx-auto border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-4">
-                  {umpireData.avatarUrl ? (
-                     <img src={umpireData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                     <span className="text-4xl font-black text-blue-900">{(umpireData.name || '?').charAt(0)}</span>
-                  )}
-               </div>
-               
-               <h2 className="text-3xl font-black text-slate-800">{umpireData.name}</h2>
-               <div className="mt-2 inline-block">
-                 <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg border uppercase ${getLevelStyles(umpireData.level)}`}>{umpireData.level}</span>
-               </div>
-             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                 <User className="w-4 h-4" /> Kontaktuppgifter
-               </h3>
-               
-               <div className="space-y-4">
-                 <div>
-                   <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.email}</label>
-                   {canEdit ? (
-                     <input type="email" defaultValue={umpireData.linkedEmail || ''} onChange={e => setTempEditEmail(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1" />
-                   ) : (
-                     <p className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-700 mt-1">{umpireData.linkedEmail || 'Ej angivet'}</p>
-                   )}
-                 </div>
-                 
-                 <div>
-                   <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.phone}</label>
-                   {canEdit ? (
-                     <input type="tel" defaultValue={umpireData.phone || ''} onChange={e => setTempEditPhone(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1" />
-                   ) : (
-                     <p className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-700 mt-1">{umpireData.phone || 'Ej angivet'}</p>
-                   )}
-                 </div>
-
-                 {canEdit && (
-                   <button onClick={saveProfileEdits} className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700">
-                     <Save className="w-4 h-4" /> Spara uppgifter
-                   </button>
-                 )}
-               </div>
-             </div>
-
-             <div className="space-y-6">
-               <div className="bg-blue-900 text-white p-6 rounded-3xl shadow-sm">
-                 <h3 className="text-xs font-black text-blue-300 uppercase tracking-widest mb-2 flex items-center gap-2">
-                   <CalendarIcon className="w-4 h-4" /> Säsongen {selectedYear}
-                 </h3>
-                 <div className="flex items-end gap-3">
-                   <span className="text-5xl font-black">{currentSeasonGames}</span>
-                   <span className="text-sm font-bold text-blue-200 pb-1">tillsatta matcher</span>
-                 </div>
-               </div>
-
-               <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                   <HistoryIcon className="w-4 h-4" /> {t.historicalStats}
-                 </h3>
-                 <div className="space-y-4">
-                   <div>
-                     <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.historicalGames}</label>
-                     {isAdmin ? (
-                       <input type="number" defaultValue={historicalGamesCount} onChange={e => setTempHistoricalGames(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-blue-600 outline-none mt-1" />
-                     ) : (
-                       <p className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xl font-black text-slate-700 mt-1">{historicalGamesCount} st</p>
-                     )}
-                   </div>
-                   <p className="text-[10px] text-slate-400 italic font-medium leading-relaxed">
-                     Denna siffra visar matcher dömda under tidigare säsonger. {t.historicalNote}
-                   </p>
-                 </div>
-               </div>
-             </div>
-          </div>
-        </div>
       </div>
     );
   }
@@ -2597,11 +2703,12 @@ function MainApp() {
         {view !== 'help' && (
           <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar sticky top-[68px] z-20">
             {tabs.map(tab => {
+              // Markera fliken som aktiv baserat på nuvarande vy ELLER om min profil visas.
               const isActive = tab.id === 'my-profile' 
-                ? (view === 'umpire-profile' && selectedProfileId === umpireId)
+                ? (selectedProfileId === umpireId && selectedProfileId !== null)
                 : tab.id === 'umpire-list' 
-                ? (view === 'umpire-list' || (view === 'umpire-profile' && selectedProfileId !== umpireId))
-                : (view === tab.id);
+                ? (view === 'umpire-list')
+                : (view === tab.id && (!selectedProfileId || selectedProfileId !== umpireId));
 
               return (
                 <button 
@@ -2609,7 +2716,6 @@ function MainApp() {
                   onClick={() => { 
                     if (tab.id === 'my-profile') {
                       setSelectedProfileId(umpireId);
-                      setView('umpire-profile');
                     } else {
                       setView(tab.id); 
                       setSelectedProfileId(null); 
@@ -2706,6 +2812,7 @@ function MainApp() {
                         {!showHistory && (
                           <>
                             <div className="flex flex-col items-end">
+                              {/* ADMINS SER NAMNEN, ANDRA SER BARA ANTALET */}
                               {isAdmin ? (
                                 gameApplications.length > 0 ? (
                                    <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">
@@ -2777,10 +2884,14 @@ function MainApp() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {sortedUmpireList.map(u => (
-                <div key={u.id} onClick={() => { setSelectedProfileId(u.id); setView('umpire-profile'); }} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 hover:shadow-md transition-all group">
+                <div key={u.id} onClick={() => { setSelectedProfileId(u.id); }} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 hover:shadow-md transition-all group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 group-hover:bg-blue-50">
-                       <span className="text-sm font-black text-slate-500 group-hover:text-blue-600">{(u.name || '?').charAt(0)}</span>
+                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 overflow-hidden group-hover:bg-blue-50">
+                       {u.avatarUrl ? (
+                          <img src={u.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                       ) : (
+                          <span className="text-sm font-black text-slate-500 group-hover:text-blue-600">{(u.name || '?').charAt(0)}</span>
+                       )}
                     </div>
                     <div>
                       <span className="font-bold text-slate-800 text-sm block group-hover:text-blue-700">{u.name}</span>
@@ -2864,15 +2975,8 @@ function MainApp() {
 
         {view === 'my-apps' && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl shadow-sm flex items-start gap-4">
-               <Megaphone className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-               <div className="text-sm text-amber-800 font-medium leading-relaxed">
-                 <p className="font-bold mb-2 text-amber-900">Sista datum för att anmäla tillgänglighet är idag (2026-04-05).</p>
-                 <p>Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.</p>
-                 <p className="mt-2 text-amber-900 font-bold">Vi tillsätter fram tills sista Juni.</p>
-               </div>
-            </div>
-            
+            {/* REMOVED THE YELLOW WARNING BANNER HERE */}
+
             <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl shadow-sm flex items-start gap-4">
                <Info className="w-6 h-6 text-blue-600 shrink-0" />
                <p className="text-sm text-blue-800 font-medium leading-relaxed">
@@ -3004,7 +3108,7 @@ function MainApp() {
                    {sortedStatistics.map(stat => (
                      <tr key={stat.userId} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                        <td className="px-6 py-4 font-bold text-slate-800">
-                         <button onClick={() => { setSelectedProfileId(stat.userId); setView('umpire-profile'); }} className="hover:text-blue-600 hover:underline">
+                         <button onClick={() => { setSelectedProfileId(stat.userId); }} className="hover:text-blue-600 hover:underline">
                            {stat.name}
                          </button>
                        </td>
@@ -3142,7 +3246,7 @@ function MainApp() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-40">
           <button onClick={() => setShowAdminModal(true)} className="bg-blue-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-blue-800 hover:scale-105 transition-transform">
             <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[10px] font-black uppercase">{(userName || '?').charAt(0)}</div>
-            <span className="text-sm font-bold">{userName || 'Välj profil'}</span>
+            <span className="text-sm font-bold">{userName || 'Inställningar'}</span>
             <Settings className="w-4 h-4 opacity-50 ml-1" />
           </button>
         </div>
@@ -3150,6 +3254,23 @@ function MainApp() {
 
       {!user?.email && (
         <button onClick={() => setShowAuthModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-8 py-3 rounded-full shadow-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform z-40">Logga in</button>
+      )}
+
+      {/* UMPIRE PROFILE MODAL */}
+      {selectedProfileId && (
+         <UmpireProfileModal 
+            selectedProfileId={selectedProfileId}
+            setSelectedProfileId={setSelectedProfileId}
+            masterUmpires={masterUmpires}
+            assignments={assignments}
+            umpireId={umpireId}
+            isAdmin={isAdmin}
+            selectedYear={selectedYear}
+            t={t}
+            getLevelStyles={getLevelStyles}
+            db={db}
+            appId={appId}
+         />
       )}
 
       {/* MATCH DETAILS MODAL (Pop-up) */}
@@ -3195,11 +3316,15 @@ function MainApp() {
                             <div key={asg.userId} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-black text-xs">
-                                     {(asg.userName || '?').charAt(0)}
+                                  <div className="w-8 h-8 bg-white shadow-sm border border-slate-200 text-slate-500 rounded-full flex items-center justify-center font-black text-xs overflow-hidden">
+                                     {m?.avatarUrl ? (
+                                        <img src={m.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                     ) : (
+                                        (asg.userName || '?').charAt(0)
+                                     )}
                                   </div>
                                   <div>
-                                    <span className="font-bold text-sm text-slate-800 block">{asg.userName}</span>
+                                    <span className="font-bold text-sm text-slate-800 block cursor-pointer hover:text-blue-600" onClick={() => setSelectedProfileId(asg.userId)}>{asg.userName}</span>
                                     {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase ${(m.level || '').toLowerCase().includes('elit') ? 'text-green-600' : 'text-slate-500'}`}>{m.level}</span>}
                                   </div>
                                 </div>
