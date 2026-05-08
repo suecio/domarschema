@@ -807,6 +807,7 @@ function UmpireProfileModal({
 function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [sentTarget, setSentTarget] = useState(''); // Ny: håller koll på var vi skickade
   const [calculatingIndex, setCalculatingIndex] = useState(null);
   const [pastInvoices, setPastInvoices] = useState([]);
 
@@ -973,9 +974,43 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     return { totalMilage, milageCost, travelBonus, overnightCost, totalExpenses, advance: advanceNum, total };
   }, [trips, expenses, overnightCount, advance]);
 
-  const handleSubmit = async (e) => {
+  const handleDownloadPDF = () => {
+    const form = document.getElementById('invoice-form');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    
+    setIsSubmitting(true);
+    // Ladda in html2pdf dynamiskt för att slippa krasha Cloudflare-bygget
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => {
+      const element = document.getElementById('print-invoice-view');
+      element.classList.remove('hidden');
+      element.classList.remove('print:block');
+      
+      const opt = {
+        margin:       10,
+        filename:     `Reserakning_${personalInfo.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('sv-SE')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      window.html2pdf().set(opt).from(element).save().then(() => {
+        element.classList.add('hidden');
+        element.classList.add('print:block');
+        setIsSubmitting(false);
+      });
+    };
+    document.body.appendChild(script);
+  };
+
+  const handleSubmit = async (e, target) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSentTarget(target);
 
     try {
       if (user && user.uid) {
@@ -1039,17 +1074,23 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         </div>
       `;
 
+      const toEmail = target === 'federation' ? 'info@sbslf.se' : personalInfo.email;
+      const emailSubject = target === 'federation' 
+        ? `Reseräkning: ${personalInfo.name} (${calculated.total} kr)` 
+        : `TEST (Kopia): Reseräkning ${personalInfo.name} (${calculated.total} kr)`;
+
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: personalInfo.email,
+        to: toEmail,
+        replyTo: personalInfo.email,
         message: {
-          subject: `Reseräkning: ${personalInfo.name} (${calculated.total} kr) - TEST`,
+          subject: emailSubject,
           text: "Ny reseräkning inskickad. Vänligen läs mailet i en HTML-kompatibel e-postklient.",
           html: emailHtml
         },
         createdAt: Date.now()
       });
 
-      if (user && user.uid) {
+      if (user && user.uid && target === 'federation') {
          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), {
             createdAt: Date.now(),
             total: calculated.total,
@@ -1060,7 +1101,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
 
       setSuccess(true);
     } catch (err) {
-      alert(t.errorOccurred);
+      alert("Ett fel uppstod. Vänligen försök igen.");
     }
     setIsSubmitting(false);
   };
@@ -1071,7 +1112,9 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center">
           <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
           <h2 className="text-2xl font-black text-slate-800 mb-2">{t.sentSuccess}</h2>
-          <p className="text-slate-600 mb-8 font-medium">{t.testInvoiceSentTo} <strong>{personalInfo.email}</strong>.</p>
+          <p className="text-slate-600 mb-8 font-medium">
+            {sentTarget === 'federation' ? t.sentSuccessFed : t.sentSuccessSelf}
+          </p>
           <button onClick={() => setSuccess(false)} className="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-black uppercase text-xs hover:bg-slate-200 transition-colors">
             {t.newInvoice}
           </button>
@@ -1119,7 +1162,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           {locationsData.map((loc, i) => <option key={i} value={loc.id}>{loc.address || loc.id}</option>)}
         </datalist>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form id="invoice-form" className="space-y-6">
           <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
               <User className="w-4 h-4" /> {t.personalInfo}
@@ -1313,28 +1356,47 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 pt-4 print:hidden">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 print:hidden">
             <button 
               type="button" 
-              onClick={() => window.print()}
-              className="flex-1 py-4 bg-white border-2 border-slate-200 text-slate-700 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+              onClick={handleDownloadPDF}
+              disabled={isSubmitting}
+              className="flex-1 py-4 bg-white border-2 border-slate-200 text-slate-700 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Printer className="w-4 h-4" /> {t.createPdf}
+              {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} 
+              {t.downloadPDF}
             </button>
             <button 
-              type="submit" 
+              type="button" 
+              onClick={(e) => {
+                 const form = document.getElementById('invoice-form');
+                 if (form.checkValidity()) handleSubmit(e, 'self');
+                 else form.reportValidity();
+              }}
+              disabled={isSubmitting}
+              className="flex-1 py-4 bg-blue-100 text-blue-700 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-blue-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Mail className="w-4 h-4" /> {t.sendToSelf}
+            </button>
+            <button 
+              type="button" 
+              onClick={(e) => {
+                 const form = document.getElementById('invoice-form');
+                 if (form.checkValidity()) handleSubmit(e, 'federation');
+                 else form.reportValidity();
+              }}
               disabled={isSubmitting}
               className="flex-1 py-4 bg-yellow-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-yellow-200 hover:bg-yellow-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 
-              Skicka in
+              {t.sendToFed}
             </button>
           </div>
         </form>
       </div>
 
       {/* PRINT VIEW (A4 Optimized Template) */}
-      <div className="hidden print:block w-[190mm] mx-auto text-black p-4 text-[12px] leading-snug">
+      <div id="print-invoice-view" className="hidden print:block w-[190mm] mx-auto text-black p-8 bg-white text-[12px] leading-snug">
         <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-4">
           <div>
             <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
