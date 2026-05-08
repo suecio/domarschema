@@ -595,6 +595,12 @@ function UmpireProfileModal({
       reader.readAsDataURL(file);
   };
 
+  const handleAvatarDelete = async () => {
+    if (window.confirm("Vill du verkligen ta bort din profilbild?")) {
+       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', selectedProfileId), { avatarUrl: null }, { merge: true });
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[90] p-4">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
@@ -613,10 +619,17 @@ function UmpireProfileModal({
               </div>
               
               {canEdit && (
-                <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2.5 rounded-full shadow-md cursor-pointer hover:bg-blue-700 transition-colors" title={t.changePicture}>
-                   <Camera className="w-4 h-4" />
-                   <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                </label>
+                <>
+                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2.5 rounded-full shadow-md cursor-pointer hover:bg-blue-700 transition-colors" title={t.changePicture}>
+                     <Camera className="w-4 h-4" />
+                     <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                  </label>
+                  {umpireData.avatarUrl && (
+                    <button onClick={handleAvatarDelete} className="absolute bottom-0 left-0 bg-red-100 text-red-600 p-2.5 rounded-full shadow-md cursor-pointer hover:bg-red-200 transition-colors" title="Ta bort bild">
+                       <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
               )}
            </div>
            
@@ -1460,6 +1473,7 @@ function MainApp() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // NY: Mobilmeny
   
   const [features, setFeatures] = useState({
     marketplace: true,
@@ -2288,6 +2302,25 @@ function MainApp() {
 
   const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
+    
+    // KROCK-SKYDD: Kolla om domaren redan är bokad på annan ort samma dag
+    const game = games.find(g => g.id === gameId);
+    if (game) {
+      const umpireAssignedGamesToday = assignments
+        .filter(asg => asg.userId === uId)
+        .map(asg => games.find(g => g.id === asg.gameId))
+        .filter(g => g && g.date === game.date && g.id !== game.id);
+      
+      const conflictGame = umpireAssignedGamesToday.find(g => 
+        (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
+      );
+      
+      if (conflictGame) {
+        if(typeof window !== 'undefined') alert(`Kan inte tillsätta! ${name} är redan bokad i ${conflictGame.location} den här dagen.`);
+        return;
+      }
+    }
+
     const asgId = `${gameId}_${uId}`;
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { 
       gameId, 
@@ -2701,33 +2734,83 @@ function MainApp() {
 
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         {view !== 'help' && (
-          <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar sticky top-[68px] z-20">
-            {tabs.map(tab => {
-              // Markera fliken som aktiv baserat på nuvarande vy ELLER om min profil visas.
-              const isActive = tab.id === 'my-profile' 
-                ? (selectedProfileId === umpireId && selectedProfileId !== null)
-                : tab.id === 'umpire-list' 
-                ? (view === 'umpire-list')
-                : (view === tab.id && (!selectedProfileId || selectedProfileId !== umpireId));
+          <>
+            {/* Desktop Tabs */}
+            <div className="hidden md:flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar sticky top-[68px] z-20">
+              {tabs.map(tab => {
+                const isActive = tab.id === 'my-profile' 
+                  ? (selectedProfileId === umpireId && selectedProfileId !== null)
+                  : tab.id === 'umpire-list' 
+                  ? (view === 'umpire-list')
+                  : (view === tab.id && (!selectedProfileId || selectedProfileId !== umpireId));
 
-              return (
-                <button 
-                  key={tab.id} 
-                  onClick={() => { 
-                    if (tab.id === 'my-profile') {
-                      setSelectedProfileId(umpireId);
-                    } else {
-                      setView(tab.id); 
-                      setSelectedProfileId(null); 
-                    }
-                  }} 
-                  className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${isActive ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                  <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button 
+                    key={tab.id} 
+                    onClick={() => { 
+                      if (tab.id === 'my-profile') {
+                        setSelectedProfileId(umpireId);
+                      } else {
+                        setView(tab.id); 
+                        setSelectedProfileId(null); 
+                      }
+                    }} 
+                    className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${isActive ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
+                  >
+                    <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mobile Dropdown Menu */}
+            <div className="md:hidden sticky top-[68px] z-20">
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                className="w-full bg-blue-900 text-white p-3.5 rounded-2xl shadow-md border border-blue-800 flex justify-between items-center font-black uppercase text-xs tracking-widest"
+              >
+                <div className="flex items-center gap-2">
+                  <List className="w-5 h-5" />
+                  <span>
+                     {tabs.find(t => t.id === (selectedProfileId === umpireId && selectedProfileId !== null ? 'my-profile' : view === 'umpire-profile' ? 'umpire-list' : view))?.label || 'Meny'}
+                  </span>
+                </div>
+                {isMobileMenuOpen ? <ChevronUp className="w-5 h-5 text-blue-300"/> : <ChevronDown className="w-5 h-5 text-blue-300"/>}
+              </button>
+              
+              {isMobileMenuOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 flex flex-col gap-1 z-30 max-h-[60vh] overflow-y-auto">
+                  {tabs.map(tab => {
+                    const isActive = tab.id === 'my-profile' 
+                      ? (selectedProfileId === umpireId && selectedProfileId !== null)
+                      : tab.id === 'umpire-list' 
+                      ? (view === 'umpire-list')
+                      : (view === tab.id && (!selectedProfileId || selectedProfileId !== umpireId));
+
+                    return (
+                      <button 
+                        key={tab.id} 
+                        onClick={() => { 
+                          if (tab.id === 'my-profile') {
+                            setSelectedProfileId(umpireId);
+                          } else {
+                            setView(tab.id); 
+                            setSelectedProfileId(null); 
+                          }
+                          setIsMobileMenuOpen(false);
+                        }} 
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase transition-all ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        <tab.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <span>{tab.label}</span>
+                        {isActive && <CheckCircle className="w-4 h-4 ml-auto text-blue-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {view === 'schedule' && (
@@ -2895,7 +2978,7 @@ function MainApp() {
                     </div>
                     <div>
                       <span className="font-bold text-slate-800 text-sm block group-hover:text-blue-700">{u.name}</span>
-                      {u.level && <span className={`text-[8px] font-black mt-1 inline-block uppercase ${(u.level || '').toLowerCase().includes('elit') ? 'text-green-600' : 'text-slate-500'}`}>{u.level}</span>}
+                      {u.level && <span className={`text-[8px] font-black mt-1 inline-block uppercase px-1.5 py-0.5 rounded border ${getLevelStyles(u.level)}`}>{u.level}</span>}
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
@@ -2975,8 +3058,6 @@ function MainApp() {
 
         {view === 'my-apps' && (
           <div className="space-y-6 animate-in fade-in">
-            {/* REMOVED THE YELLOW WARNING BANNER HERE */}
-
             <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl shadow-sm flex items-start gap-4">
                <Info className="w-6 h-6 text-blue-600 shrink-0" />
                <p className="text-sm text-blue-800 font-medium leading-relaxed">
@@ -3325,7 +3406,7 @@ function MainApp() {
                                   </div>
                                   <div>
                                     <span className="font-bold text-sm text-slate-800 block cursor-pointer hover:text-blue-600" onClick={() => setSelectedProfileId(asg.userId)}>{asg.userName}</span>
-                                    {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase ${(m.level || '').toLowerCase().includes('elit') ? 'text-green-600' : 'text-slate-500'}`}>{m.level}</span>}
+                                    {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase px-1.5 py-0.5 rounded border ${(m.level || '').toLowerCase().includes('elit') ? 'text-green-600 border-green-200 bg-green-50' : 'text-slate-500 border-slate-200 bg-white'}`}>{m.level}</span>}
                                   </div>
                                 </div>
                               </div>
