@@ -58,7 +58,7 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : nu
 
 const translations = {
   sv: {
-    appTitle: "Domartillsättning",
+    appTitle: "Domarportalen",
     season: "Säsong",
     schedule: "Spelschema",
     myGames: "Mina Matcher",
@@ -263,7 +263,45 @@ const translations = {
     historicalNote: "Datan kan redigeras av administratörer.",
     streetAddressHidden: "Gatuadress (Dold för andra)",
     cityPublic: "Ort (Offentlig)",
-    changePicture: "Byt bild"
+    changePicture: "Byt bild",
+    backToUmpireList: "Tillbaka till Domarlistan",
+    contactInfo: "Kontaktuppgifter",
+    notProvided: "Ej angivet",
+    homeAddress1: "Hemadress 1",
+    cityPlaceholder: "Stockholm",
+    saveDetails: "Spara uppgifter",
+    assignedMatchesCount: "tillsatta matcher",
+    updateHistory: "Uppdatera historik",
+    fillFromTo: "Fyll i både 'Från' och 'Till' för att kunna beräkna avståndet automatiskt.",
+    addressMissing: "Gatuadress och postort saknas.",
+    coordsMissing: "Kunde inte hitta exakta koordinater.",
+    routeMissing: "Kunde inte hitta en giltig körrutt.",
+    autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.",
+    errorOccurred: "Ett fel uppstod. Vänligen försök igen.",
+    testInvoiceSentTo: "I test-syfte har reseräkningen skickats till",
+    savedSuccess: "Sparat!",
+    conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.",
+    interestRegistered: "Intresse anmält! Administratörerna kan nu se att du vill ta matchen.",
+    conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.",
+    sandboxLoaded: "50 test-matcher har laddats in i din lokala Sandbox!",
+    downloadICS: "Ladda ner (.ICS)",
+    availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag (2026-04-05).",
+    availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.",
+    availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.",
+    assigned: "TILLSATTA",
+    takeOverFrom: "Ta över från",
+    spotsAvailable: "plats(er) lediga",
+    noInterestsYet: "Inga intresseanmälningar ännu.",
+    currentCrew: "Aktuellt Domarteam",
+    noUmpiresAssigned: "Inga domare tillsatta.",
+    manualAssign: "+ Manuell tilldelning...",
+    assignBtn: "Tilldela",
+    removeBtn: "Ta bort",
+    pasteSchedulePlaceholder: "Klistra in spelschema...",
+    unknown: "Okänd",
+    sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
+    deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?",
+    deleteAvatar: "Ta bort bild"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -435,7 +473,6 @@ const translations = {
     acceptTime: "Accept New Time",
     declineTime: "Cannot Make It",
     timeChangedBadge: "Time Changed",
-    pendingReply: "Pending Reply",
     actionRequired: "Action Required",
     superAdminSettings: "System Architecture (Super Admin)",
     featureMarketplace: "Enable Marketplace (Trade Board)",
@@ -485,7 +522,45 @@ const translations = {
     historicalNote: "Data can be edited by an admin.",
     streetAddressHidden: "Street Address (Hidden)",
     cityPublic: "City (Public)",
-    changePicture: "Change Picture"
+    changePicture: "Change Picture",
+    backToUmpireList: "Back to Umpire List",
+    contactInfo: "Contact Information",
+    notProvided: "Not provided",
+    homeAddress1: "Home Address 1",
+    cityPlaceholder: "Stockholm",
+    saveDetails: "Save Details",
+    assignedMatchesCount: "assigned games",
+    updateHistory: "Update History",
+    fillFromTo: "Fill in both 'From' and 'To' to calculate the distance automatically.",
+    addressMissing: "Street address and city are missing.",
+    coordsMissing: "Could not find exact coordinates.",
+    routeMissing: "Could not find a valid driving route.",
+    autoCalcFailed: "Automatic calculation failed. Please enter the distance manually.",
+    errorOccurred: "An error occurred. Please try again.",
+    testInvoiceSentTo: "For testing purposes, the invoice was sent to",
+    savedSuccess: "Saved!",
+    conflictApply: "Cannot apply! You are already booked in {location} on this day.",
+    interestRegistered: "Interest registered! Administrators can now see that you want to take the game.",
+    conflictAssign: "Cannot assign! {name} is already booked in {location} on this day.",
+    sandboxLoaded: "50 test games have been loaded into your local Sandbox!",
+    downloadICS: "Download (.ICS)",
+    availabilityWarningTitle: "The deadline for submitting availability is today (2026-04-05).",
+    availabilityWarningDesc1: "If you have not submitted your availability, you will not receive any games this coming season.",
+    availabilityWarningDesc2: "We are assigning games until the end of June.",
+    assigned: "ASSIGNED",
+    takeOverFrom: "Take over from",
+    spotsAvailable: "spot(s) available",
+    noInterestsYet: "No interests marked yet.",
+    currentCrew: "Current Crew",
+    noUmpiresAssigned: "No umpires assigned.",
+    manualAssign: "+ Manual Assignment...",
+    assignBtn: "Assign",
+    removeBtn: "Remove",
+    pasteSchedulePlaceholder: "Paste schedule here...",
+    unknown: "Unknown",
+    sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED TO PRODUCTION",
+    deleteAvatarConfirm: "Are you sure you want to remove your profile picture?",
+    deleteAvatar: "Remove picture"
   }
 };
 
@@ -558,9 +633,9 @@ function UmpireProfileModal({
            city: editData.city.trim(),
            historicGames: parseInt(editData.historicGames) || 0
         }, { merge: true });
-        if (typeof window !== 'undefined') alert("Sparat!");
+        if (typeof window !== 'undefined') alert(t.savedSuccess);
      } catch(e) {
-        if (typeof window !== 'undefined') alert("Ett fel uppstod.");
+        if (typeof window !== 'undefined') alert(t.errorOccurred);
      }
      setIsSaving(false);
   };
@@ -591,7 +666,7 @@ function UmpireProfileModal({
   };
 
   const handleAvatarDelete = async () => {
-    if (window.confirm("Vill du verkligen ta bort din profilbild?")) {
+    if (window.confirm(t.deleteAvatarConfirm)) {
        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', selectedProfileId), { avatarUrl: null }, { merge: true });
     }
   };
@@ -620,7 +695,7 @@ function UmpireProfileModal({
                      <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                   </label>
                   {umpireData.avatarUrl && (
-                    <button onClick={handleAvatarDelete} className="absolute bottom-0 left-0 bg-red-100 text-red-600 p-2.5 rounded-full shadow-md cursor-pointer hover:bg-red-200 transition-colors" title="Ta bort bild">
+                    <button onClick={handleAvatarDelete} className="absolute bottom-0 left-0 bg-red-100 text-red-600 p-2.5 rounded-full shadow-md cursor-pointer hover:bg-red-200 transition-colors" title={t.deleteAvatar}>
                        <Trash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -644,7 +719,7 @@ function UmpireProfileModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                 <User className="w-4 h-4" /> Kontaktuppgifter
+                 <User className="w-4 h-4" /> {t.contactInfo}
                </h3>
                
                <div className="space-y-4">
@@ -653,7 +728,7 @@ function UmpireProfileModal({
                    {canEdit ? (
                      <input type="email" value={editData.linkedEmail} onChange={e => setEditData({...editData, linkedEmail: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
                    ) : (
-                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1 break-all">{editData.linkedEmail || 'Ej angivet'}</p>
+                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1 break-all">{editData.linkedEmail || t.notProvided}</p>
                    )}
                  </div>
                  
@@ -662,7 +737,7 @@ function UmpireProfileModal({
                    {canEdit ? (
                      <input type="tel" value={editData.phone} onChange={e => setEditData({...editData, phone: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
                    ) : (
-                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1">{editData.phone || 'Ej angivet'}</p>
+                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1">{editData.phone || t.notProvided}</p>
                    )}
                  </div>
 
@@ -670,14 +745,14 @@ function UmpireProfileModal({
                    <>
                      <div>
                        <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.streetAddressHidden}</label>
-                       <input type="text" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} placeholder="Hemadress 1" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
+                       <input type="text" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} placeholder={t.homeAddress1} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
                      </div>
                      <div>
                        <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.cityPublic}</label>
-                       <input type="text" value={editData.city} onChange={e => setEditData({...editData, city: e.target.value})} placeholder="Stockholm" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
+                       <input type="text" value={editData.city} onChange={e => setEditData({...editData, city: e.target.value})} placeholder={t.cityPlaceholder} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
                      </div>
                      <button onClick={handleSave} disabled={isSaving} className="w-full py-3 mt-2 bg-blue-600 text-white font-black rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50">
-                       {isSaving ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />} Spara uppgifter
+                       {isSaving ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />} {t.saveDetails}
                      </button>
                    </>
                  )}
@@ -687,11 +762,11 @@ function UmpireProfileModal({
              <div className="space-y-6">
                <div className="bg-blue-900 text-white p-6 rounded-3xl shadow-sm">
                  <h3 className="text-xs font-black text-blue-300 uppercase tracking-widest mb-2 flex items-center gap-2">
-                   <CalendarIcon className="w-4 h-4" /> Säsongen {selectedYear}
+                   <CalendarIcon className="w-4 h-4" /> {t.season} {selectedYear}
                  </h3>
                  <div className="flex items-end gap-3">
                    <span className="text-5xl font-black">{currentSeasonGames}</span>
-                   <span className="text-sm font-bold text-blue-200 pb-1">tillsatta matcher</span>
+                   <span className="text-sm font-bold text-blue-200 pb-1">{t.assignedMatchesCount}</span>
                  </div>
                </div>
 
@@ -709,11 +784,11 @@ function UmpireProfileModal({
                      )}
                    </div>
                    <p className="text-[10px] text-slate-400 italic font-medium leading-relaxed">
-                     Denna siffra visar matcher dömda under tidigare säsonger. {t.historicalNote}
+                     {t.historicalNote}
                    </p>
                    {isAdmin && (
                      <button onClick={handleSave} disabled={isSaving} className="w-full py-2 bg-slate-200 text-slate-700 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-300 disabled:opacity-50">
-                       Uppdatera historik
+                       {t.updateHistory}
                      </button>
                    )}
                  </div>
@@ -757,6 +832,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
+             // Fall-back på profilens Gatuadress/Ort om tomt i invoiceData
             setPersonalInfo(prev => ({ 
                ...prev, 
                ...docSnap.data(), 
@@ -824,7 +900,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
   const calculateDistance = async (index) => {
     const trip = trips[index];
     if (!trip.from || !trip.to) {
-      alert("Fyll i både 'Från' och 'Till' för att kunna beräkna avståndet automatiskt.");
+      alert(t.fillFromTo);
       return;
     }
 
@@ -842,7 +918,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
       const toAddress = resolveAddress(trip.to);
 
       if(!fromAddress || !toAddress || fromAddress === ', ' || toAddress === ', ') {
-         throw new Error("Gatuadress och postort saknas.");
+         throw new Error(t.addressMissing);
       }
 
       const fromRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fromAddress + ', Sweden')}`);
@@ -851,7 +927,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
       const toRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(toAddress + ', Sweden')}`);
       const toData = await toRes.json();
 
-      if (fromData.length === 0 || toData.length === 0) throw new Error("Kunde inte hitta exakta koordinater.");
+      if (fromData.length === 0 || toData.length === 0) throw new Error(t.coordsMissing);
 
       const lon1 = fromData[0].lon; const lat1 = fromData[0].lat;
       const lon2 = toData[0].lon; const lat2 = toData[0].lat;
@@ -865,10 +941,10 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         if (trip.roundTrip) mil *= 2;
         handleTripChange(trip.id, 'distance', mil.toFixed(1));
       } else {
-         throw new Error("Kunde inte hitta en giltig körrutt.");
+         throw new Error(t.routeMissing);
       }
     } catch (err) {
-      alert("Automatisk beräkning misslyckades. Skriv in avståndet manuellt.");
+      alert(t.autoCalcFailed);
     } finally {
       setCalculatingIndex(null);
     }
@@ -984,7 +1060,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
 
       setSuccess(true);
     } catch (err) {
-      alert("Ett fel uppstod. Vänligen försök igen.");
+      alert(t.errorOccurred);
     }
     setIsSubmitting(false);
   };
@@ -995,7 +1071,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center">
           <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
           <h2 className="text-2xl font-black text-slate-800 mb-2">{t.sentSuccess}</h2>
-          <p className="text-slate-600 mb-8 font-medium">I test-syfte har reseräkningen skickats till <strong>{personalInfo.email}</strong>.</p>
+          <p className="text-slate-600 mb-8 font-medium">{t.testInvoiceSentTo} <strong>{personalInfo.email}</strong>.</p>
           <button onClick={() => setSuccess(false)} className="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-black uppercase text-xs hover:bg-slate-200 transition-colors">
             {t.newInvoice}
           </button>
@@ -1062,7 +1138,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                 <input required type="text" name="pnr" value={personalInfo.pnr} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.streetAddress} (Hemadress)</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.streetAddressHidden}</label>
                 <input required type="text" name="address" value={personalInfo.address} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
               </div>
               <div className="space-y-1">
@@ -1411,7 +1487,7 @@ class ErrorBoundary extends Component {
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
           <div className="bg-white p-8 rounded-3xl shadow-xl max-w-2xl w-full text-center border border-red-100">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Ett oväntat fel uppstod</h2>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">{t.errorOccurred}</h2>
             <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade. Felet var:</p>
             
             <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap bg-red-50 p-4 rounded-xl text-left overflow-auto max-h-60 border border-red-200">
@@ -1460,8 +1536,7 @@ function MainApp() {
   const [federation, setFederation] = useState('swe');
   const federations = [
     { id: 'swe', name: '🇸🇪 Sweden', defaultLang: 'sv' },
-    { id: 'fin', name: '🇫🇮 Finland', defaultLang: 'fi' },
-    { id: 'sui', name: '🇨🇭 Switzerland', defaultLang: 'de' }
+    { id: 'int', name: '🇬🇧 English', defaultLang: 'en' }
   ];
 
   // Language & UI Context
@@ -2017,7 +2092,6 @@ function MainApp() {
     }
   }, [view, selectedYear, lang]);
 
-  // 6. HJÄLPFUNKTIONER FÖR UI
   const safeDateMonth = (dateString) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -2134,7 +2208,6 @@ function MainApp() {
     </div>
   );
 
-  // 7. FUNKTIONER FÖR DATABAS OCH INTERAKTION
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -2232,7 +2305,7 @@ function MainApp() {
      if (!isSuperAdmin) return;
      try {
          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'cron'), { lastReminderSentDate: 'FORCED' }, { merge: true });
-         if (typeof window !== 'undefined') alert(t.remindersSent || "Reminders queued!");
+         if (typeof window !== 'undefined') alert(t.runRemindersNow || "Reminders queued!");
      } catch (e) { console.error(e); }
   };
 
@@ -2298,10 +2371,8 @@ function MainApp() {
       setShowNamePrompt(true); 
       return; 
     }
-    
     const appIdStr = `${gameId}_${umpireId}`;
     const existing = applications.find(a => a.id === appIdStr);
-    
     if (existing) {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr));
     } else {
@@ -2317,7 +2388,7 @@ function MainApp() {
         );
 
         if (conflictGame) {
-          if (typeof window !== 'undefined') alert(`Kan inte anmäla! Du är redan bokad i ${conflictGame.location} den här dagen.`);
+          if (typeof window !== 'undefined') alert(t.conflictApply.replace('{location}', conflictGame.location));
           return;
         }
       }
@@ -2347,7 +2418,7 @@ function MainApp() {
       );
       
       if (conflictGame) {
-        if(typeof window !== 'undefined') alert(`Kan inte tillsätta! ${name} är redan bokad i ${conflictGame.location} den här dagen.`);
+        if(typeof window !== 'undefined') alert(t.conflictAssign.replace('{name}', name).replace('{location}', conflictGame.location));
         return;
       }
     }
@@ -2440,13 +2511,13 @@ function MainApp() {
       );
 
       if (conflictGame) {
-        if (typeof window !== 'undefined') alert(`Kan inte anmäla! Du är redan bokad i ${conflictGame.location} den här dagen.`);
+        if (typeof window !== 'undefined') alert(t.conflictApply.replace('{location}', conflictGame.location));
         return;
       }
     }
 
     await toggleApplication(game.id);
-    if(typeof window !== 'undefined') alert("Intresse anmält! Administratörerna kan nu se att du vill ta matchen.");
+    if(typeof window !== 'undefined') alert(t.interestRegistered);
     
     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
        to: 'suecio@tryempire.com',
@@ -2681,7 +2752,7 @@ function MainApp() {
       }
 
       await batch.commit();
-      if(typeof window !== 'undefined') alert("50 test-matcher har laddats in i din lokala Sandbox!");
+      if(typeof window !== 'undefined') alert(t.sandboxLoaded);
     } catch (e) {
       console.error(e);
     } finally {
@@ -2700,12 +2771,12 @@ function MainApp() {
       <div className="relative bg-slate-100 min-h-screen">
         {isDemoEnv && (
           <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm z-50 relative print:hidden">
-            <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
+            <Code className="w-4 h-4" /> {t.sandboxWarning}
           </div>
         )}
         <div className="absolute top-4 sm:top-8 left-4 sm:left-8 z-10 print:hidden">
           <button onClick={() => setView('schedule')} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200 text-xs font-black text-slate-600 uppercase tracking-widest hover:text-blue-600 hover:border-blue-200 transition-all">
-            <ArrowLeft className="w-4 h-4" /> Tillbaka till Portalen
+            <ArrowLeft className="w-4 h-4" /> Tillbaka
           </button>
         </div>
         <TravelInvoiceView 
@@ -2739,7 +2810,7 @@ function MainApp() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 relative">
       {isDemoEnv && (
         <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm z-50 relative print:hidden">
-          <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
+          <Code className="w-4 h-4" /> {t.sandboxWarning}
         </div>
       )}
       
@@ -2764,6 +2835,10 @@ function MainApp() {
             <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none text-white hidden sm:block">
               <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
             </select>
+            <div className="flex bg-blue-800 rounded p-0.5">
+              <button onClick={() => setLang('sv')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'sv' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇸🇪</button>
+              <button onClick={() => setLang('en')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'en' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇬🇧</button>
+            </div>
 
             {user?.email ? (
               <>
@@ -2868,7 +2943,7 @@ function MainApp() {
               
               <div className="flex items-center gap-2 flex-wrap">
                 <button onClick={() => generateCSV(filteredGames, selectedYear)} className="text-[10px] font-black uppercase px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm">
-                  <Download className="w-3.5 h-3.5" /> Ladda ner (.ICS)
+                  <Download className="w-3.5 h-3.5" /> {t.downloadICS}
                 </button>
                 <div className="flex bg-slate-100 rounded-xl p-1">
                   <button onClick={() => setScheduleViewMode('list')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${scheduleViewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -2905,7 +2980,7 @@ function MainApp() {
                 <p className="text-slate-500 font-medium">{t.noGames}</p>
                 {isDemoEnv && (
                    <button onClick={loadDemoData} disabled={syncing} className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs hover:bg-blue-700 shadow-md transition-colors">
-                     {syncing ? <RefreshCw className="w-4 h-4 animate-spin inline-block" /> : 'Ladda in testdata (Sandbox)'}
+                     {syncing ? <RefreshCw className="w-4 h-4 animate-spin inline-block" /> : t.sandboxLoaded}
                    </button>
                 )}
               </div>
@@ -2943,6 +3018,7 @@ function MainApp() {
                         {!showHistory && (
                           <>
                             <div className="flex flex-col items-end">
+                              {/* ADMINS SER NAMNEN, ANDRA SER BARA ANTALET */}
                               {isAdmin ? (
                                 gameApplications.length > 0 ? (
                                    <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">
@@ -3061,7 +3137,7 @@ function MainApp() {
                           <div className="flex flex-col justify-center gap-2">
                             {tradeAssignments.map(asg => (
                               <button key={asg.id} onClick={() => takeTrade(asg, game)} className="bg-yellow-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-sm flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors">
-                                <ArrowRightLeft className="w-4 h-4"/> Ta över från {asg.userName}
+                                <ArrowRightLeft className="w-4 h-4"/> {t.takeOverFrom} {asg.userName}
                               </button>
                             ))}
                           </div>
@@ -3075,7 +3151,7 @@ function MainApp() {
              <div>
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> {t.missingUmpires}</h3>
                 {games.filter(g => !showHistory && g.date >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).length === 0 ? (
-                  <p className="text-slate-400 text-sm italic">Inga matcher saknar domare just nu.</p>
+                  <p className="text-slate-400 text-sm italic">{t.noMarketplaceGames}</p>
                 ) : (
                   <div className="grid gap-4">
                     {games.filter(g => !showHistory && g.date >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
@@ -3087,7 +3163,7 @@ function MainApp() {
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
                             <h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3>
                             <p className="text-sm text-slate-500">{game.date} kl {game.time} • {game.location}</p>
-                            <p className="text-xs font-black text-red-500 mt-2 uppercase">{missingSpots} plats(er) lediga</p>
+                            <p className="text-xs font-black text-red-500 mt-2 uppercase">{missingSpots} {t.spotsAvailable}</p>
                           </div>
                           <div className="flex flex-col justify-center">
                              <button onClick={() => isApplied ? toggleApplication(game.id) : expressInterestMarketplace(game)} className={`px-6 py-3 rounded-xl text-xs font-black uppercase shadow-sm flex items-center justify-center gap-2 transition-colors ${isApplied ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
@@ -3116,7 +3192,7 @@ function MainApp() {
               <h2 className="text-xl font-black uppercase text-slate-800">{t.mySchedule}</h2>
               <div className="flex items-center gap-2 flex-wrap">
                 <button onClick={() => generateCSV(myAssignedGames, selectedYear)} className="text-[10px] font-black uppercase px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm">
-                  <Download className="w-3.5 h-3.5" /> Ladda ner (.ICS)
+                  <Download className="w-3.5 h-3.5" /> {t.downloadICS}
                 </button>
                 <div className="flex bg-slate-100 rounded-xl p-1">
                   <button onClick={() => setMyGamesViewMode('list')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${myGamesViewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -3269,7 +3345,7 @@ function MainApp() {
              {showImportTool && (
                <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 animate-in slide-in-from-top">
                  <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3>
-                 <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder="YYYY-MM-DD	HH:MM	Serie	Borta	Hemma	Plats" className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
+                 <textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder={t.pasteSchedulePlaceholder} className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" />
                  <div className="flex gap-3">
                    <button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">{t.addGames}</button>
                    <button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">{t.cancel}</button>
@@ -3309,7 +3385,7 @@ function MainApp() {
                           <span className="text-xs font-bold text-slate-500">| {safeDateDay(game.date)} {game.date} @ {game.time}</span>
                        </div>
                        <div className="flex items-center gap-4 justify-between sm:justify-end">
-                          <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} TILLSATTA</span>
+                          <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assigned}</span>
                           <button onClick={() => handleDeleteGame(game.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4"/></button>
                        </div>
                     </div>
@@ -3332,7 +3408,7 @@ function MainApp() {
 
                                   if (conflictGame) {
                                     return (
-                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`Bokad i ${conflictGame.location}`}>
+                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`${t.bookedIn} ${conflictGame.location}`}>
                                          <span className="text-xs font-bold text-red-900 line-through decoration-red-500 truncate">{app.userName}</span>
                                          <span className="text-[9px] font-black uppercase text-red-600 px-2 text-right truncate max-w-[100px]">{conflictGame.location}</span>
                                       </div>
@@ -3342,29 +3418,29 @@ function MainApp() {
                                   return (
                                     <div key={app.userId} className="flex justify-between items-center bg-blue-50 p-2.5 rounded-xl border border-blue-100">
                                        <span className="text-xs font-bold text-blue-900">{app.userName}</span>
-                                       <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Tilldela</button>
+                                       <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">{t.assignBtn}</button>
                                     </div>
                                   );
                                 })}
                              </div>
                           ) : (
-                             <p className="text-xs text-slate-400 italic">Inga intresseanmälningar ännu.</p>
+                             <p className="text-xs text-slate-400 italic">{t.noInterestsYet}</p>
                           )}
                        </div>
 
                        <div className="space-y-3">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aktuellt Domarteam</h4>
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.currentCrew}</h4>
                           {gameAssignments.length > 0 ? (
                              <div className="flex flex-col gap-2 mb-3">
                                 {gameAssignments.map(asg => (
                                    <div key={asg.userId} className="flex justify-between items-center bg-green-50 p-2.5 rounded-xl border border-green-200">
                                       <span className="text-xs font-bold text-green-900 flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-600"/> {asg.userName}</span>
-                                      <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-[9px] font-black tracking-widest uppercase text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">Ta bort</button>
+                                      <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-[9px] font-black tracking-widest uppercase text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">{t.removeBtn}</button>
                                    </div>
                                 ))}
                              </div>
                           ) : (
-                             <p className="text-xs text-slate-400 italic mb-3">Inga domare tillsatta.</p>
+                             <p className="text-xs text-slate-400 italic mb-3">{t.noUmpiresAssigned}</p>
                           )}
 
                           {!isFullyStaffed && (
@@ -3372,11 +3448,11 @@ function MainApp() {
                                 <select 
                                   value="" 
                                   onChange={(e) => { 
-                                    if(e.target.value) { assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || 'Okänd')); } 
+                                    if(e.target.value) { assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || t.unknown)); } 
                                   }} 
                                   className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none text-slate-600 focus:ring-2 focus:ring-blue-500/20"
                                 >
-                                  <option value="">+ Manuell tilldelning...</option>
+                                  <option value="">{t.manualAssign}</option>
                                   {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name} ({u.level})</option>)}
                                 </select>
                              </div>
@@ -3521,7 +3597,7 @@ function MainApp() {
                                   <span className="text-xs font-bold text-blue-800">{app.userName}</span>
                                   {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
                                   <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="ml-2 text-white bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-700 font-black text-[9px] uppercase tracking-widest shadow-sm transition-colors">
-                                    Tilldela
+                                    {t.assignBtn}
                                   </button>
                                 </div>
                               );
