@@ -38,7 +38,7 @@ import {
   ArrowUp, Users2, X, AlertTriangle, ArrowLeft, Megaphone, 
   MessageCircle, Code, Send, Share2, Map, Mail,
   ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
-  Calculator, Printer, Car, CreditCard, Save, Camera
+  Calculator, Printer, Car, CreditCard, Save, Camera, ExternalLink
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -305,7 +305,8 @@ const translations = {
     unknown: "Okänd",
     sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
     deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?",
-    deleteAvatar: "Ta bort bild"
+    deleteAvatar: "Ta bort bild",
+    open: "Öppna"
   },
   en: {
     appTitle: "Umpire Portal",
@@ -359,6 +360,7 @@ const translations = {
     userSettings: "User Settings",
     profileAccess: "Configure profile & access",
     displayName: "Display Name",
+    namePlaceholder: "Search or type name...",
     logout: "Logout",
     close: "Close",
     status: "Status",
@@ -419,6 +421,9 @@ const translations = {
     masterAdminInfo: "You are logged in as Master Admin.",
     linkedAccount: "Account:",
     notLinked: "No account",
+    linkEmailPlaceholder: "Link email...",
+    selectEmail: "-- Select Email --",
+    otherEmail: "+ Enter other...",
     umpireProfile: "Umpire Profile",
     back: "Back",
     assignedMatches: "Assigned Matches",
@@ -518,7 +523,7 @@ const translations = {
     sendToSelf: "Send Test to Me",
     sentSuccess: "Submitted Successfully!",
     sentSuccessFed: "Your invoice has been submitted to the Federation.",
-    sentSuccessSelf: "A copy has been sent to your email.",
+    sentSuccessSelf: "A test copy has been sent to your email.",
     newInvoice: "Create new invoice",
     selectGame: "-- Select an assigned game --",
     homeLocation: "Home",
@@ -568,7 +573,8 @@ const translations = {
     unknown: "Unknown",
     sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED TO PRODUCTION",
     deleteAvatarConfirm: "Are you sure you want to remove your profile picture?",
-    deleteAvatar: "Remove picture"
+    deleteAvatar: "Remove picture",
+    open: "Open"
   }
 };
 
@@ -1000,6 +1006,18 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     }
   };
 
+  const handleReopenInvoice = (inv) => {
+    if (inv.personalInfo) setPersonalInfo(inv.personalInfo);
+    if (inv.trips && inv.trips.length > 0) setTrips(inv.trips);
+    if (inv.expenses && inv.expenses.length > 0) setExpenses(inv.expenses);
+    setAdvance(inv.advance || '');
+    setOvernightCount(inv.overnightCount || '');
+    
+    if (typeof window !== 'undefined') {
+       window.scrollTo({ top: 300, behavior: 'smooth' });
+    }
+  };
+
   const handleDownloadPDF = () => {
     const form = document.getElementById('invoice-form');
     if (!form.checkValidity()) {
@@ -1028,14 +1046,17 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         element.classList.add('print:block');
         setIsSubmitting(false);
 
-        // Spara i historiken vid nedladdning av PDF
         if (user && user.uid) {
            try {
               await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), {
                  createdAt: Date.now(),
                  total: calculated.total,
-                 trips: trips.map(tr => ({ date: tr.date, assignment: tr.assignment })),
-                 status: "Nedladdad (PDF)"
+                 status: "Nedladdad (PDF)",
+                 personalInfo,
+                 trips,
+                 expenses,
+                 advance,
+                 overnightCount
               });
            } catch(e) {}
         }
@@ -1131,8 +1152,12 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), {
             createdAt: Date.now(),
             total: calculated.total,
-            trips: trips.map(tr => ({ date: tr.date, assignment: tr.assignment })),
-            status: "Inskickad"
+            status: "Inskickad",
+            personalInfo,
+            trips,
+            expenses,
+            advance,
+            overnightCount
          });
       }
 
@@ -1182,15 +1207,22 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                  <div key={inv.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
                    <div className="flex-1">
                      <span className="text-xs font-bold text-slate-700">{new Date(inv.createdAt).toLocaleDateString('sv-SE')}</span>
-                     <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[200px]">{inv.trips?.map(tr => tr.assignment).join(', ')}</p>
+                     <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[200px]">
+                       {inv.trips?.map(tr => tr.assignment).join(', ')}
+                     </p>
                    </div>
                    <div className="text-right mr-3">
                      <span className="text-sm font-black text-blue-600">{inv.total} kr</span>
                      <p className="text-[9px] font-black uppercase text-green-600 mt-0.5">{inv.status}</p>
                    </div>
-                   <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors" title="Ta bort">
-                     <Trash2 className="w-4 h-4" />
-                   </button>
+                   <div className="flex items-center gap-1">
+                     <button onClick={() => handleReopenInvoice(inv)} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black uppercase hover:bg-blue-200 transition-colors">
+                       {t.open}
+                     </button>
+                     <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title="Ta bort">
+                       <Trash2 className="w-4 h-4" />
+                     </button>
+                   </div>
                  </div>
                ))}
              </div>
@@ -1435,25 +1467,38 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         </form>
       </div>
 
-      {/* PRINT VIEW (A4 Optimized Template) */}
+      {/* PRINT VIEW (TABLE OPTIMIZED FOR HTML2PDF) */}
       <div id="print-invoice-view" className="hidden print:block w-[190mm] mx-auto text-black p-8 bg-white text-[12px] leading-snug">
-        <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-4">
-          <div>
-            <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
-            <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
-          </div>
-          <div className="text-right text-[10px]">
-            <p>{t.date}: {new Date().toLocaleDateString('sv-SE')}</p>
-          </div>
-        </div>
+        
+        <table className="w-full mb-6">
+          <tbody>
+            <tr>
+              <td className="align-bottom">
+                <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
+                <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
+              </td>
+              <td className="align-bottom text-right text-[10px]">
+                <p>{t.date}: {new Date().toLocaleDateString('sv-SE')}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-6">
-          <div><span className="font-bold">{t.name}:</span> {personalInfo.name}</div>
-          <div><span className="font-bold">{t.pnr}:</span> {personalInfo.pnr}</div>
-          <div><span className="font-bold">{t.streetAddress}:</span> {personalInfo.address}</div>
-          <div><span className="font-bold">{t.zipCity}:</span> {personalInfo.zipCity}</div>
-          <div className="col-span-2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo.bank}</div>
-        </div>
+        <table className="w-full mb-6 text-[12px]">
+          <tbody>
+            <tr>
+              <td className="py-1.5 w-1/2"><span className="font-bold">{t.name}:</span> {personalInfo.name}</td>
+              <td className="py-1.5 w-1/2"><span className="font-bold">{t.pnr}:</span> {personalInfo.pnr}</td>
+            </tr>
+            <tr>
+              <td className="py-1.5"><span className="font-bold">{t.streetAddress}:</span> {personalInfo.address}</td>
+              <td className="py-1.5"><span className="font-bold">{t.zipCity}:</span> {personalInfo.zipCity}</td>
+            </tr>
+            <tr>
+              <td className="py-1.5" colSpan="2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo.bank}</td>
+            </tr>
+          </tbody>
+        </table>
 
         <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Uppdrag & Resor</h3>
         <table className="w-full border-collapse border border-black mb-6 text-[11px]">
@@ -1503,63 +1548,81 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           </>
         )}
 
-        <div className="flex justify-end mb-8 page-break-inside-avoid">
-          <div className="w-1/2">
-            <table className="w-full border-collapse border border-black text-[11px]">
-              <tbody>
-                <tr>
-                  <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.milageCost} kr</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-1.5">Restidsersättning</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.travelBonus} kr</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 150kr)</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.overnightCost} kr</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-1.5">Övriga Utlägg</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.totalExpenses} kr</td>
-                </tr>
-                {calculated.advance > 0 && (
-                  <tr>
-                    <td className="border border-black p-1.5">Avgår förskott</td>
-                    <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
-                  </tr>
-                )}
-                <tr className="bg-gray-100 font-bold text-sm">
-                  <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
-                  <td className="border border-black p-1.5 text-right">{calculated.total} kr</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <table className="w-full mb-8">
+          <tbody>
+            <tr>
+              <td className="w-1/2"></td>
+              <td className="w-1/2">
+                <table className="w-full border-collapse border border-black text-[11px]">
+                  <tbody>
+                    <tr>
+                      <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
+                      <td className="border border-black p-1.5 text-right">{calculated.milageCost} kr</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5">Restidsersättning</td>
+                      <td className="border border-black p-1.5 text-right">{calculated.travelBonus} kr</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 150kr)</td>
+                      <td className="border border-black p-1.5 text-right">{calculated.overnightCost} kr</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5">Övriga Utlägg</td>
+                      <td className="border border-black p-1.5 text-right">{calculated.totalExpenses} kr</td>
+                    </tr>
+                    {calculated.advance > 0 && (
+                      <tr>
+                        <td className="border border-black p-1.5">Avgår förskott</td>
+                        <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
+                      </tr>
+                    )}
+                    <tr className="bg-gray-100 font-bold text-sm">
+                      <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
+                      <td className="border border-black p-1.5 text-right">{calculated.total} kr</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-        <div className="page-break-inside-avoid mt-8">
-          <div className="mb-12">
-            <p className="font-bold mb-6">Underskrift resenär:</p>
-            <div className="border-b border-black w-1/2"></div>
-            <p className="text-[10px] mt-1 text-gray-500">Signatur & Namnförtydligande</p>
-          </div>
-
-          <div className="border-2 border-black p-4">
-            <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
-            <div className="grid grid-cols-4 gap-4 text-xs h-16">
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Konto</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Kostnadsställe</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Projekt</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Fritt</div>
-            </div>
-            <div className="grid grid-cols-3 gap-6 text-xs mt-8 h-16">
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Belopp (kr)</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Attesteras (Sign/Datum)</div>
-              <div className="border-b border-black flex flex-col justify-end pb-1 font-bold">Beslutas (Sign/Datum)</div>
-            </div>
-          </div>
-        </div>
+        <table className="w-full mt-8 page-break-inside-avoid">
+          <tbody>
+            <tr>
+              <td className="w-1/2 align-top pr-12">
+                <p className="font-bold mb-8">Underskrift resenär:</p>
+                <div className="border-b border-black w-full"></div>
+                <p className="text-[10px] mt-1 text-gray-500">Signatur & Namnförtydligande</p>
+              </td>
+              <td className="w-1/2 align-top">
+                <div className="border-2 border-black p-4">
+                  <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
+                  <table className="w-full text-xs h-16">
+                    <tbody>
+                      <tr>
+                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Konto</td>
+                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">K-ställe</td>
+                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Projekt</td>
+                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Fritt</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table className="w-full text-xs mt-6 h-16">
+                    <tbody>
+                      <tr>
+                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Belopp (kr)</td>
+                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Attest (Sign)</td>
+                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Beslut (Sign)</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1970,12 +2033,32 @@ function MainApp() {
   }, [globalNote]);
 
   useEffect(() => {
+    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
+      setReadmeLoading(true);
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.content) {
+            const text = decodeURIComponent(escape(atob(data.content)));
+            setReadmeContent(text);
+          } else {
+            setReadmeContent(t.fetchError);
+          }
+        })
+        .catch(err => {
+          setReadmeContent(t.fetchError);
+        })
+        .finally(() => setReadmeLoading(false));
+    }
+  }, [view, helpTab, readmeContent, t.fetchError]);
+
+  useEffect(() => {
     setEvaluatingUmpire(null);
     setEvalGrade(0);
     setEvalComment('');
   }, [selectedGameDetails]);
 
-  // Firebase Real-time listeners (MED FIX FÖR UTLOGGNING VID REFRESH)
+  // Firebase Real-time listeners
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) {
@@ -2175,7 +2258,6 @@ function MainApp() {
     }
   }, [view, selectedYear, lang]);
 
-  // 6. HJÄLPFUNKTIONER FÖR UI
   const safeDateMonth = (dateString) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -2292,7 +2374,6 @@ function MainApp() {
     </div>
   );
 
-  // 7. FUNKTIONER FÖR DATABAS OCH INTERAKTION
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
