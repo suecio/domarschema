@@ -36,7 +36,7 @@ import {
   BarChart3, History as HistoryIcon, Info, User, UserPlus, UserMinus, Download, 
   UserCheck, Edit2, LogOut, ChevronRight, List, ChevronLeft, 
   ArrowUp, Users2, X, AlertTriangle, ArrowLeft, Megaphone, 
-  MessageCircle, Code, Send, Share2, Map, 
+  MessageCircle, Code, Send, Share2, Map, Mail,
   ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
   Calculator, Printer, Car, CreditCard, Save, Camera
 } from 'lucide-react';
@@ -301,7 +301,12 @@ const translations = {
     unknown: "Okänd",
     sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
     deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?",
-    deleteAvatar: "Ta bort bild"
+    deleteAvatar: "Ta bort bild",
+    downloadPDF: "Ladda ner PDF",
+    sendToFed: "Skicka till Förbundet",
+    sendToSelf: "Skicka test till mig",
+    sentSuccessFed: "Din reseräkning har skickats in till Förbundet (info@sbslf.se).",
+    sentSuccessSelf: "Ett test har skickats till din egen e-post."
   },
   en: {
     appTitle: "Umpire Portal",
@@ -560,7 +565,12 @@ const translations = {
     unknown: "Unknown",
     sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED TO PRODUCTION",
     deleteAvatarConfirm: "Are you sure you want to remove your profile picture?",
-    deleteAvatar: "Remove picture"
+    deleteAvatar: "Remove picture",
+    downloadPDF: "Download PDF",
+    sendToFed: "Send to Federation",
+    sendToSelf: "Send Test to Me",
+    sentSuccessFed: "Your invoice has been submitted to the Federation (info@sbslf.se).",
+    sentSuccessSelf: "A test copy has been sent to your email."
   }
 };
 
@@ -807,7 +817,7 @@ function UmpireProfileModal({
 function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [sentTarget, setSentTarget] = useState(''); // Ny: håller koll på var vi skickade
+  const [sentTarget, setSentTarget] = useState('');
   const [calculatingIndex, setCalculatingIndex] = useState(null);
   const [pastInvoices, setPastInvoices] = useState([]);
 
@@ -982,7 +992,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     }
     
     setIsSubmitting(true);
-    // Ladda in html2pdf dynamiskt för att slippa krasha Cloudflare-bygget
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload = () => {
@@ -1101,7 +1110,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
 
       setSuccess(true);
     } catch (err) {
-      alert("Ett fel uppstod. Vänligen försök igen.");
+      alert(t.errorOccurred);
     }
     setIsSubmitting(false);
   };
@@ -1598,7 +1607,8 @@ function MainApp() {
   const [federation, setFederation] = useState('swe');
   const federations = [
     { id: 'swe', name: '🇸🇪 Sweden', defaultLang: 'sv' },
-    { id: 'int', name: '🇬🇧 English', defaultLang: 'en' }
+    { id: 'fin', name: '🇫🇮 Finland', defaultLang: 'fi' },
+    { id: 'sui', name: '🇨🇭 Switzerland', defaultLang: 'de' }
   ];
 
   // Language & UI Context
@@ -2838,7 +2848,7 @@ function MainApp() {
         )}
         <div className="absolute top-4 sm:top-8 left-4 sm:left-8 z-10 print:hidden">
           <button onClick={() => setView('schedule')} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200 text-xs font-black text-slate-600 uppercase tracking-widest hover:text-blue-600 hover:border-blue-200 transition-all">
-            <ArrowLeft className="w-4 h-4" /> Tillbaka
+            <ArrowLeft className="w-4 h-4" /> {t.back}
           </button>
         </div>
         <TravelInvoiceView 
@@ -2897,7 +2907,7 @@ function MainApp() {
             <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none text-white hidden sm:block">
               <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
             </select>
-            <div className="flex bg-blue-800 rounded p-0.5">
+            <div className="flex bg-blue-800 rounded p-0.5 hidden sm:flex">
               <button onClick={() => setLang('sv')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'sv' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇸🇪</button>
               <button onClick={() => setLang('en')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'en' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇬🇧</button>
             </div>
