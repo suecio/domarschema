@@ -296,8 +296,6 @@ const translations = {
     removeAssignment: "Remove",
     deleteGame: "Delete Game",
     deleteAllGames: "Clear Entire Season",
-    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
-    deleteAllSuccess: "Season cleared successfully.",
     downloadBackup: "Download Backup (JSON)",
     umpire: "Umpire",
     interests: "Interests",
@@ -312,12 +310,10 @@ const translations = {
     userSettings: "User Settings",
     profileAccess: "Configure profile & access",
     displayName: "Display Name",
-    namePlaceholder: "Search or type name...",
     logout: "Logout",
     close: "Close",
     status: "Status",
     setProfile: "Select Your Profile",
-    pasteSheet: "Paste from Google Sheets",
     addGames: "Add Games",
     importSuccess: "Import Successful",
     cancel: "Cancel",
@@ -382,57 +378,10 @@ const translations = {
     totalAssignments: "Assignments",
     totalInterests: "Interests",
     deleteUmpireConfirm: "Are you sure you want to remove",
-    umpireDeletedSubject: "Your umpire profile has been removed",
-    umpireDeletedBody: "Hello,\n\nAn admin has removed your umpire profile from the scheduling system.",
-    assignmentEmailSubject: "New Match Assignment",
-    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}.",
-    myGamesReminder: "Important! If you need to cancel an assigned game, it is your responsibility to find a replacement and notify the elite umpire group.",
     globalAnnouncement: "Global Announcement",
     saveAnnouncement: "Publish",
     clearAnnouncement: "Clear",
     announcementPlaceholder: "Type an important message to display to everyone...",
-    helpAndInfo: "Help & Info",
-    guide: "Getting Started",
-    faq: "FAQ",
-    about: "About App",
-    guideStep1Title: "1. Create an account",
-    guideStep1Desc: "Click the login icon and select 'Create a new account'. Fill in your email address and a secure password.",
-    guideStep2Title: "2. Search for your profile",
-    guideStep2Desc: "Immediately after logging in, the 'Who are you?' prompt appears. Type your name into the search bar.",
-    guideStep3Title: "3. Confirm & Link",
-    guideStep3Desc: "Click your name in the list. This permanently links your account to the official profile, syncing your schedule across devices.",
-    guideStep4Title: "4. Name Missing?",
-    guideStep4Desc: "If you are completely new and not in the list, click 'Can't find your name?' to create a brand new profile from scratch.",
-    faq1Q: "Can I change my linked profile if I made a mistake?",
-    faq1A: "No, for security reasons your account is locked to the chosen profile. Contact an administrator to reset the link.",
-    faq2Q: "How do I apply to umpire a game?",
-    faq2A: "Navigate to 'Schedule' and click the blue 'Interested' button next to the games you are available for.",
-    faq3Q: "Who assigns the games?",
-    faq3A: "You mark your interest, but the Elite Umpire Group/Administrators make the final staffing assignments.",
-    faq4Q: "Why is my stats page empty?",
-    faq4A: "Your statistics will be generated as soon as you mark interest for a game or receive an assignment.",
-    faq5Q: "How does the marketplace work?",
-    faq5A: "If you cannot umpire a game, click 'Give Away' under My Games. It will be listed on the Marketplace. You are responsible for the game until someone else clicks 'Take Game'.",
-    loadingReadme: "Fetching README from GitHub...",
-    contactUs: "Contact Us",
-    contactDesc: "Need help or have a question? Send us a message and we'll assist you.",
-    subject: "Subject",
-    message: "Message",
-    sendMsg: "Send Message",
-    sending: "Sending...",
-    msgSentTitle: "Message Sent!",
-    msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
-    sendAnother: "Send another message",
-    shareGuide: "Share Guide",
-    linkCopied: "Link copied to clipboard!",
-    sendSchedules: "Send Schedules",
-    reviewEmails: "Review Emails",
-    customEmailMessage: "Custom Message (Optional)",
-    customEmailPlaceholder: "Type a message to appear at the top of the email for everyone...",
-    sendAllEmails: "Send to {count} umpires",
-    missingEmailWarning: "{count} umpires have assignments but no email linked:",
-    emailPreview: "Email Preview",
-    emailsSentSuccess: "All schedules have been sent successfully!",
     bookedIn: "Booked in",
     coUmpires: "Co-umpires:",
     noCoUmpires: "No co-umpires",
@@ -445,22 +394,19 @@ const translations = {
     notAssigned: "Not Assigned",
     yourGame: "Your Game",
     marketplace: "Marketplace",
-    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires. Taking a game immediately assigns it to you.",
+    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires.",
     tradeGame: "Give Away",
     cancelTrade: "Cancel Give Away",
     takeGame: "Take Game",
+    expressInterest: "Express Interest",
     gamesForTrade: "Games Up For Trade",
+    missingUmpires: "Games missing umpires",
     noMarketplaceGames: "No games are up for trade right now.",
-    tradeSuccess: "You have taken over the game! Your schedule is updated.",
+    tradeSuccess: "You have taken over the game!",
     tradeConfirm: "Are you sure you want to take over this game?",
-    downloadCalendar: "Download",
-    formatICS: ".ICS File",
-    subtextICS: "For Apple & Outlook",
-    formatCSV: ".CSV File",
-    subtextCSV: "For Google Calendar",
     evaluate: "Evaluate",
     grade: "Grade",
-    feedback: "Feedback / Comment",
+    feedback: "Feedback",
     saveEval: "Save Evaluation",
     evalSaved: "Evaluation Saved",
     yourEval: "Evaluation",
@@ -479,11 +425,6 @@ const translations = {
     acceptTime: "Accept New Time",
     declineTime: "Cannot Make It",
     timeChangedBadge: "Time Changed",
-    pendingReply: "Pending Reply",
-    emailMatchMovedSubject: "Schedule Updated ({count} games)",
-    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.",
-    pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games.",
-    sendQueuedNow: "Send Now",
     actionRequired: "Action Required",
     superAdminSettings: "System Architecture (Super Admin)",
     featureMarketplace: "Enable Marketplace (Trade Board)",
@@ -492,8 +433,6 @@ const translations = {
     reminderPreferences: "My Notifications",
     receiveReminders: "Receive email reminders for my upcoming games",
     runRemindersNow: "Run Reminders Cron",
-    reminderEmailSubject: "Upcoming Games Reminder",
-    reminderEmailBody: "Hello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement.",
     invoiceTitle: "Travel Invoice",
     digitalSubmission: "Digital Submission",
     personalInfo: "Personal Information",
@@ -563,8 +502,10 @@ const generateCSV = (gamesToExport, selectedYear) => {
   document.body.removeChild(link);
 };
 
-// TravelInvoice Component
-function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssignedGames }) {
+// ==========================================
+// TRAVEL INVOICE COMPONENT
+// ==========================================
+function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [calculatingIndex, setCalculatingIndex] = useState(null);
@@ -785,9 +726,9 @@ function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssigned
         </div>
       `;
 
-      // Skicka mail
+      // Skicka mail - BYT DETTA TILL info@sbslf.se NÄR NI GÅR LIVE
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: personalInfo.email,
+        to: personalInfo.email, // Testläge - skickar till den inloggades mail just nu
         message: {
           subject: `Reseräkning: ${personalInfo.name} (${calculated.total} kr) - TEST`,
           text: "Ny reseräkning inskickad. Vänligen läs mailet i en HTML-kompatibel e-postklient.",
@@ -796,7 +737,6 @@ function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssigned
         createdAt: Date.now()
       });
 
-      // Spara fakturan i användarens historik
       if (user && user.uid) {
          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), {
             createdAt: Date.now(),
@@ -1036,7 +976,7 @@ function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssigned
                 <span>{calculated.milageCost} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">{t.travelTimeComp} (>10 mil/resa: 100kr, >20 mil: 200kr)</span>
+                <span className="text-slate-300">{t.travelTimeComp} (>10 mil: 100kr, >20 mil: 200kr)</span>
                 <span>{calculated.travelBonus} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
@@ -1081,7 +1021,7 @@ function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssigned
         </form>
       </div>
 
-      {/* PRINT VIEW */}
+      {/* PRINT VIEW (A4 Optimized Template) */}
       <div className="hidden print:block w-[190mm] mx-auto text-black p-4 text-[12px] leading-snug">
         <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-4">
           <div>
@@ -1211,16 +1151,24 @@ function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssigned
   );
 }
 
+// ==========================================
+// ERROR BOUNDARY
+// ==========================================
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
   }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, errorInfo) { 
-    console.error("Critical React Crash:", error, errorInfo); 
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Critical React Crash:", error, errorInfo);
     this.setState({ errorInfo });
   }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -1247,7 +1195,11 @@ class ErrorBoundary extends Component {
   }
 }
 
+// ==========================================
+// MAIN APPLICATION COMPONENT
+// ==========================================
 function MainApp() {
+  // 1. ALLA USESTATE DEKLARATIONER HÖGST UPP (För att undvika ReferenceErrors)
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
@@ -1262,76 +1214,175 @@ function MainApp() {
     }
     return 'schedule';
   });
-  
   const [scheduleViewMode, setScheduleViewMode] = useState('list');
   const [myGamesViewMode, setMyGamesViewMode] = useState('list');
   const [selectedYear, setSelectedYear] = useState('2026');
   
   const [isDemoEnv, setIsDemoEnv] = useState(true);
   const [federation, setFederation] = useState('swe');
+  const federations = [
+    { id: 'swe', name: '🇸🇪 Sweden', defaultLang: 'sv' },
+    { id: 'fin', name: '🇫🇮 Finland', defaultLang: 'fi' },
+    { id: 'sui', name: '🇨🇭 Switzerland', defaultLang: 'de' }
+  ];
 
-  const [lang, setLang] = useState('sv');
-  const t = new Proxy(translations[lang], {
-      get: (target, prop) => target[prop] !== undefined ? target[prop] : (translations['en'] ? translations['en'][prop] : undefined)
-  });
-
+  const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
+  const [lang, setLang] = useState(defaultLang);
+  
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
   
-  const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
+  const [features, setFeatures] = useState({
+    marketplace: true,
+    evaluations: true,
+    reminders: true
+  });
   
+  const [helpTab, setHelpTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('tab') || 'guide';
+    }
+    return 'guide';
+  });
+  const [readmeContent, setReadmeContent] = useState(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
+  
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactStatus, setContactStatus] = useState('idle');
+
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [customEmailMessage, setCustomEmailMessage] = useState('');
+  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
+  const [showScheduleExport, setShowScheduleExport] = useState(false);
+  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
+
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [masterUmpires, setMasterUmpires] = useState([]);
-  const [locationsData, setLocationsData] = useState([]);
+  const [registeredEmails, setRegisteredEmails] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
+  const [locationsData, setLocationsData] = useState([]);
+  const [mailQueue, setMailQueue] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [firebaseError, setFirebaseError] = useState(null); 
   
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
-  
+  const [authError, setAuthError] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
-  
   const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [selectedGameDetails, setSelectedGameDetails] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
   
-  const [showImportTool, setShowImportTool] = useState(false);
+  const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
+  const [evalGrade, setEvalGrade] = useState(0);
+  const [evalComment, setEvalComment] = useState('');
+
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [newFacility, setNewFacility] = useState('');
+  
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
+  const [changelog, setChangelog] = useState([]);
+  const [loadingChangelog, setLoadingChangelog] = useState(false);
+  
   const [bulkInput, setBulkInput] = useState('');
+  const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  
+  const [editingUmpireId, setEditingUmpireId] = useState(null);
+  const [tempEditName, setTempEditName] = useState('');
+  const [tempEditLevel, setTempEditLevel] = useState('');
+  const [tempEditEmail, setTempEditEmail] = useState('');
+  const [editNoteText, setEditNoteText] = useState('');
+  const [showManualEmailInput, setShowManualEmailInput] = useState(false);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [editingGameData, setEditingGameData] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
+  const [umpireSort, setUmpireSort] = useState('name');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  
   const [tempEditPhone, setTempEditPhone] = useState('');
-  const [tempEditEmail, setTempEditEmail] = useState('');
   const [tempHistoricalGames, setTempHistoricalGames] = useState('');
 
+  // 2. STANDARD VARIABLER OCH ÖVERSÄTTNINGAR
   const today = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
+  const getTranslation = (languageCode) => {
+    const selected = translations[languageCode] || translations['en'];
+    const fallback = translations['en'];
+    return new Proxy(selected, {
+      get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop]
+    });
+  };
+  const t = getTranslation(lang);
+
+  // 3. EFFECTS OCH INITIALISERING
   useEffect(() => {
      if (typeof window !== 'undefined') {
-        if (window.location.hostname === 'schema.domarweb.se') {
+        const host = window.location.hostname;
+        if (host === 'schema.domarweb.se') {
            setIsDemoEnv(false);
+           setFederation('swe');
+           setLang('sv');
         } else {
            setIsDemoEnv(true);
         }
      }
   }, []);
 
+  // 4. MEMOIZED VALUES (DATA BERÄKNINGAR)
   const appId = useMemo(() => {
-    const base = 'baseball-umpire-scheduler';
+    const base = typeof window !== 'undefined' && window.__app_id 
+      ? String(window.__app_id).replace(/[\/\\]/g, '-') 
+      : 'baseball-umpire-scheduler';
     return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
   }, [selectedYear, isDemoEnv]);
+
+  const calendarWeeks = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const shiftedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+
+    let currentWeek = [];
+    const weeks = [];
+
+    for (let i = 0; i < shiftedFirstDay; i++) currentWeek.push(null);
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      currentWeek.push(new Date(year, month, d));
+      if (currentWeek.length === 7) {
+        const validDate = currentWeek.find(day => day !== null);
+        weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
+        currentWeek = [];
+      }
+    }
+
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 7) currentWeek.push(null);
+      const validDate = currentWeek.find(day => day !== null);
+      weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
+    }
+
+    return weeks;
+  }, [currentDate]);
 
   const groupedAssignments = useMemo(() => {
     const map = {};
@@ -1357,11 +1408,19 @@ function MainApp() {
       if (!stats[app.userId]) stats[app.userId] = { userId: app.userId, name: app.userName || 'Unknown', games: 0, interest: 0 };
       stats[app.userId].interest += 1;
     });
-    return Object.values(stats).map(s => {
+    const data = Object.values(stats).map(s => {
       const rate = s.interest > 0 ? Math.round((s.games / s.interest) * 100) : (s.games > 0 ? 100 : 0);
       return { ...s, rate };
-    }).sort((a, b) => b.games - a.games);
-  }, [assignments, applications, masterUmpires]);
+    });
+    return data.sort((a, b) => {
+      let valA = a[sortConfig.key];
+      let valB = b[sortConfig.key];
+      if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [assignments, applications, masterUmpires, sortConfig]);
 
   const filteredGames = useMemo(() => {
     return games.filter(game => {
@@ -1391,7 +1450,6 @@ function MainApp() {
     });
   }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
 
-  // LÄGG TILL DETTA SAKNADE BLOCK:
   const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
   
   const allLocationNames = useMemo(() => {
@@ -1421,7 +1479,6 @@ function MainApp() {
   const filteredMasterUmpires = useMemo(() => {
     return masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
   }, [masterUmpires, searchQuery]);
-  // SLUT PÅ DET SAKNADE BLOCKET
 
   const myAssignedGames = useMemo(() => {
     if (!umpireId) return [];
@@ -1442,158 +1499,272 @@ function MainApp() {
     );
   }, [games, applications, groupedAssignments, umpireId]);
 
+  const umpiresWithAssignmentsMap = useMemo(() => {
+    const map = {};
+    assignments.forEach(asg => {
+      if (!map[asg.userId]) {
+        map[asg.userId] = { umpire: masterUmpires.find(u => u.id === asg.userId), assignedGames: [] };
+      }
+      const game = games.find(g => g.id === asg.gameId);
+      if (game) map[asg.userId].assignedGames.push(game);
+    });
+    Object.values(map).forEach(obj => {
+      obj.assignedGames.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    });
+    return map;
+  }, [assignments, masterUmpires, games]);
+
+  const emailCandidates = useMemo(() => {
+    const list = Object.values(umpiresWithAssignmentsMap).filter(obj => obj.umpire !== undefined);
+    const ready = list.filter(obj => obj.umpire.linkedEmail);
+    const missing = list.filter(obj => !obj.umpire.linkedEmail);
+    return { ready, missing };
+  }, [umpiresWithAssignmentsMap]);
+
+  const unconnectedEmails = useMemo(() => {
+    const linked = masterUmpires.map(u => (u.linkedEmail || '').toLowerCase()).filter(Boolean);
+    return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
+  }, [registeredEmails, masterUmpires]);
+
   const uiDays = useMemo(() => {
     const arr = [...(t.days || [])];
     if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
     return arr;
   }, [t.days]);
 
-  const calendarWeeks = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const shiftedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+  // 5. YTTERLIGARE EFFECTS
+  useEffect(() => {
+    setEditNoteText(globalNote);
+  }, [globalNote]);
 
-    let currentWeek = [];
-    const weeks = [];
-    for (let i = 0; i < shiftedFirstDay; i++) currentWeek.push(null);
-    for (let d = 1; d <= daysInMonth; d++) {
-      currentWeek.push(new Date(year, month, d));
-      if (currentWeek.length === 7) {
-        weeks.push({ days: currentWeek });
-        currentWeek = [];
-      }
+  useEffect(() => {
+    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
+      setReadmeLoading(true);
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.content) {
+            const text = decodeURIComponent(escape(atob(data.content)));
+            setReadmeContent(text);
+          } else {
+            setReadmeContent(t.fetchError);
+          }
+        })
+        .catch(err => {
+          setReadmeContent(t.fetchError);
+        })
+        .finally(() => setReadmeLoading(false));
     }
-    if (currentWeek.length > 0) {
-      while (currentWeek.length < 7) currentWeek.push(null);
-      weeks.push({ days: currentWeek });
-    }
-    return weeks;
-  }, [currentDate]);
+  }, [view, helpTab, readmeContent, t.fetchError]);
 
+  useEffect(() => {
+    setEvalGrade(0);
+    setEvalComment('');
+  }, [selectedGameDetails]);
+
+  // Firebase Real-time listeners
   useEffect(() => {
     const initAuth = async () => {
       try { 
         if (typeof window !== 'undefined' && window.__initial_auth_token) {
-          try { await signInWithCustomToken(auth, window.__initial_auth_token); } 
-          catch (e) { await signInAnonymously(auth); }
-        } else { await signInAnonymously(auth); }
+          try {
+            await signInWithCustomToken(auth, window.__initial_auth_token);
+          } catch (customErr) {
+            await signInAnonymously(auth);
+          }
+        } else {
+          await signInAnonymously(auth); 
+        }
       } catch (err) { }
     };
     initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
+    
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!user) return; 
-    const handleDbError = (err) => { if (err.code === 'permission-denied') setFirebaseError('permission-denied'); };
+    const isCanvas = typeof window !== 'undefined' && window.__initial_auth_token != null;
+    if (isCanvas && !user) return; 
 
-    const unsubGames = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'games'), (snap) => setGames(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b)=>(a.date || '').localeCompare(b.date || ''))), handleDbError);
-    const unsubApps = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'applications'), (snap) => setApplications(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), handleDbError);
-    const unsubAssign = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), (snap) => setAssignments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), handleDbError);
-    const unsubUmpires = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), (snap) => setMasterUmpires(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b)=>(a.name||'').localeCompare(b.name||''))), handleDbError);
-    const unsubEvals = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'evaluations'), (snap) => setEvaluations(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), handleDbError);
-    const unsubLocs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), (snap) => setLocationsData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), handleDbError);
-    const unsubSet = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), (snap) => {
-      if (snap.exists()) {
-        const d = snap.data();
-        setAdminUmpireIds(d.adminUmpireIds || []);
-        setGlobalNote(d.globalNote || '');
-        if (d.features) setFeatures(prev => ({...prev, ...d.features}));
+    const handleDbError = (err) => {
+      if (err.code === 'permission-denied') {
+        setFirebaseError('permission-denied');
+      }
+    };
+
+    const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+    const unsubscribeGames = onSnapshot(gamesCol, (snapshot) => {
+      const gamesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setGames(gamesList.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
+      setFirebaseError(null);
+    }, handleDbError);
+
+    const appsCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
+    const unsubscribeApps = onSnapshot(appsCol, (snapshot) => {
+      setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
+
+    const assignCol = collection(db, 'artifacts', appId, 'public', 'data', 'assignments');
+    const unsubscribeAssign = onSnapshot(assignCol, (snapshot) => {
+      setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
+
+    const umpiresCol = collection(db, 'artifacts', appId, 'public', 'data', 'umpires');
+    const unsubscribeUmpires = onSnapshot(umpiresCol, (snapshot) => {
+      setMasterUmpires(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+    }, handleDbError);
+    
+    const regUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'registered_users');
+    const unsubscribeRegUsers = onSnapshot(regUsersCol, (snapshot) => {
+      const emails = snapshot.docs.map(doc => doc.data().email).filter(Boolean);
+      setRegisteredEmails([...new Set(emails)]);
+    }, handleDbError);
+    
+    const evalsCol = collection(db, 'artifacts', appId, 'public', 'data', 'evaluations');
+    const unsubscribeEvals = onSnapshot(evalsCol, (snapshot) => {
+      setEvaluations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
+
+    const locCol = collection(db, 'artifacts', appId, 'public', 'data', 'locations');
+    const unsubscribeLocations = onSnapshot(locCol, (snapshot) => {
+      setLocationsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
+
+    const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'mail_queue');
+    const unsubscribeQueue = onSnapshot(queueCol, (snapshot) => {
+      setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, handleDbError);
+
+    const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+    const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setAdminUmpireIds(data.adminUmpireIds || []);
+        setGlobalNote(data.globalNote || '');
+        if (data.features) {
+           setFeatures(prev => ({ ...prev, ...data.features }));
+        }
       }
     }, handleDbError);
 
-    return () => { unsubGames(); unsubApps(); unsubAssign(); unsubUmpires(); unsubEvals(); unsubLocs(); unsubSet(); };
+    return () => {
+      unsubscribeGames(); 
+      unsubscribeApps(); 
+      unsubscribeAssign(); 
+      unsubscribeUmpires();
+      unsubscribeRegUsers();
+      unsubscribeEvals();
+      unsubscribeLocations();
+      unsubscribeQueue();
+      unsubscribeSettings();
+    };
   }, [user, appId]);
 
   useEffect(() => {
     let unsubscribeProfile = () => {};
+
     if (user && user.email) {
       const isMaster = user.email.toLowerCase() === 'suecio@tryempire.com';
       setIsSuperAdmin(isMaster);
+      setContactEmail(user.email);
       
+      setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registered_users', user.uid), {
+        email: user.email.toLowerCase(),
+        lastSeen: Date.now()
+      }, { merge: true }).catch(err => { });
+
       const profileDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      unsubscribeProfile = onSnapshot(profileDoc, (snap) => {
-        if (snap.exists() && snap.data().umpireId) {
-          setUserName(snap.data().name || '');
-          setUmpireId(snap.data().umpireId || '');
-          setIsAdmin(isMaster || (adminUmpireIds || []).includes(snap.data().umpireId));
+      unsubscribeProfile = onSnapshot(profileDoc, (snapshot) => {
+        if (snapshot.exists() && snapshot.data().umpireId) {
+          const data = snapshot.data();
+          setUserName(data.name || '');
+          setContactName(data.name || '');
+          setUmpireId(data.umpireId || '');
+          
+          const isStandardAdmin = Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId);
+          setIsAdmin(isMaster || isStandardAdmin);
         } else {
-          setUserName(''); setUmpireId(''); setIsAdmin(isMaster);
+          const preLinkedUmpire = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
+          if (preLinkedUmpire) {
+             setDoc(profileDoc, { name: preLinkedUmpire.name, umpireId: preLinkedUmpire.id }, { merge: true });
+          } else {
+             setUserName('');
+             setUmpireId('');
+             setIsAdmin(isMaster);
+          }
         }
       });
     } else {
-      setIsAdmin(false); setIsSuperAdmin(false); setUserName(''); setUmpireId('');
+      setIsAdmin(false);
+      setIsSuperAdmin(false);
+      setUserName('');
+      setUmpireId('');
     }
+
     return () => unsubscribeProfile();
-  }, [user, appId, adminUmpireIds]);
+  }, [user, appId, adminUmpireIds, masterUmpires]);
 
-  const toggleApplication = async (gameId) => {
-    if (!user || !user.email) { setShowAuthModal(true); return; }
-    if (!umpireId) { setShowNamePrompt(true); return; }
-    const appIdStr = `${gameId}_${umpireId}`;
-    const existing = applications.find(a => a.id === appIdStr);
-    if (existing) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr));
-    } else {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr), { gameId, userId: umpireId, userName, timestamp: Date.now() });
+  useEffect(() => {
+    if (user && user.email && umpireId && masterUmpires.length > 0) {
+      const myUmpire = masterUmpires.find(u => u.id === umpireId);
+      if (myUmpire && myUmpire.linkedEmail !== user.email) {
+        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
+          linkedUserId: user.uid,
+          linkedEmail: user.email
+        }).catch(e => { });
+      }
     }
-  };
+  }, [user, umpireId, masterUmpires, appId]);
 
-  const assignUmpire = async (gameId, uId, name) => {
-    if (!isAdmin) return;
-    const asgId = `${gameId}_${uId}`;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { gameId, userId: uId, userName: name, assignedAt: Date.now() });
-  };
+  useEffect(() => {
+    if (!isAdmin || mailQueue.length === 0) return;
+    const interval = setInterval(() => {
+       const now = Date.now();
+       const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
+       
+       if (readyToProcess.length > 0) {
+           readyToProcess.forEach(async (queueItem) => {
+              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
+              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
+              const emailBody = t.emailMatchMovedBody
+                 .replace(/\{name\}/g, queueItem.userName)
+                 .replace(/\{changesListSv\}/g, changesTextSv)
+                 .replace(/\{changesListEn\}/g, changesTextEn);
+                 
+              try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+                   to: queueItem.email,
+                   message: {
+                     subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
+                     text: emailBody
+                   },
+                   createdAt: Date.now()
+                });
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
+              } catch(e) { }
+           });
+       }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isAdmin, mailQueue, appId, t]);
 
-  const removeAssignment = async (gameId, uId) => {
-    if (!isAdmin && uId !== umpireId) return; // Allow user to remove themselves if needed (decline)
-    const asgId = `${gameId}_${uId}`;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
-  };
+  useEffect(() => {
+    if (analytics) {
+      logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
+    }
+  }, [view, selectedYear, lang]);
 
-  const handleDeleteGame = async (gameId) => {
-    if (!isAdmin) return;
-    if (typeof window !== 'undefined' && !window.confirm(t.deleteConfirm)) return;
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
-    } catch(e) {}
-  };
-
-  const takeTrade = async (oldAsg, game) => {
-    if (!user || !user.email) { setShowAuthModal(true); return; }
-    if (!umpireId) { setShowNamePrompt(true); return; }
-    if (oldAsg && oldAsg.userId === umpireId) return; 
-
-    if (typeof window !== 'undefined' && !window.confirm(t.tradeConfirm)) return;
-    
-    try {
-      const batch = writeBatch(db);
-      if (oldAsg && oldAsg.id) batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
-      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${game.id}_${umpireId}`), {
-        gameId: game.id, userId: umpireId, userName: userName, assignedAt: Date.now(), forTrade: false 
-      });
-      await batch.commit();
-      alert(t.tradeSuccess);
-    } catch (e) {}
-  };
-
-  const expressInterestMarketplace = async (game) => {
-    if (!user || !user.email) { setShowAuthModal(true); return; }
-    if (!umpireId) { setShowNamePrompt(true); return; }
-    await toggleApplication(game.id);
-    alert("Intresse anmält! Administratörerna kan nu se att du vill ta matchen.");
-    
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-       to: 'suecio@tryempire.com',
-       message: {
-          subject: `Ny intresseanmälan från Marknaden: ${userName}`,
-          text: `${userName} har anmält intresse för matchen ${game.away} @ ${game.home} den ${game.date}.`
-       },
-       createdAt: Date.now()
-    });
+  // 6. HJÄLPFUNKTIONER FÖR UI
+  const safeDateMonth = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString; 
+    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
   };
 
   const safeDateDay = (dateString) => {
@@ -1609,13 +1780,6 @@ function MainApp() {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return '-';
     return d.getDate();
-  };
-
-  const safeDateMonth = (dateString) => {
-    if (!dateString) return '';
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString; 
-    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
   };
 
   const getLeagueStyles = (league) => {
@@ -1712,13 +1876,7 @@ function MainApp() {
     </div>
   );
 
-  const toggleTradeStatus = async (asgId, status) => {
-    if (!umpireId && !isAdmin) return; 
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
-      forTrade: status
-    });
-  };
-
+  // 7. FUNKTIONER FÖR DATABAS OCH INTERAKTION
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -1731,6 +1889,47 @@ function MainApp() {
       setShowAuthModal(false);
     } catch (err) {
       setAuthError(err.message);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!authEmail) {
+      setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Please enter your email address first.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, authEmail);
+      if (typeof window !== 'undefined') alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!');
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
+  const handleSort = (key) => {
+    setSortConfig(prev => ({ 
+      key, 
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' 
+    }));
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setContactStatus('sending');
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+        to: 'admin@domarweb.se',
+        replyTo: contactEmail,
+        message: {
+          subject: `[Kontaktformulär] ${contactSubject}`,
+          text: `Nytt meddelande från Domarportalen:\n\nAvsändare: ${contactName}\nE-post: ${contactEmail}\n\nMeddelande:\n${contactMessage}`
+        },
+        createdAt: Date.now()
+      });
+      setContactStatus('success');
+      setContactSubject('');
+      setContactMessage('');
+    } catch (error) {
+      setContactStatus('error');
     }
   };
 
@@ -1771,12 +1970,178 @@ function MainApp() {
      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', uId), { remindersEnabled: newStatus }, { merge: true });
   };
 
+  const forceRunRemindersNow = async () => {
+     if (!isSuperAdmin) return;
+     try {
+         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'cron'), { lastReminderSentDate: 'FORCED' }, { merge: true });
+         if (typeof window !== 'undefined') alert(t.remindersSent || "Reminders queued!");
+     } catch (e) { console.error(e); }
+  };
+
+  const copyGuideLink = () => {
+    if (typeof window !== 'undefined') {
+      const link = `${window.location.origin}${window.location.pathname}?view=help&tab=guide`;
+      navigator.clipboard.writeText(link).then(() => {
+        alert(t.linkCopied);
+      }).catch(() => { });
+    }
+  };
+
+  const toggleUmpireAdmin = async (uId) => {
+    if (!isSuperAdmin) return; 
+    let updatedIds = [...(adminUmpireIds || [])];
+    if (updatedIds.includes(uId)) {
+      updatedIds = updatedIds.filter(id => id !== uId);
+    } else {
+      updatedIds.push(uId);
+    }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { adminUmpireIds: updatedIds }, { merge: true });
+  };
+
   const addMasterUmpire = async (name, level = "") => {
     if (!name.trim()) return "";
     const exists = masterUmpires.find(u => (u.name || '').toLowerCase() === name.toLowerCase());
     if (exists) return exists.id;
     const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'), { name, level, remindersEnabled: true });
     return docRef.id;
+  };
+
+  const updateMasterUmpire = async (id, newName, newLevel, newEmail) => {
+    if (!isAdmin || !newName.trim()) return;
+    const updateData = { name: newName, level: newLevel };
+    if (newEmail !== undefined) {
+      updateData.linkedEmail = newEmail.trim().toLowerCase();
+    }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), updateData, { merge: true });
+  };
+
+  const deleteMasterUmpire = async (id, name, linkedEmail) => {
+    if (!isAdmin) return;
+    if (typeof window !== 'undefined' && !window.confirm(`${t.deleteUmpireConfirm} "${name}"?`)) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id));
+    if (linkedEmail) {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+        to: linkedEmail,
+        message: {
+          subject: t.umpireDeletedSubject,
+          text: t.umpireDeletedBody
+        },
+        createdAt: Date.now()
+      });
+    }
+  };
+
+  const toggleApplication = async (gameId) => {
+    if (!user || !user.email) { 
+      setShowAuthModal(true); 
+      return; 
+    }
+    if (!umpireId) { 
+      setShowNamePrompt(true); 
+      return; 
+    }
+    const appIdStr = `${gameId}_${umpireId}`;
+    const existing = applications.find(a => a.id === appIdStr);
+    if (existing) {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr));
+    } else {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr), { 
+        gameId, 
+        userId: umpireId, 
+        userName, 
+        timestamp: Date.now() 
+      });
+    }
+  };
+
+  const assignUmpire = async (gameId, uId, name) => {
+    if (!isAdmin) return;
+    const asgId = `${gameId}_${uId}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { 
+      gameId, 
+      userId: uId, 
+      userName: name, 
+      assignedAt: Date.now() 
+    });
+  };
+
+  const removeAssignment = async (gameId, uId) => {
+    if (!isAdmin && uId !== umpireId) return; // Allow user to decline their own
+    const asgId = `${gameId}_${uId}`;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
+  };
+
+  const handleDeleteGame = async (gameId) => {
+    if (!isAdmin) return;
+    if (typeof window !== 'undefined' && !window.confirm(t.deleteConfirm)) return;
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
+    } catch(e) {}
+  };
+  
+  const toggleTradeStatus = async (asgId, status) => {
+    if (!umpireId && !isAdmin) return; 
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), {
+      forTrade: status
+    });
+  };
+
+  const takeTrade = async (oldAsg, game) => {
+    if (!user || !user.email) { setShowAuthModal(true); return; }
+    if (!umpireId) { setShowNamePrompt(true); return; }
+    if (oldAsg && oldAsg.userId === umpireId) return; 
+    
+    const umpireAssignedGamesToday = assignments
+      .filter(asg => asg.userId === umpireId)
+      .map(asg => games.find(g => g.id === asg.gameId))
+      .filter(g => g && g.date === game.date && g.id !== game.id);
+    
+    const conflictGame = umpireAssignedGamesToday.find(g => 
+      (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
+    );
+    
+    if (conflictGame) {
+      if(typeof window !== 'undefined') alert(`${t.bookedIn} ${conflictGame.location}. Du kan inte ta denna match.`);
+      return;
+    }
+
+    if (typeof window !== 'undefined' && !window.confirm(t.tradeConfirm)) return;
+    
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      if (oldAsg && oldAsg.id) {
+         batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
+      }
+      const newAsgId = `${game.id}_${umpireId}`;
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', newAsgId), {
+        gameId: game.id,
+        userId: umpireId,
+        userName: userName,
+        assignedAt: Date.now(),
+        forTrade: false 
+      });
+      await batch.commit();
+      if(typeof window !== 'undefined') alert(t.tradeSuccess);
+    } catch (e) { } finally {
+      setSyncing(false);
+    }
+  };
+
+  const expressInterestMarketplace = async (game) => {
+    if (!user || !user.email) { setShowAuthModal(true); return; }
+    if (!umpireId) { setShowNamePrompt(true); return; }
+    await toggleApplication(game.id);
+    if(typeof window !== 'undefined') alert("Intresse anmält! Administratörerna kan nu se att du vill ta matchen.");
+    
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+       to: 'suecio@tryempire.com',
+       message: {
+          subject: `Ny intresseanmälan från Marknaden: ${userName}`,
+          text: `${userName} har anmält intresse för matchen ${game.away} @ ${game.home} den ${game.date}.`
+       },
+       createdAt: Date.now()
+    });
   };
 
   const handleBulkImport = async () => {
@@ -1807,6 +2172,73 @@ function MainApp() {
       if(typeof window !== 'undefined') alert(t.importSuccess);
     } catch (e) { } finally { 
       setSyncing(false); 
+    }
+  };
+
+  const saveEditedGame = async () => {
+    if (!isAdmin || !editingGameData) return;
+    setSyncing(true);
+    try {
+      const originalGame = games.find(g => g.id === editingGameData.id);
+      const isTimeChanged = originalGame && (originalGame.date !== editingGameData.date || originalGame.time !== editingGameData.time);
+
+      const batch = writeBatch(db);
+      const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id);
+      batch.update(gameRef, { 
+        date: editingGameData.date, 
+        time: editingGameData.time, 
+        league: editingGameData.league, 
+        home: editingGameData.home, 
+        away: editingGameData.away, 
+        location: editingGameData.location, 
+        requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 
+      });
+
+      if (isTimeChanged) {
+        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
+        affectedAssignments.forEach((asg) => {
+          const asgRef = doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id);
+          batch.update(asgRef, { pendingChange: true });
+        });
+        const affectedApplications = applications.filter(a => a.gameId === editingGameData.id);
+        affectedApplications.forEach((app) => {
+          const appRef = doc(db, 'artifacts', appId, 'public', 'data', 'applications', app.id);
+          batch.delete(appRef);
+        });
+      }
+
+      await batch.commit();
+
+      if (isTimeChanged) {
+        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
+        for (const asg of affectedAssignments) {
+          const ump = masterUmpires.find(u => u.id === asg.userId);
+          if (ump && ump.linkedEmail) {
+             const existingQueue = mailQueue.find(q => q.id === asg.userId);
+             const gameChangeInfo = {
+                gameId: editingGameData.id,
+                away: editingGameData.away,
+                home: editingGameData.home,
+                oldDate: originalGame.date,
+                oldTime: originalGame.time,
+                newDate: editingGameData.date,
+                newTime: editingGameData.time
+             };
+             const currentChanges = existingQueue ? existingQueue.changes : [];
+             const updatedChanges = [...currentChanges.filter(c => c.gameId !== editingGameData.id), gameChangeInfo];
+             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', asg.userId), {
+                userId: asg.userId,
+                email: ump.linkedEmail,
+                userName: asg.userName,
+                changes: updatedChanges,
+                processAfter: Date.now() + 15 * 60 * 1000
+             });
+          }
+        }
+      }
+      setEditingGameData(null);
+    } catch (e) { } finally {
+      setSyncing(false);
     }
   };
 
@@ -1851,6 +2283,44 @@ function MainApp() {
       });
       if (typeof window !== 'undefined') alert(t.evalSaved);
     } catch (e) { }
+  };
+
+  const saveLocation = async () => {
+    if (!isAdmin || !editingLocation) return;
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', editingLocation.id), {
+        address: editingLocation.address || '',
+        facilities: editingLocation.facilities || []
+      }, { merge: true });
+      setEditingLocation(null);
+    } catch (e) { }
+  };
+
+  const handleDownloadBackup = () => {
+    if (!isAdmin || typeof window === 'undefined') return;
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      year: selectedYear,
+      appId: appId,
+      collections: {
+        games,
+        applications,
+        assignments,
+        umpires: masterUmpires,
+        adminUmpireIds,
+        evaluations,
+        locations: locationsData
+      }
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `umpire-backup-${selectedYear}-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
   };
 
   const loadDemoData = async () => {
@@ -1905,22 +2375,35 @@ function MainApp() {
     }
   };
 
+  // 8. HUVUD-RENDERING
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
   if (view === 'invoice') {
     return (
       <div className="relative bg-slate-100 min-h-screen">
+        {isDemoEnv && (
+          <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm z-50 relative print:hidden">
+            <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
+          </div>
+        )}
         <div className="absolute top-4 sm:top-8 left-4 sm:left-8 z-10 print:hidden">
           <button onClick={() => setView('schedule')} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200 text-xs font-black text-slate-600 uppercase tracking-widest hover:text-blue-600 hover:border-blue-200 transition-all">
-            <ArrowLeft className="w-4 h-4" /> Tillbaka
+            <ArrowLeft className="w-4 h-4" /> Tillbaka till Portalen
           </button>
         </div>
-        <TravelInvoice db={db} appId={appId} locationsData={locationsData} user={user} userName={userName} t={t} myAssignedGames={myAssignedGames} />
+        <TravelInvoiceView 
+          db={db} 
+          appId={appId} 
+          locationsData={locationsData} 
+          user={user} 
+          userName={userName} 
+          t={t} 
+          myAssignedGames={myAssignedGames} 
+        />
       </div>
     );
   }
 
-  // UMPIRE PROFILE VIEW
   if (view === 'umpire-profile' && selectedProfileId) {
     const umpireData = masterUmpires.find(u => u.id === selectedProfileId);
     if (!umpireData) return null;
@@ -2036,6 +2519,12 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24">
+      {isDemoEnv && (
+        <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm z-50 relative print:hidden">
+          <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
+        </div>
+      )}
+      
       <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-30">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div className="flex items-center justify-between w-full sm:w-auto">
@@ -2049,6 +2538,11 @@ function MainApp() {
             <button onClick={() => setShowAdminModal(true)} className="sm:hidden p-1.5"><Settings className="w-5 h-5" /></button>
           </div>
           <div className="flex items-center gap-2">
+            {isDemoEnv && (
+              <select value={federation} onChange={(e) => { setFederation(e.target.value); const newFed = federations.find(f => f.id === e.target.value); if (newFed) setLang(newFed.defaultLang); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none">
+                {federations.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            )}
             <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none text-white">
               <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
             </select>
@@ -2061,28 +2555,38 @@ function MainApp() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4 space-y-6">
-        <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar sticky top-[68px] z-20">
-          {[
-            { id: 'schedule', label: t.schedule, icon: CalendarIcon },
-            { id: 'locations', label: t.locations, icon: MapPin },
-            { id: 'umpire-list', label: t.umpireList, icon: Users2 },
-            ...(user?.email ? [
-              ...(features.marketplace ? [{ id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft }] : []),
-              { id: 'my-apps', label: t.myGames, icon: CheckCircle }
-            ] : []),
-            ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
-            { id: 'invoice', label: t.invoiceTitle, icon: FileText }
-          ].map(tab => (
-            <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); }} className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${view === tab.id ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>
-              <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
-            </button>
-          ))}
+      {globalNote && view !== 'help' && (
+        <div className="bg-blue-50 border-b border-blue-100 p-3 sm:p-4 animate-in slide-in-from-top">
+          <div className="max-w-5xl mx-auto flex items-start gap-3">
+             <Megaphone className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+             <p className="text-sm font-medium text-blue-900">{globalNote}</p>
+          </div>
         </div>
+      )}
+
+      <main className="max-w-5xl mx-auto p-4 space-y-6">
+        {view !== 'help' && (
+          <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar sticky top-[68px] z-20">
+            {[
+              { id: 'schedule', label: t.schedule, icon: CalendarIcon },
+              { id: 'locations', label: t.locations, icon: MapPin },
+              { id: 'umpire-list', label: t.umpireList, icon: Users2 },
+              ...(user?.email ? [
+                ...(features.marketplace ? [{ id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft }] : []),
+                { id: 'my-apps', label: t.myGames, icon: CheckCircle }
+              ] : []),
+              ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
+              { id: 'invoice', label: t.invoiceTitle, icon: FileText }
+            ].map(tab => (
+              <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); }} className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${view === tab.id ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>
+                <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {view === 'schedule' && (
           <div className="space-y-4 animate-in fade-in">
-            {/* Action Bar */}
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
               <h2 className="text-lg font-black uppercase text-slate-800">{showHistory ? t.archived : t.activeSchedule}</h2>
               
@@ -2104,7 +2608,6 @@ function MainApp() {
               </div>
             </div>
 
-            {/* Fileringsmeny */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -2164,7 +2667,6 @@ function MainApp() {
                         {!showHistory && (
                           <>
                             <div className="flex flex-col items-end">
-                              {/* ADMINS SER NAMNEN, ANDRA SER BARA ANTALET */}
                               {isAdmin ? (
                                 gameApplications.length > 0 ? (
                                    <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">
@@ -2201,7 +2703,6 @@ function MainApp() {
           </div>
         )}
 
-        {/* LOCATIONS VIEW */}
         {view === 'locations' && (
           <div className="space-y-4 animate-in fade-in">
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative">
@@ -2223,7 +2724,6 @@ function MainApp() {
           </div>
         )}
 
-        {/* UMPIRE LIST VIEW */}
         {view === 'umpire-list' && (
           <div className="space-y-4 animate-in fade-in">
             <div className="flex gap-4 mb-4">
@@ -2255,7 +2755,6 @@ function MainApp() {
           </div>
         )}
 
-        {/* MARKETPLACE VIEW */}
         {view === 'marketplace' && (
           <div className="space-y-8 animate-in fade-in">
              <div className="text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
@@ -2264,7 +2763,6 @@ function MainApp() {
                <p className="text-slate-500 font-medium mt-2">{t.marketplaceDesc}</p>
              </div>
              
-             {/* Sektion 1: Matcher som bytes bort */}
              <div>
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><RefreshCw className="w-4 h-4" /> {t.gamesForTrade}</h3>
                 {games.filter(g => !showHistory && g.date >= today && assignments.some(a => a.gameId === g.id && a.forTrade)).length === 0 ? (
@@ -2294,7 +2792,6 @@ function MainApp() {
                 )}
              </div>
 
-             {/* Sektion 2: Matcher som saknar domare */}
              <div>
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> {t.missingUmpires}</h3>
                 {games.filter(g => !showHistory && g.date >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).length === 0 ? (
@@ -2326,10 +2823,8 @@ function MainApp() {
           </div>
         )}
 
-        {/* MY GAMES VIEW */}
         {view === 'my-apps' && (
           <div className="space-y-6 animate-in fade-in">
-            {/* Information Banners */}
             <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl shadow-sm flex items-start gap-4">
                <Megaphone className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
                <div className="text-sm text-amber-800 font-medium leading-relaxed">
@@ -2366,7 +2861,6 @@ function MainApp() {
               </div>
             </div>
 
-            {/* Warning if any game has changed time */}
             {myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).length > 0 && (
               <div className="bg-yellow-50 p-4 rounded-3xl border border-yellow-200">
                 <h3 className="text-xs font-black text-yellow-700 uppercase mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> {t.actionRequired}</h3>
@@ -2383,7 +2877,6 @@ function MainApp() {
               </div>
             )}
 
-            {/* Confirmed Games */}
             <div className="space-y-4">
               <div className="border-b border-slate-200 pb-2">
                 <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.confirmedGames}</h2>
@@ -2403,7 +2896,6 @@ function MainApp() {
                         <h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3>
                         <p className="text-sm text-slate-500 flex items-center gap-2 mt-1"><Clock className="w-3 h-3"/> {game.date} @ {game.time} &bull; {game.location}</p>
                         
-                        {/* Co-umpires section */}
                         <div className="mt-3 flex gap-2 items-center flex-wrap">
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.coUmpires}</span>
                           {coUmpires.length > 0 ? (
@@ -2432,7 +2924,6 @@ function MainApp() {
               )}
             </div>
 
-            {/* Interested Games */}
             {!showHistory && (
               <div className="space-y-4 pt-4">
                 <div className="border-b border-slate-200 pb-2">
@@ -2457,7 +2948,6 @@ function MainApp() {
           </div>
         )}
 
-        {/* STATS VIEW */}
         {view === 'stats' && isAdmin && (
           <div className="space-y-6 animate-in fade-in">
              <h2 className="text-xl font-black uppercase">{t.analytics}</h2>
@@ -2492,7 +2982,6 @@ function MainApp() {
           </div>
         )}
 
-        {/* ADMIN STAFFING VIEW */}
         {view === 'admin' && (
           <div className="space-y-6 animate-in fade-in">
              <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -2542,7 +3031,6 @@ function MainApp() {
 
                return (
                  <div key={game.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-4 p-5 hover:border-blue-300 transition-colors">
-                    {/* Kortets header */}
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-100 pb-3 mb-4 gap-3">
                        <div className="flex items-center gap-3 flex-wrap cursor-pointer" onClick={() => setSelectedGameDetails(game)}>
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
@@ -2556,7 +3044,6 @@ function MainApp() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       {/* Vänster: Anmälningar */}
                        <div className="space-y-3">
                           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.applied}</h4>
                           {gameApplications.length > 0 ? (
@@ -2573,7 +3060,6 @@ function MainApp() {
                           )}
                        </div>
 
-                       {/* Höger: Tillsatta & Manuell tilldelning */}
                        <div className="space-y-3">
                           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aktuellt Domarteam</h4>
                           {gameAssignments.length > 0 ? (
@@ -2620,7 +3106,7 @@ function MainApp() {
       )}
 
       {!user?.email && (
-        <button onClick={() => setShowAuthModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-8 py-3 rounded-full shadow-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform">Logga in</button>
+        <button onClick={() => setShowAuthModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-8 py-3 rounded-full shadow-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform z-40">Logga in</button>
       )}
 
       {/* MATCH DETAILS MODAL (Pop-up) */}
@@ -2846,7 +3332,7 @@ function MainApp() {
 
       {showAdminModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh]">
+          <div className="bg-white rounded-[2.5rem] p-8 space-y-8 max-w-sm w-full shadow-2xl animate-in zoom-in border border-white/20 overflow-y-auto max-h-[90vh] custom-scrollbar">
             <div>
               <h3 className="text-2xl font-black text-slate-800 mb-1">{t.userSettings}</h3>
               <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">{user?.email}</p>
