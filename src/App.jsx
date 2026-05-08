@@ -63,6 +63,7 @@ const translations = {
     season: "Säsong",
     schedule: "Spelschema",
     myGames: "Mina Matcher",
+    myProfile: "Min profil",
     umpireList: "Domarlista",
     staffing: "Bemanning",
     analytics: "Statistik",
@@ -270,6 +271,7 @@ const translations = {
     season: "Season",
     schedule: "Schedule",
     myGames: "My Games",
+    myProfile: "My Profile",
     umpireList: "Umpire List",
     staffing: "Staffing",
     analytics: "Analytics",
@@ -585,7 +587,6 @@ function UmpireProfileModal({
             ctx.drawImage(img, 0, 0, w, h);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
             
-            // Spara den förminskade bilden i Firestore
             setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', selectedProfileId), { avatarUrl: dataUrl }, { merge: true });
          };
          img.src = event.target.result;
@@ -600,10 +601,10 @@ function UmpireProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
-        {/* Modal Header med bakgrund */}
+        {/* Modal Header */}
         <div className="relative pt-12 pb-6 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
            <button onClick={() => setSelectedProfileId(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
            
@@ -760,7 +761,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-             // Fall-back på profilens Gatuadress/Ort om tomt i invoiceData
             setPersonalInfo(prev => ({ 
                ...prev, 
                ...docSnap.data(), 
@@ -1255,7 +1255,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
               className="flex-1 py-4 bg-yellow-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-yellow-200 hover:bg-yellow-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 
-              Skicka in
+              Skicka in (TEST: Kvitto till din E-post)
             </button>
           </div>
         </form>
@@ -1439,7 +1439,7 @@ class ErrorBoundary extends Component {
 // MAIN APPLICATION COMPONENT
 // ==========================================
 function MainApp() {
-  // 1. ALLA USESTATE DEKLARATIONER HÖGST UPP (För att undvika ReferenceErrors)
+  // Auth & Roles
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
@@ -1447,6 +1447,7 @@ function MainApp() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminUmpireIds, setAdminUmpireIds] = useState([]);
   
+  // Navigation & View
   const [view, setView] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1458,6 +1459,7 @@ function MainApp() {
   const [myGamesViewMode, setMyGamesViewMode] = useState('list');
   const [selectedYear, setSelectedYear] = useState('2026');
   
+  // Federation Multi-Tenant Setup (Environment detection)
   const [isDemoEnv, setIsDemoEnv] = useState(true);
   const [federation, setFederation] = useState('swe');
   const federations = [
@@ -1466,20 +1468,33 @@ function MainApp() {
     { id: 'sui', name: '🇨🇭 Switzerland', defaultLang: 'de' }
   ];
 
+  // Language & UI Context
   const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
   
+  const getTranslation = (languageCode) => {
+    const selected = translations[languageCode] || translations['en'];
+    const fallback = translations['en'];
+    return new Proxy(selected, {
+      get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop]
+    });
+  };
+  const t = getTranslation(lang);
+
+  // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // NY: Mobilmeny
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  // System Feature Flags
   const [features, setFeatures] = useState({
     marketplace: true,
     evaluations: true,
     reminders: true
   });
   
+  // Help View State
   const [helpTab, setHelpTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1490,18 +1505,23 @@ function MainApp() {
   const [readmeContent, setReadmeContent] = useState(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
   
+  // Contact Form State
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactSubject, setContactSubject] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [contactStatus, setContactStatus] = useState('idle');
 
+  // Email Module State
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [customEmailMessage, setCustomEmailMessage] = useState('');
   const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
+
+  // Calendar Dropdown States
   const [showScheduleExport, setShowScheduleExport] = useState(false);
   const [showMyGamesExport, setShowMyGamesExport] = useState(false);
 
+  // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -1514,6 +1534,7 @@ function MainApp() {
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
   
+  // Auth & Modals State
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -1525,17 +1546,21 @@ function MainApp() {
   const [selectedGameDetails, setSelectedGameDetails] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   
+  // Evaluation Forms State
   const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
   const [evalGrade, setEvalGrade] = useState(0);
   const [evalComment, setEvalComment] = useState('');
 
+  // Location Editing State
   const [editingLocation, setEditingLocation] = useState(null);
   const [newFacility, setNewFacility] = useState('');
   
+  // Changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelog, setChangelog] = useState([]);
   const [loadingChangelog, setLoadingChangelog] = useState(false);
   
+  // Admin Editing Controls
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
@@ -1551,29 +1576,19 @@ function MainApp() {
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
   const [umpireSort, setUmpireSort] = useState('name');
 
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [tempEditPhone, setTempEditPhone] = useState('');
-  const [tempHistoricalGames, setTempHistoricalGames] = useState('');
 
-  // 2. STANDARD VARIABLER OCH ÖVERSÄTTNINGAR
+  // Localized today
   const today = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
-  const getTranslation = (languageCode) => {
-    const selected = translations[languageCode] || translations['en'];
-    const fallback = translations['en'];
-    return new Proxy(selected, {
-      get: (target, prop) => target[prop] !== undefined ? target[prop] : (fallback[prop] || '')
-    });
-  };
-  const t = getTranslation(lang);
-
-  // 3. EFFECTS OCH INITIALISERING
+  // Environment Logic
   useEffect(() => {
      if (typeof window !== 'undefined') {
         const host = window.location.hostname;
@@ -1587,7 +1602,6 @@ function MainApp() {
      }
   }, []);
 
-  // 4. MEMOIZED VALUES (DATA BERÄKNINGAR)
   const appId = useMemo(() => {
     const base = typeof window !== 'undefined' && window.__app_id 
       ? String(window.__app_id).replace(/[\/\\]/g, '-') 
@@ -1595,6 +1609,7 @@ function MainApp() {
     return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
   }, [selectedYear, isDemoEnv]);
 
+  // Derived state that needs to be declared BEFORE it's used
   const calendarWeeks = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -1671,7 +1686,6 @@ function MainApp() {
       const matchesSearch = hName.includes(search) || aName.includes(search);
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
-      
       const isHistorical = (game.date || '') < today;
       
       let statusMatch = true;
@@ -1683,23 +1697,25 @@ function MainApp() {
           statusMatch = applicants.length === 0;
       }
       
-      if (showHistory) {
-        return isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
-      } else {
-        return !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
-      }
+      return showHistory ? isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch : !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
     });
   }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
-  
   const allLocationNames = useMemo(() => {
     const fromGames = games.map(g => g.location);
     const fromData = locationsData.map(l => l.id);
     return [...new Set([...fromGames, ...fromData])].filter(Boolean).sort((a, b) => a.localeCompare(b, lang));
   }, [games, locationsData, lang]);
-  
   const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
+  const uiDays = useMemo(() => {
+    const arr = [...(t.days || [])];
+    if (arr.length > 0) {
+      const sunday = arr.shift();
+      arr.push(sunday);
+    }
+    return arr;
+  }, [t.days]);
 
   const sortedUmpireList = useMemo(() => {
     const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
@@ -1723,13 +1739,8 @@ function MainApp() {
 
   const myAssignedGames = useMemo(() => {
     if (!umpireId) return [];
-    const myGames = games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId));
-    
-    return myGames.filter(game => {
-      const isHistorical = (game.date || '') < today;
-      if (showHistory) return isHistorical;
-      return !isHistorical;
-    });
+    return games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId))
+                .filter(game => showHistory ? (game.date < today) : (game.date >= today));
   }, [games, groupedAssignments, umpireId, showHistory, today]);
 
   const myInterestedGames = useMemo(() => {
@@ -1767,13 +1778,6 @@ function MainApp() {
     return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
   }, [registeredEmails, masterUmpires]);
 
-  const uiDays = useMemo(() => {
-    const arr = [...(t.days || [])];
-    if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
-    return arr;
-  }, [t.days]);
-
-  // 5. YTTERLIGARE EFFECTS
   useEffect(() => {
     setEditNoteText(globalNote);
   }, [globalNote]);
@@ -2004,7 +2008,6 @@ function MainApp() {
     }
   }, [view, selectedYear, lang]);
 
-  // 6. HJÄLPFUNKTIONER FÖR UI
   const safeDateMonth = (dateString) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -2121,7 +2124,6 @@ function MainApp() {
     </div>
   );
 
-  // 7. FUNKTIONER FÖR DATABAS OCH INTERAKTION
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -2285,11 +2287,30 @@ function MainApp() {
       setShowNamePrompt(true); 
       return; 
     }
+    
     const appIdStr = `${gameId}_${umpireId}`;
     const existing = applications.find(a => a.id === appIdStr);
+    
     if (existing) {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr));
     } else {
+      const game = games.find(g => g.id === gameId);
+      if (game) {
+        const umpireAssignedGamesToday = assignments
+          .filter(asg => asg.userId === umpireId)
+          .map(asg => games.find(g => g.id === asg.gameId))
+          .filter(g => g && g.date === game.date && g.id !== game.id);
+        
+        const conflictGame = umpireAssignedGamesToday.find(g => 
+          (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
+        );
+
+        if (conflictGame) {
+          if (typeof window !== 'undefined') alert(`Kan inte anmäla! Du är redan bokad i ${conflictGame.location} den här dagen.`);
+          return;
+        }
+      }
+
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr), { 
         gameId, 
         userId: umpireId, 
@@ -2302,7 +2323,6 @@ function MainApp() {
   const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
     
-    // KROCK-SKYDD: Kolla om domaren redan är bokad på annan ort samma dag
     const game = games.find(g => g.id === gameId);
     if (game) {
       const umpireAssignedGamesToday = assignments
@@ -2395,6 +2415,24 @@ function MainApp() {
   const expressInterestMarketplace = async (game) => {
     if (!user || !user.email) { setShowAuthModal(true); return; }
     if (!umpireId) { setShowNamePrompt(true); return; }
+    
+    const gameCheck = games.find(g => g.id === game.id);
+    if (gameCheck) {
+      const umpireAssignedGamesToday = assignments
+        .filter(asg => asg.userId === umpireId)
+        .map(asg => games.find(g => g.id === asg.gameId))
+        .filter(g => g && g.date === gameCheck.date && g.id !== gameCheck.id);
+      
+      const conflictGame = umpireAssignedGamesToday.find(g => 
+        (g.location || '').toLowerCase().trim() !== (gameCheck.location || '').toLowerCase().trim()
+      );
+
+      if (conflictGame) {
+        if (typeof window !== 'undefined') alert(`Kan inte anmäla! Du är redan bokad i ${conflictGame.location} den här dagen.`);
+        return;
+      }
+    }
+
     await toggleApplication(game.id);
     if(typeof window !== 'undefined') alert("Intresse anmält! Administratörerna kan nu se att du vill ta matchen.");
     
@@ -2686,7 +2724,7 @@ function MainApp() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 relative">
       {isDemoEnv && (
         <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm z-50 relative print:hidden">
           <Code className="w-4 h-4" /> SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION
@@ -2695,8 +2733,8 @@ function MainApp() {
       
       <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-40">
         <div className="max-w-5xl mx-auto flex justify-between items-center gap-3">
-          {/* Vänster: Logga och titel */}
-          <div className="flex items-center gap-2 overflow-hidden">
+          {/* Vänster: Logga och titel (Klickbar för scroll till toppen) */}
+          <div className="flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <Trophy className="w-6 h-6 shrink-0" />
             <div className="truncate">
               <h1 className="text-sm sm:text-xl font-bold truncate">{t.appTitle}</h1>
@@ -2718,7 +2756,7 @@ function MainApp() {
             {user?.email ? (
               <>
                 {umpireId && (
-                  <button onClick={() => { setSelectedProfileId(umpireId); }} className="w-8 h-8 rounded-full bg-white text-blue-900 border-2 border-blue-400 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform shadow-sm">
+                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileId(umpireId); }} className="w-8 h-8 rounded-full bg-white text-blue-900 border-2 border-blue-400 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform shadow-sm">
                     {myUmpireData?.avatarUrl ? (
                        <img src={myUmpireData.avatarUrl} className="w-full h-full object-cover" />
                     ) : (
@@ -2965,7 +3003,7 @@ function MainApp() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {sortedUmpireList.map(u => (
-                <div key={u.id} onClick={() => { setSelectedProfileId(u.id); }} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 hover:shadow-md transition-all group">
+                <div key={u.id} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileId(u.id); }} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 hover:shadow-md transition-all group">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 overflow-hidden group-hover:bg-blue-50">
                        {u.avatarUrl ? (
@@ -3056,13 +3094,6 @@ function MainApp() {
 
         {view === 'my-apps' && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl shadow-sm flex items-start gap-4">
-               <Info className="w-6 h-6 text-blue-600 shrink-0" />
-               <p className="text-sm text-blue-800 font-medium leading-relaxed">
-                 {t.myGamesReminder}
-               </p>
-            </div>
-
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
               <h2 className="text-xl font-black uppercase text-slate-800">{t.mySchedule}</h2>
               <div className="flex items-center gap-2 flex-wrap">
@@ -3187,7 +3218,7 @@ function MainApp() {
                    {sortedStatistics.map(stat => (
                      <tr key={stat.userId} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                        <td className="px-6 py-4 font-bold text-slate-800">
-                         <button onClick={() => { setSelectedProfileId(stat.userId); }} className="hover:text-blue-600 hover:underline">
+                         <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileId(stat.userId); }} className="hover:text-blue-600 hover:underline">
                            {stat.name}
                          </button>
                        </td>
@@ -3270,12 +3301,33 @@ function MainApp() {
                           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.applied}</h4>
                           {gameApplications.length > 0 ? (
                              <div className="flex flex-col gap-2">
-                                {gameApplications.map(app => (
-                                   <div key={app.userId} className="flex justify-between items-center bg-blue-50 p-2.5 rounded-xl border border-blue-100">
-                                      <span className="text-xs font-bold text-blue-900">{app.userName}</span>
-                                      <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Tilldela</button>
-                                   </div>
-                                ))}
+                                {gameApplications.map(app => {
+                                  // Kontrollera om denna intresserade domare redan är bokad på ANNAN ort samma dag
+                                  const umpireAssignedGamesToday = assignments
+                                    .filter(asg => asg.userId === app.userId)
+                                    .map(asg => games.find(g => g.id === asg.gameId))
+                                    .filter(g => g && g.date === game.date && g.id !== game.id);
+                                  
+                                  const conflictGame = umpireAssignedGamesToday.find(g => 
+                                    (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim()
+                                  );
+
+                                  if (conflictGame) {
+                                    return (
+                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`Bokad i ${conflictGame.location}`}>
+                                         <span className="text-xs font-bold text-red-900 line-through decoration-red-500">{app.userName}</span>
+                                         <span className="text-[9px] font-black uppercase text-red-600 px-2">Annan ort</span>
+                                      </div>
+                                    )
+                                  }
+
+                                  return (
+                                    <div key={app.userId} className="flex justify-between items-center bg-blue-50 p-2.5 rounded-xl border border-blue-100">
+                                       <span className="text-xs font-bold text-blue-900">{app.userName}</span>
+                                       <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Tilldela</button>
+                                    </div>
+                                  );
+                                })}
                              </div>
                           ) : (
                              <p className="text-xs text-slate-400 italic">Inga intresseanmälningar ännu.</p>
@@ -3319,6 +3371,34 @@ function MainApp() {
           </div>
         )}
       </main>
+
+      {/* FLOAT BUTTON SCROLL TO TOP */}
+      {showBackToTop && (
+        <button 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
+          className="fixed bottom-6 right-6 p-3 bg-slate-800 text-white rounded-full shadow-2xl hover:bg-black transition-all z-50 animate-in fade-in"
+          title="Till toppen"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* UMPIRE PROFILE MODAL */}
+      {!!selectedProfileId && (
+         <UmpireProfileModal 
+            selectedProfileId={selectedProfileId}
+            setSelectedProfileId={setSelectedProfileId}
+            masterUmpires={masterUmpires}
+            assignments={assignments}
+            umpireId={umpireId}
+            isAdmin={isAdmin}
+            selectedYear={selectedYear}
+            t={t}
+            getLevelStyles={getLevelStyles}
+            db={db}
+            appId={appId}
+         />
+      )}
 
       {/* MATCH DETAILS MODAL (Pop-up) */}
       {selectedGameDetails && (() => {
@@ -3371,7 +3451,7 @@ function MainApp() {
                                      )}
                                   </div>
                                   <div>
-                                    <span className="font-bold text-sm text-slate-800 block cursor-pointer hover:text-blue-600" onClick={() => setSelectedProfileId(asg.userId)}>{asg.userName}</span>
+                                    <span className="font-bold text-sm text-slate-800 block cursor-pointer hover:text-blue-600" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileId(asg.userId); }}>{asg.userName}</span>
                                     {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase px-1.5 py-0.5 rounded border ${(m.level || '').toLowerCase().includes('elit') ? 'text-green-600 border-green-200 bg-green-50' : 'text-slate-500 border-slate-200 bg-white'}`}>{m.level}</span>}
                                   </div>
                                 </div>
@@ -3584,61 +3664,4 @@ function MainApp() {
                   <Shield className="w-5 h-5 text-blue-600" />
                   <div>
                     <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Admin</p>
-                    <p className="text-[10px] text-blue-600 font-medium">Behörighet beviljad via e-post</p>
-                  </div>
-                </div>
-              )}
-
-              {isSuperAdmin && (
-                <div className="pt-4 border-t border-slate-100 space-y-3">
-                  <h4 className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2 mb-4">
-                    <Sliders className="w-4 h-4" /> {t.superAdminSettings}
-                  </h4>
-                  
-                  <button onClick={() => toggleSystemFeature('marketplace')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
-                    <span className="text-xs font-bold text-purple-900">{t.featureMarketplace}</span>
-                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.marketplace ? 'bg-purple-600' : 'bg-slate-300'}`}>
-                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.marketplace ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
-                  </button>
-                  
-                  <button onClick={() => toggleSystemFeature('evaluations')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
-                    <span className="text-xs font-bold text-purple-900">{t.featureEvaluations}</span>
-                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.evaluations ? 'bg-purple-600' : 'bg-slate-300'}`}>
-                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.evaluations ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
-                  </button>
-                  
-                  <button onClick={() => toggleSystemFeature('reminders')} className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
-                    <span className="text-xs font-bold text-purple-900">{t.featureReminders}</span>
-                    <div className={`w-10 h-5 rounded-full p-1 transition-colors ${features.reminders ? 'bg-purple-600' : 'bg-slate-300'}`}>
-                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${features.reminders ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
-                  </button>
-
-                  {features.reminders && (
-                    <button onClick={forceRunRemindersNow} className="w-full mt-2 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5" /> {t.runRemindersNow}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <button onClick={() => setShowAdminModal(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors shadow-sm">
-              {t.close}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <MainApp />
-    </ErrorBoundary>
-  );
-}
+                    <p className="text-[10px] text-blue-6
