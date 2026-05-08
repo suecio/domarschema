@@ -63,7 +63,6 @@ const translations = {
     season: "Säsong",
     schedule: "Spelschema",
     myGames: "Mina Matcher",
-    myProfile: "Min profil",
     umpireList: "Domarlista",
     staffing: "Bemanning",
     analytics: "Statistik",
@@ -271,7 +270,6 @@ const translations = {
     season: "Season",
     schedule: "Schedule",
     myGames: "My Games",
-    myProfile: "My Profile",
     umpireList: "Umpire List",
     staffing: "Staffing",
     analytics: "Analytics",
@@ -521,7 +519,7 @@ const generateCSV = (gamesToExport, selectedYear) => {
 };
 
 // ==========================================
-// UMPIRE PROFILE MODAL COMPONENT (NEW)
+// UMPIRE PROFILE MODAL COMPONENT
 // ==========================================
 function UmpireProfileModal({ 
   selectedProfileId, setSelectedProfileId, masterUmpires, assignments, 
@@ -602,7 +600,7 @@ function UmpireProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[90] p-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
         {/* Modal Header med bakgrund */}
@@ -634,9 +632,11 @@ function UmpireProfileModal({
            </div>
            
            <h2 className="text-3xl font-black text-slate-800">{umpireData.name}</h2>
-           {umpireData.city && !canEdit && (
+           
+           {umpireData.city && (
              <p className="text-sm font-bold text-slate-500 mt-1 flex items-center justify-center gap-1"><MapPin className="w-3.5 h-3.5"/> {umpireData.city}</p>
            )}
+
            <div className="mt-3 inline-block">
              <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg border uppercase ${getLevelStyles(umpireData.level)}`}>{umpireData.level}</span>
            </div>
@@ -656,7 +656,7 @@ function UmpireProfileModal({
                    {canEdit ? (
                      <input type="email" value={editData.linkedEmail} onChange={e => setEditData({...editData, linkedEmail: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none mt-1 focus:border-blue-400" />
                    ) : (
-                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1">{editData.linkedEmail || 'Ej angivet'}</p>
+                     <p className="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 mt-1 break-all">{editData.linkedEmail || 'Ej angivet'}</p>
                    )}
                  </div>
                  
@@ -760,7 +760,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-             // Om det finns i databasen, fyll i, MEN fall-back på profilens Gatuadress/Ort om tomt
+             // Fall-back på profilens Gatuadress/Ort om tomt i invoiceData
             setPersonalInfo(prev => ({ 
                ...prev, 
                ...docSnap.data(), 
@@ -769,7 +769,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                email: user?.email || docSnap.data().email || prev.email || '' 
             }));
           } else {
-             // Finns inte invoiceData, hämta adress från Umpire-profilen
             setPersonalInfo(prev => ({ 
                ...prev, 
                name: userName || myUmpireData?.name || '', 
@@ -2640,11 +2639,13 @@ function MainApp() {
     }
   };
 
+  // Helper för inloggad domare
+  const myUmpireData = masterUmpires.find(u => u.id === umpireId);
+
   // 8. HUVUD-RENDERING
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
   if (view === 'invoice') {
-    const myUmpireData = masterUmpires.find(u => u.id === umpireId);
     return (
       <div className="relative bg-slate-100 min-h-screen">
         {isDemoEnv && (
@@ -2678,8 +2679,7 @@ function MainApp() {
     { id: 'umpire-list', label: t.umpireList, icon: Users2 },
     ...(user?.email ? [
       ...(features.marketplace ? [{ id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft }] : []),
-      { id: 'my-apps', label: t.myGames, icon: CheckCircle },
-      ...(umpireId ? [{ id: 'my-profile', label: t.myProfile || 'Min profil', icon: User }] : [])
+      { id: 'my-apps', label: t.myGames, icon: CheckCircle }
     ] : []),
     ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
     { id: 'invoice', label: t.invoiceTitle, icon: FileText }
@@ -2693,32 +2693,48 @@ function MainApp() {
         </div>
       )}
       
-      <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <div className="flex items-center justify-between w-full sm:w-auto">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-6 h-6" />
-              <div>
-                <h1 className="text-sm sm:text-xl font-bold">{t.appTitle}</h1>
-                <p className="text-[8px] sm:text-[10px] uppercase text-blue-300">{t.season} {selectedYear}</p>
-              </div>
+      <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto flex justify-between items-center gap-3">
+          {/* Vänster: Logga och titel */}
+          <div className="flex items-center gap-2 overflow-hidden">
+            <Trophy className="w-6 h-6 shrink-0" />
+            <div className="truncate">
+              <h1 className="text-sm sm:text-xl font-bold truncate">{t.appTitle}</h1>
+              <p className="text-[8px] sm:text-[10px] uppercase text-blue-300">{t.season} {selectedYear}</p>
             </div>
-            <button onClick={() => user?.email ? setShowAdminModal(true) : setShowAuthModal(true)} className="sm:hidden p-1.5"><Settings className="w-5 h-5" /></button>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Höger: Kontroller, Inställningar och Profil/Login */}
+          <div className="flex items-center gap-3 shrink-0">
             {isDemoEnv && (
-              <select value={federation} onChange={(e) => { setFederation(e.target.value); const newFed = federations.find(f => f.id === e.target.value); if (newFed) setLang(newFed.defaultLang); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none">
+              <select value={federation} onChange={(e) => { setFederation(e.target.value); const newFed = federations.find(f => f.id === e.target.value); if (newFed) setLang(newFed.defaultLang); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none hidden sm:block">
                 {federations.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             )}
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none text-white">
+            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none text-white hidden sm:block">
               <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
             </select>
-            <div className="flex bg-blue-800 rounded p-0.5">
-              <button onClick={() => setLang('sv')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'sv' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇸🇪</button>
-              <button onClick={() => setLang('en')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'en' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇬🇧</button>
-            </div>
-            <button onClick={() => user?.email ? setShowAdminModal(true) : setShowAuthModal(true)} className="hidden sm:block p-1.5"><Settings className="w-5 h-5 text-white" /></button>
+
+            {user?.email ? (
+              <>
+                {umpireId && (
+                  <button onClick={() => { setSelectedProfileId(umpireId); }} className="w-8 h-8 rounded-full bg-white text-blue-900 border-2 border-blue-400 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform shadow-sm">
+                    {myUmpireData?.avatarUrl ? (
+                       <img src={myUmpireData.avatarUrl} className="w-full h-full object-cover" />
+                    ) : (
+                       <span className="text-[12px] font-black">{(userName || '?').charAt(0)}</span>
+                    )}
+                  </button>
+                )}
+                <button onClick={() => setShowAdminModal(true)} className="p-1.5 hover:bg-blue-800 rounded-full transition-colors">
+                  <Settings className="w-5 h-5 text-white" />
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setShowAuthModal(true)} className="text-[10px] font-black uppercase bg-blue-600 px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+                {t.login}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -2736,26 +2752,17 @@ function MainApp() {
         {view !== 'help' && (
           <>
             {/* Desktop Tabs */}
-            <div className="hidden md:flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar sticky top-[68px] z-20">
+            <div className="hidden md:flex flex-wrap bg-white p-1 rounded-2xl shadow-sm border border-slate-200 sticky top-[68px] z-20 gap-1">
               {tabs.map(tab => {
-                const isActive = tab.id === 'my-profile' 
-                  ? (selectedProfileId === umpireId && selectedProfileId !== null)
-                  : tab.id === 'umpire-list' 
-                  ? (view === 'umpire-list')
-                  : (view === tab.id && (!selectedProfileId || selectedProfileId !== umpireId));
-
+                const isActive = view === tab.id;
                 return (
                   <button 
                     key={tab.id} 
                     onClick={() => { 
-                      if (tab.id === 'my-profile') {
-                        setSelectedProfileId(umpireId);
-                      } else {
-                        setView(tab.id); 
-                        setSelectedProfileId(null); 
-                      }
+                      setView(tab.id); 
+                      setSelectedProfileId(null); 
                     }} 
-                    className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${isActive ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
+                    className={`flex-1 min-w-[120px] max-w-[200px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${isActive ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
                   >
                     <tab.icon className="w-4 h-4 shrink-0" /><span className="inline">{tab.label}</span>
                   </button>
@@ -2772,7 +2779,7 @@ function MainApp() {
                 <div className="flex items-center gap-2">
                   <List className="w-5 h-5" />
                   <span>
-                     {tabs.find(t => t.id === (selectedProfileId === umpireId && selectedProfileId !== null ? 'my-profile' : view === 'umpire-profile' ? 'umpire-list' : view))?.label || 'Meny'}
+                     {tabs.find(t => t.id === view)?.label || 'Meny'}
                   </span>
                 </div>
                 {isMobileMenuOpen ? <ChevronUp className="w-5 h-5 text-blue-300"/> : <ChevronDown className="w-5 h-5 text-blue-300"/>}
@@ -2781,22 +2788,13 @@ function MainApp() {
               {isMobileMenuOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 flex flex-col gap-1 z-30 max-h-[60vh] overflow-y-auto">
                   {tabs.map(tab => {
-                    const isActive = tab.id === 'my-profile' 
-                      ? (selectedProfileId === umpireId && selectedProfileId !== null)
-                      : tab.id === 'umpire-list' 
-                      ? (view === 'umpire-list')
-                      : (view === tab.id && (!selectedProfileId || selectedProfileId !== umpireId));
-
+                    const isActive = view === tab.id;
                     return (
                       <button 
                         key={tab.id} 
                         onClick={() => { 
-                          if (tab.id === 'my-profile') {
-                            setSelectedProfileId(umpireId);
-                          } else {
-                            setView(tab.id); 
-                            setSelectedProfileId(null); 
-                          }
+                          setView(tab.id); 
+                          setSelectedProfileId(null); 
                           setIsMobileMenuOpen(false);
                         }} 
                         className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase transition-all ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
@@ -3321,38 +3319,6 @@ function MainApp() {
           </div>
         )}
       </main>
-
-      {/* FLOAT BUTTON / BOTTOM BAR */}
-      {user?.email && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-40">
-          <button onClick={() => setShowAdminModal(true)} className="bg-blue-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-blue-800 hover:scale-105 transition-transform">
-            <div className="w-8 h-8 bg-white text-blue-900 rounded-full flex items-center justify-center text-[10px] font-black uppercase">{(userName || '?').charAt(0)}</div>
-            <span className="text-sm font-bold">{userName || 'Inställningar'}</span>
-            <Settings className="w-4 h-4 opacity-50 ml-1" />
-          </button>
-        </div>
-      )}
-
-      {!user?.email && (
-        <button onClick={() => setShowAuthModal(true)} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-8 py-3 rounded-full shadow-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-transform z-40">Logga in</button>
-      )}
-
-      {/* UMPIRE PROFILE MODAL */}
-      {selectedProfileId && (
-         <UmpireProfileModal 
-            selectedProfileId={selectedProfileId}
-            setSelectedProfileId={setSelectedProfileId}
-            masterUmpires={masterUmpires}
-            assignments={assignments}
-            umpireId={umpireId}
-            isAdmin={isAdmin}
-            selectedYear={selectedYear}
-            t={t}
-            getLevelStyles={getLevelStyles}
-            db={db}
-            appId={appId}
-         />
-      )}
 
       {/* MATCH DETAILS MODAL (Pop-up) */}
       {selectedGameDetails && (() => {
