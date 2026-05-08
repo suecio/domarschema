@@ -1,44 +1,25 @@
 import React, { useState, useEffect, useMemo, Component } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc,
-  onSnapshot, 
-  deleteDoc,
-  writeBatch,
-  addDoc,
-  updateDoc,
-  query,
-  orderBy
+  getFirestore, collection, doc, setDoc, getDoc, onSnapshot, 
+  deleteDoc, writeBatch, addDoc, updateDoc, query, orderBy
 } from 'firebase/firestore';
 import { 
-  getAuth,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signInAnonymously,
-  signInWithCustomToken,
-  signOut
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, sendPasswordResetEmail,
+  signInAnonymously, signInWithCustomToken, signOut
 } from 'firebase/auth';
-import { 
-  getAnalytics, 
-  logEvent 
-} from 'firebase/analytics';
+import { getAnalytics, logEvent } from 'firebase/analytics';
 
 // Import Icons
 import { 
   Calendar as CalendarIcon, Shield, CheckCircle, Clock, Settings, Trash2, 
   MapPin, RefreshCw, Trophy, FileText, Plus, ChevronDown, ChevronUp, Search, 
-  BarChart3, History as HistoryIcon, Info, User, UserPlus, UserMinus, Download, 
+  BarChart3, History as HistoryIcon, Info, User, UserPlus, Download, 
   UserCheck, Edit2, LogOut, ChevronRight, List, ChevronLeft, 
   ArrowUp, Users2, X, AlertTriangle, ArrowLeft, Megaphone, 
-  MessageCircle, Code, Send, Share2, Map, Mail,
-  ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
-  Calculator, Printer, Car, CreditCard, Save, Camera, ExternalLink
+  Send, Map, Mail, ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
+  Calculator, Printer, Car, CreditCard, Save, Camera
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -58,523 +39,159 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : nu
 
 const translations = {
   sv: {
-    appTitle: "Domarportalen",
-    season: "Säsong",
-    schedule: "Spelschema",
-    myGames: "Mina Matcher",
-    myProfile: "Min profil",
-    umpireList: "Domarlista",
-    staffing: "Bemanning",
-    analytics: "Statistik",
-    history: "Historik",
-    upcoming: "Kommande",
-    archived: "Arkiverade matcher",
-    activeSchedule: "Aktivt schema",
-    searchPlaceholder: "Sök matcher...",
-    allSeries: "Alla serier",
-    allLocations: "Alla platser",
-    filterStatusAll: "Alla statusar",
-    needsUmpire: "Saknar domare",
-    noInterests: "Inga anmälningar",
-    noGames: "Inga matcher hittades.",
-    syncNow: "Synka förbundsdata nu",
-    applied: "Anmälda",
-    interested: "Intresserad",
-    withdraw: "Dra tillbaka",
-    assignedTo: "Tillsatta",
-    staffed: "Bemannad",
-    partiallyStaffed: "Delvis bemannad",
-    bulkImport: "Massimport",
-    pendingAssignments: "Bemanningsöversikt",
-    staffingControl: "Bemanningskontroll",
-    hideStaffed: "Dölj helt bemannade",
-    showAll: "Visa alla matcher",
-    removeAssignment: "Ta bort",
-    deleteGame: "Ta bort match",
-    deleteAllGames: "Rensa hela säsongen",
-    deleteAllConfirm: "ÄR DU HELT SÄKER?",
-    deleteAllSuccess: "Säsongen har rensats.",
-    downloadBackup: "Ladda ner backup",
-    umpire: "Domare",
-    interests: "Intresseanmälningar",
-    gamesAssigned: "Dömda matcher",
-    assignmentRate: "Tillsättningsgrad",
-    noStats: "Ingen data finns registrerad än.",
-    mySchedule: "Mitt Schema",
-    noAssignedMatches: "Du har inga bekräftade matchuppdrag än.",
-    noPendingInterest: "Du har inte anmält intresse för några matcher.",
-    confirmed: "Bekräftad",
-    settings: "Inställningar",
-    userSettings: "Användarinställningar",
-    profileAccess: "Konfigurera profil & åtkomst",
-    displayName: "Visningsnamn",
-    namePlaceholder: "Sök eller skriv ditt namn...",
-    logout: "Logga ut",
-    close: "Stäng",
-    status: "Status",
-    setProfile: "Välj din profil",
-    pasteSheet: "Klistra in från Google Sheets",
-    addGames: "Lägg till matcher",
-    importSuccess: "Import lyckades",
-    cancel: "Avbryt",
-    date: "Datum",
-    crew: "Domarteam",
-    addToCalendar: "Spara i kalender",
-    downloadFullSchedule: "Ladda ner (.ICS)",
-    confirmedGames: "Bekräftade uppdrag",
-    interestedGames: "Anmält intresse",
-    nameRequiredTitle: "Vem är du?",
+    appTitle: "Domarportalen", season: "Säsong", schedule: "Spelschema", myGames: "Mina Matcher",
+    myProfile: "Min profil", umpireList: "Domarlista", staffing: "Bemanning", analytics: "Statistik",
+    history: "Historik", upcoming: "Kommande", archived: "Arkiverade matcher", activeSchedule: "Aktivt schema",
+    searchPlaceholder: "Sök matcher...", allSeries: "Alla serier", allLocations: "Alla platser",
+    filterStatusAll: "Alla statusar", needsUmpire: "Saknar domare", noInterests: "Inga anmälningar",
+    noGames: "Inga matcher hittades.", syncNow: "Synka förbundsdata nu", applied: "Anmälda",
+    interested: "Intresserad", withdraw: "Dra tillbaka", assignedTo: "Tillsatta", staffed: "Bemannad",
+    partiallyStaffed: "Delvis bemannad", bulkImport: "Massimport", pendingAssignments: "Bemanningsöversikt",
+    staffingControl: "Bemanningskontroll", hideStaffed: "Dölj helt bemannade", showAll: "Visa alla matcher",
+    removeAssignment: "Ta bort", deleteGame: "Ta bort match", deleteAllGames: "Rensa hela säsongen",
+    deleteAllConfirm: "ÄR DU HELT SÄKER?", deleteAllSuccess: "Säsongen har rensats.",
+    downloadBackup: "Ladda ner backup", umpire: "Domare", interests: "Intresseanmälningar",
+    gamesAssigned: "Dömda matcher", assignmentRate: "Tillsättningsgrad", noStats: "Ingen data finns registrerad än.",
+    mySchedule: "Mitt Schema", noAssignedMatches: "Du har inga bekräftade matchuppdrag än.",
+    noPendingInterest: "Du har inte anmält intresse för några matcher.", confirmed: "Bekräftad",
+    settings: "Inställningar", userSettings: "Användarinställningar", profileAccess: "Konfigurera profil & åtkomst",
+    displayName: "Visningsnamn", namePlaceholder: "Sök eller skriv ditt namn...", logout: "Logga ut",
+    close: "Stäng", status: "Status", setProfile: "Välj din profil", pasteSheet: "Klistra in från Google Sheets",
+    addGames: "Lägg till matcher", importSuccess: "Import lyckades", cancel: "Avbryt", date: "Datum",
+    crew: "Domarteam", addToCalendar: "Spara i kalender", downloadFullSchedule: "Ladda ner (.ICS)",
+    confirmedGames: "Bekräftade uppdrag", interestedGames: "Anmält intresse", nameRequiredTitle: "Vem är du?",
     nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.",
-    saveName: "Välj profil",
-    addNewName: "Hittar du inte ditt namn?",
-    createUmpire: "Skapa ny profil",
-    masterList: "Domarlista",
-    editName: "Ändra namn",
-    save: "Spara",
-    selectFromList: "Välj från listan",
-    changeUser: "Byt användare",
-    editMatch: "Ändra matchdata",
-    home: "Hemma",
-    away: "Borta",
-    time: "Tid",
-    location: "Plats",
-    locations: "Platser",
-    league: "Serie",
-    saveChanges: "Spara ändringar",
-    listView: "Lista",
-    calendarView: "Kalender",
-    days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
+    saveName: "Välj profil", addNewName: "Hittar du inte ditt namn?", createUmpire: "Skapa ny profil",
+    masterList: "Domarlista", editName: "Ändra namn", save: "Spara", selectFromList: "Välj från listan",
+    changeUser: "Byt användare", editMatch: "Ändra matchdata", home: "Hemma", away: "Borta",
+    time: "Tid", location: "Plats", locations: "Platser", league: "Serie", saveChanges: "Spara ändringar",
+    listView: "Lista", calendarView: "Kalender", days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
     months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"],
-    requiredUmpires: "Antal domare",
-    level: "Nivå",
-    name: "Namn",
-    sortBy: "Sortera",
-    week: "V.",
-    login: "Logga in",
-    register: "Skapa konto",
-    email: "E-postadress",
-    phone: "Telefonnummer",
-    password: "Lösenord",
-    loginToContinue: "Logga in för att fortsätta",
-    noAccount: "Inget konto? Registrera dig här",
-    hasAccount: "Har du redan ett konto? Logga in",
-    adminManagement: "Administratörer",
-    masterAdminInfo: "Du är inloggad som Master Admin.",
-    linkedAccount: "Konto:",
-    notLinked: "Inget konto",
-    umpireProfile: "Domarprofil",
-    back: "Tillbaka",
-    assignedMatches: "Tillsatta matcher",
-    totalAssignments: "Tillsättningar",
-    totalInterests: "Intresseanmälningar",
-    deleteUmpireConfirm: "Är du säker på att du vill ta bort",
-    globalAnnouncement: "Globalt Meddelande",
-    saveAnnouncement: "Publicera",
-    clearAnnouncement: "Ta bort",
-    announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...",
-    bookedIn: "Bokad i",
-    coUmpires: "Dömer med:",
-    noCoUmpires: "Inga meddomare",
-    calendarColumn: "Kalender",
-    gameDetails: "Matchinformation",
-    mapDirections: "Öppna Karta",
-    officials: "Domarteam",
-    supervisor: "Supervisor",
-    techComm: "Technical Commissioner",
-    notAssigned: "Ej tillsatt",
-    yourGame: "Din match",
-    marketplace: "Marknad",
-    marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.",
-    tradeGame: "Byt bort",
-    cancelTrade: "Ångra byte",
-    takeGame: "Ta match",
-    expressInterest: "Anmäl intresse",
-    gamesForTrade: "Matcher som bytes bort",
-    missingUmpires: "Matcher som saknar domare",
-    noMarketplaceGames: "Inga matcher på marknaden just nu.",
-    tradeSuccess: "Du har tagit över matchen!",
-    tradeConfirm: "Är du säker på att du vill ta över denna match?",
-    evaluate: "Utvärdera",
-    grade: "Betyg",
-    feedback: "Feedback",
-    saveEval: "Spara utvärdering",
-    evalSaved: "Utvärdering sparad",
-    yourEval: "Utvärdering",
-    selectAdmin: "Välj Admin...",
-    enterTCName: "Ange namn på TC...",
-    umpireShort: "DOMARE",
-    supShort: "SUP",
-    tcShort: "TC",
-    address: "Adress",
-    facilities: "Faciliteter",
-    noFacilities: "Inga faciliteter",
-    addFacility: "Lägg till facilitet...",
-    editLocation: "Redigera plats",
-    matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.",
-    acceptTime: "Acceptera ny tid",
-    declineTime: "Kan inte (Avboka)",
-    timeChangedBadge: "Tid Ändrad",
-    actionRequired: "Kräver åtgärd",
-    superAdminSettings: "Systemarkitektur (Super Admin)",
-    featureMarketplace: "Aktivera Marknadsplats",
-    featureEvaluations: "Aktivera Utvärderingar",
-    featureReminders: "E-postpåminnelser",
-    reminderPreferences: "Mina Notiser",
-    receiveReminders: "Få e-postpåminnelser",
-    runRemindersNow: "Kör Påminnelser Nu",
-    invoiceTitle: "Reseräkning",
-    digitalSubmission: "Digital inlämning",
-    personalInfo: "Personuppgifter",
-    pnr: "Personnummer",
-    streetAddress: "Gatuadress",
-    zipCity: "Postnummer & Ort",
-    bankAccount: "Bank & Kontonummer",
-    tripsAllowance: "Resor (Milersättning & Restid)",
-    assignmentDetails: "Ändamål (Vilka lag spelade?)",
-    travelFrom: "Resa Från",
-    travelTo: "Resa Till",
-    roundTrip: "Tur & Retur",
-    distanceMil: "Antal Mil",
-    calcAuto: "Beräkna avstånd (Auto)",
-    calculating: "Beräknar...",
-    addTrip: "Lägg till ytterligare en resa",
-    expensesAllowance: "Övriga Utlägg & Traktamente",
-    description: "Beskrivning",
-    amount: "Belopp (kr)",
-    addExpense: "Lägg till utlägg",
-    overnightNights: "Övernattningstraktamente (Antal nätter)",
-    advanceDeduction: "Avgår förskott (kr)",
-    summary: "Sammanställning",
-    mileageComp: "Milersättning",
-    travelTimeComp: "Restidsersättning",
-    overnightComp: "Övernattningstraktamente",
-    otherExpenses: "Övriga Utlägg",
-    totalToReceive: "Totalt att erhålla",
-    downloadPDF: "Ladda ner PDF",
-    sendToFed: "Skicka till Förbundet",
-    sendToSelf: "Skicka test till mig",
-    sentSuccess: "Insänt & Klart!",
-    sentSuccessFed: "Din reseräkning har skickats in till Förbundet.",
-    sentSuccessSelf: "En kopia har skickats till din e-post.",
-    newInvoice: "Skapa ny reseräkning",
-    selectGame: "-- Välj en av dina matcher --",
-    homeLocation: "Hem",
-    homeAddressLabel: "Hemadress",
-    foundAssignments: "Hittade uppdrag:",
-    pastInvoices: "Tidigare reseräkningar",
-    historicalStats: "Historisk Statistik (Tidigare säsonger)",
-    historicalGames: "Totalt dömda matcher",
-    historicalNote: "Datan kan redigeras av administratörer.",
-    streetAddressHidden: "Gatuadress (Dold för andra)",
-    cityPublic: "Ort (Offentlig)",
-    changePicture: "Byt bild",
-    backToUmpireList: "Tillbaka till Domarlistan",
-    contactInfo: "Kontaktuppgifter",
-    notProvided: "Ej angivet",
-    homeAddress1: "Hemadress 1",
-    cityPlaceholder: "Stockholm",
-    saveDetails: "Spara uppgifter",
-    assignedMatchesCount: "tillsatta matcher",
-    updateHistory: "Uppdatera historik",
-    fillFromTo: "Fyll i både 'Från' och 'Till' för att kunna beräkna avståndet automatiskt.",
-    addressMissing: "Gatuadress och postort saknas.",
-    coordsMissing: "Kunde inte hitta exakta koordinater.",
-    routeMissing: "Kunde inte hitta en giltig körrutt.",
-    autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.",
-    errorOccurred: "Ett fel uppstod. Vänligen försök igen.",
-    testInvoiceSentTo: "I test-syfte har reseräkningen skickats till",
-    savedSuccess: "Sparat!",
-    conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.",
-    interestRegistered: "Intresse anmält! Administratörerna kan nu se att du vill ta matchen.",
-    conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.",
-    sandboxLoaded: "50 test-matcher har laddats in i din lokala Sandbox!",
-    downloadICS: "Ladda ner (.ICS)",
-    availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.",
+    requiredUmpires: "Antal domare", level: "Nivå", name: "Namn", sortBy: "Sortera", week: "V.",
+    login: "Logga in", register: "Skapa konto", email: "E-postadress", phone: "Telefonnummer",
+    password: "Lösenord", loginToContinue: "Logga in för att fortsätta", noAccount: "Inget konto? Registrera dig här",
+    hasAccount: "Har du redan ett konto? Logga in", adminManagement: "Administratörer", masterAdminInfo: "Du är inloggad som Master Admin.",
+    linkedAccount: "Konto:", notLinked: "Inget konto", umpireProfile: "Domarprofil", back: "Tillbaka",
+    assignedMatches: "Tillsatta matcher", totalAssignments: "Tillsättningar", totalInterests: "Intresseanmälningar",
+    deleteUmpireConfirm: "Är du säker på att du vill ta bort", globalAnnouncement: "Globalt Meddelande",
+    saveAnnouncement: "Publicera", clearAnnouncement: "Ta bort", announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...",
+    bookedIn: "Bokad i", coUmpires: "Dömer med:", noCoUmpires: "Inga meddomare", calendarColumn: "Kalender",
+    gameDetails: "Matchinformation", mapDirections: "Öppna Karta", officials: "Domarteam", supervisor: "Supervisor",
+    techComm: "Technical Commissioner", notAssigned: "Ej tillsatt", yourGame: "Din match", marketplace: "Marknad",
+    marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.", tradeGame: "Byt bort",
+    cancelTrade: "Ångra byte", takeGame: "Ta match", expressInterest: "Anmäl intresse", gamesForTrade: "Matcher som bytes bort",
+    missingUmpires: "Matcher som saknar domare", noMarketplaceGames: "Inga matcher på marknaden just nu.",
+    tradeSuccess: "Du har tagit över matchen!", tradeConfirm: "Är du säker på att du vill ta över denna match?",
+    evaluate: "Utvärdera", grade: "Betyg", feedback: "Feedback", saveEval: "Spara utvärdering", evalSaved: "Utvärdering sparad",
+    yourEval: "Utvärdering", selectAdmin: "Välj Admin...", enterTCName: "Ange namn på TC...", umpireShort: "DOMARE",
+    supShort: "SUP", tcShort: "TC", address: "Adress", facilities: "Faciliteter", noFacilities: "Inga faciliteter",
+    addFacility: "Lägg till facilitet...", editLocation: "Redigera plats", matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.",
+    acceptTime: "Acceptera ny tid", declineTime: "Kan inte (Avboka)", timeChangedBadge: "Tid Ändrad", actionRequired: "Kräver åtgärd",
+    superAdminSettings: "Systemarkitektur (Super Admin)", featureMarketplace: "Aktivera Marknadsplats",
+    featureEvaluations: "Aktivera Utvärderingar", featureReminders: "E-postpåminnelser", reminderPreferences: "Mina Notiser",
+    receiveReminders: "Få e-postpåminnelser", runRemindersNow: "Kör Påminnelser Nu", invoiceTitle: "Reseräkning",
+    digitalSubmission: "Digital inlämning", personalInfo: "Personuppgifter", pnr: "Personnummer", streetAddress: "Gatuadress",
+    zipCity: "Postnummer & Ort", bankAccount: "Bank & Kontonummer", tripsAllowance: "Resor (Milersättning & Restid)",
+    assignmentDetails: "Ändamål (Vilka lag spelade?)", travelFrom: "Resa Från", travelTo: "Resa Till", roundTrip: "Tur & Retur",
+    distanceMil: "Antal Mil", calcAuto: "Beräkna avstånd (Auto)", calculating: "Beräknar...", addTrip: "Lägg till ytterligare en resa",
+    expensesAllowance: "Övriga Utlägg & Traktamente", description: "Beskrivning", amount: "Belopp (kr)", addExpense: "Lägg till utlägg",
+    overnightNights: "Övernattningstraktamente (Antal nätter)", advanceDeduction: "Avgår förskott (kr)", summary: "Sammanställning",
+    mileageComp: "Milersättning", travelTimeComp: "Restidsersättning", overnightComp: "Övernattningstraktamente",
+    otherExpenses: "Övriga Utlägg", totalToReceive: "Totalt att erhålla", downloadPDF: "Ladda ner PDF", sendToFed: "Skicka till Förbundet",
+    sendToSelf: "Skicka test till mig", sentSuccess: "Insänt & Klart!", sentSuccessFed: "Din reseräkning har skickats in till Förbundet.",
+    sentSuccessSelf: "En kopia har skickats till din e-post.", newInvoice: "Skapa ny reseräkning", selectGame: "-- Välj en av dina matcher --",
+    homeLocation: "Hem", homeAddressLabel: "Hemadress", foundAssignments: "Hittade uppdrag:", pastInvoices: "Tidigare reseräkningar",
+    historicalStats: "Historisk Statistik (Tidigare säsonger)", historicalGames: "Totalt dömda matcher",
+    historicalNote: "Datan kan redigeras av administratörer.", streetAddressHidden: "Gatuadress (Dold för andra)",
+    cityPublic: "Ort (Offentlig)", changePicture: "Byt bild", backToUmpireList: "Tillbaka till Domarlistan", contactInfo: "Kontaktuppgifter",
+    notProvided: "Ej angivet", homeAddress1: "Hemadress 1", cityPlaceholder: "Stockholm", saveDetails: "Spara uppgifter",
+    assignedMatchesCount: "tillsatta matcher", updateHistory: "Uppdatera historik", fillFromTo: "Fyll i både 'Från' och 'Till' för att beräkna avstånd.",
+    addressMissing: "Gatuadress och postort saknas.", coordsMissing: "Kunde inte hitta exakta koordinater.", routeMissing: "Kunde inte hitta en giltig körrutt.",
+    autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.", errorOccurred: "Ett fel uppstod. Vänligen försök igen.",
+    testInvoiceSentTo: "I test-syfte har reseräkningen skickats till", savedSuccess: "Sparat!",
+    conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.", interestRegistered: "Intresse anmält! Administratörerna ser nu din anmälan.",
+    conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.", sandboxLoaded: "50 test-matcher har laddats in i Sandbox!",
+    downloadICS: "Ladda ner (.ICS)", availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.",
     availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.",
-    availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.",
-    assigned: "TILLSATTA",
-    takeOverFrom: "Ta över från",
-    spotsAvailable: "plats(er) lediga",
-    noInterestsYet: "Inga intresseanmälningar ännu.",
-    currentCrew: "Aktuellt Domarteam",
-    noUmpiresAssigned: "Inga domare tillsatta.",
-    manualAssign: "+ Manuell tilldelning...",
-    assignBtn: "Tilldela",
-    removeBtn: "Ta bort",
-    pasteSchedulePlaceholder: "Klistra in spelschema...",
-    unknown: "Okänd",
-    sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
-    deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?",
-    deleteAvatar: "Ta bort bild",
-    open: "Öppna"
+    availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.", assigned: "TILLSATTA", takeOverFrom: "Ta över från",
+    spotsAvailable: "plats(er) lediga", noInterestsYet: "Inga intresseanmälningar ännu.", currentCrew: "Aktuellt Domarteam",
+    noUmpiresAssigned: "Inga domare tillsatta.", manualAssign: "+ Manuell tilldelning...", assignBtn: "Tilldela", removeBtn: "Ta bort",
+    pasteSchedulePlaceholder: "Klistra in spelschema...", unknown: "Okänd", sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
+    deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?", deleteAvatar: "Ta bort bild", open: "Öppna"
   },
   en: {
-    appTitle: "Umpire Portal",
-    season: "Season",
-    schedule: "Schedule",
-    myGames: "My Games",
-    myProfile: "My Profile",
-    umpireList: "Umpire List",
-    staffing: "Staffing",
-    analytics: "Analytics",
-    history: "History",
-    upcoming: "Upcoming",
-    archived: "Archived Games",
-    activeSchedule: "Active Schedule",
-    searchPlaceholder: "Search...",
-    allSeries: "All Series",
-    allLocations: "All Locations",
-    filterStatusAll: "All Statuses",
-    needsUmpire: "Needs Umpire",
-    noInterests: "No Interests",
-    noGames: "No games found.",
-    syncNow: "Sync Federation Data Now",
-    applied: "Interested",
-    interested: "Interested",
-    withdraw: "Withdraw",
-    assignedTo: "Crew",
-    staffed: "Fully Staffed",
-    partiallyStaffed: "Partially Staffed",
-    bulkImport: "Bulk Import",
-    pendingAssignments: "Staffing Desk",
-    staffingControl: "Staffing Control",
-    hideStaffed: "Hide Fully Staffed",
-    showAll: "Show All Games",
-    removeAssignment: "Remove",
-    deleteGame: "Delete Game",
-    deleteConfirm: "Are you sure you want delete this game?",
-    deleteAllGames: "Clear Entire Season",
-    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
-    deleteAllSuccess: "Season cleared successfully.",
-    downloadBackup: "Download Backup (JSON)",
-    umpire: "Umpire",
-    interests: "Interests",
-    gamesAssigned: "Games Assigned",
-    assignmentRate: "Assignment Rate",
-    noStats: "No engagement data recorded yet.",
-    mySchedule: "My Schedule",
-    noAssignedMatches: "You have no confirmed assignments yet.",
-    noPendingInterest: "You haven't marked interest in any matches.",
-    confirmed: "Confirmed",
-    settings: "Settings",
-    userSettings: "User Settings",
-    profileAccess: "Configure profile & access",
-    displayName: "Display Name",
-    namePlaceholder: "Search or type name...",
-    logout: "Logout",
-    close: "Close",
-    status: "Status",
-    setProfile: "Select Your Profile",
-    pasteSheet: "Paste from Google Sheets",
-    addGames: "Add Games",
-    importSuccess: "Import Successful",
-    cancel: "Cancel",
-    date: "Date",
-    crew: "Umpire Crew",
-    addToCalendar: "Add to Calendar",
-    downloadFullSchedule: "Download (.ics)",
-    confirmedGames: "Confirmed Assignments",
-    interestedGames: "Interested Matches",
-    nameRequiredTitle: "Who are you?",
-    nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.",
-    saveName: "Select Profile",
-    addNewName: "Can't find your name?",
-    createUmpire: "Create new profile",
-    masterList: "Umpire Master List",
-    editName: "Edit Name",
-    save: "Save",
-    selectFromList: "Select from list",
-    changeUser: "Change User",
-    editMatch: "Edit Match Details",
-    home: "Home",
-    away: "Away",
-    time: "Time",
-    location: "Location",
-    locations: "Locations",
-    league: "League",
-    saveChanges: "Save Changes",
-    listView: "List",
-    calendarView: "Calendar",
-    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile",
+    umpireList: "Umpire List", staffing: "Staffing", analytics: "Analytics", history: "History", upcoming: "Upcoming",
+    archived: "Archived Games", activeSchedule: "Active Schedule", searchPlaceholder: "Search...", allSeries: "All Series",
+    allLocations: "All Locations", noGames: "No games found.", syncNow: "Sync Data Now", applied: "Interested",
+    interested: "Interested", withdraw: "Withdraw", assignedTo: "Crew", staffed: "Fully Staffed", partiallyStaffed: "Partially Staffed",
+    needsUmpire: "Needs Umpire", bulkImport: "Bulk Import", pendingAssignments: "Staffing Desk", staffingControl: "Staffing Control",
+    hideStaffed: "Hide Fully Staffed", showAll: "Show All Games", removeAssignment: "Remove", deleteGame: "Delete Game",
+    deleteConfirm: "Are you sure you want delete this game?", deleteAllGames: "Clear Entire Season",
+    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.", deleteAllSuccess: "Season cleared successfully.",
+    downloadBackup: "Download Backup (JSON)", umpire: "Umpire", interests: "Interests", gamesAssigned: "Games Assigned",
+    assignmentRate: "Assignment Rate", noStats: "No data recorded yet.", mySchedule: "My Schedule",
+    noAssignedMatches: "You have no confirmed assignments yet.", noPendingInterest: "You haven't marked interest in any matches.",
+    confirmed: "Confirmed", settings: "Settings", userSettings: "User Settings", profileAccess: "Configure profile & access",
+    displayName: "Display Name", namePlaceholder: "Search or type name...", logout: "Logout", close: "Close", status: "Status",
+    setProfile: "Select Your Profile", pasteSheet: "Paste from Google Sheets", addGames: "Add Games", importSuccess: "Import Successful",
+    cancel: "Cancel", date: "Date", crew: "Umpire Crew", addToCalendar: "Add to Calendar", downloadFullSchedule: "Download (.ics)",
+    confirmedGames: "Confirmed Assignments", interestedGames: "Interested Matches", nameRequiredTitle: "Who are you?",
+    nameRequiredDesc: "Select your name from the list below to sync your schedule.", saveName: "Select Profile",
+    addNewName: "Can't find your name?", createUmpire: "Create new profile", masterList: "Umpire Master List",
+    editName: "Edit Name", save: "Save", selectFromList: "Select from list", changeUser: "Change User", editMatch: "Edit Match",
+    home: "Home", away: "Away", time: "Time", location: "Location", locations: "Locations", league: "League", saveChanges: "Save Changes",
+    listView: "List", calendarView: "Calendar", days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    requiredUmpires: "Crew Size",
-    level: "Level",
-    name: "Name",
-    sortBy: "Sort by",
-    week: "W.",
-    systemUpdates: "System Updates",
-    fetchError: "Could not fetch data",
-    login: "Login",
-    register: "Register",
-    email: "Email Address",
-    password: "Password",
-    forgotPassword: "Forgot Password?",
-    loginToContinue: "Login to continue",
-    createAnAccount: "Create a new account",
-    noAccount: "No account? Register here",
-    hasAccount: "Already have an account? Login",
-    loginRequiredMsg: "You must be logged in to view this.",
-    adminManagement: "Admin Roles",
-    addAdmin: "Add Admin",
-    adminAdded: "Admin added",
-    adminRemoved: "Admin removed",
-    masterAdminInfo: "You are logged in as Master Admin.",
-    linkedAccount: "Account:",
-    notLinked: "No account",
-    linkEmailPlaceholder: "Link email...",
-    selectEmail: "-- Select Email --",
-    otherEmail: "+ Enter other...",
-    umpireProfile: "Umpire Profile",
-    back: "Back",
-    assignedMatches: "Assigned Matches",
-    totalAssignments: "Assignments",
-    totalInterests: "Interests",
-    deleteUmpireConfirm: "Are you sure you want to remove",
-    globalAnnouncement: "Global Announcement",
-    saveAnnouncement: "Publish",
-    clearAnnouncement: "Clear",
-    announcementPlaceholder: "Type an important message to display to everyone...",
-    bookedIn: "Booked in",
-    coUmpires: "Co-umpires:",
-    noCoUmpires: "No co-umpires",
-    calendarColumn: "Calendar",
-    gameDetails: "Game Details",
-    mapDirections: "Open Map",
-    officials: "Officials",
-    supervisor: "Supervisor",
-    techComm: "Technical Commissioner",
-    notAssigned: "Not Assigned",
-    yourGame: "Your Game",
-    marketplace: "Marketplace",
-    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires.",
-    tradeGame: "Give Away",
-    cancelTrade: "Cancel Give Away",
-    takeGame: "Take Game",
-    expressInterest: "Express Interest",
-    gamesForTrade: "Games Up For Trade",
-    missingUmpires: "Games missing umpires",
-    noMarketplaceGames: "No games are up for trade right now.",
-    tradeSuccess: "You have taken over the game!",
-    tradeConfirm: "Are you sure you want to take over this game?",
-    downloadCalendar: "Download",
-    formatICS: ".ICS File",
-    subtextICS: "For Apple & Outlook",
-    formatCSV: ".CSV File",
-    subtextCSV: "For Google Calendar",
-    evaluate: "Evaluate",
-    grade: "Grade",
-    feedback: "Feedback / Comment",
-    saveEval: "Save Evaluation",
-    evalSaved: "Evaluation Saved",
-    yourEval: "Evaluation",
-    selectAdmin: "Select Admin...",
-    selectUmpire: "Select Umpire...",
-    enterTCName: "Enter TC name...",
-    umpireShort: "UMP",
-    supShort: "SUP",
-    tcShort: "TC",
-    address: "Address",
-    facilities: "Facilities",
-    noFacilities: "No facilities listed",
-    addFacility: "Add facility...",
-    editLocation: "Edit Location",
-    matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
-    acceptTime: "Accept New Time",
-    declineTime: "Cannot Make It",
-    timeChangedBadge: "Time Changed",
-    actionRequired: "Action Required",
-    superAdminSettings: "System Architecture (Super Admin)",
-    featureMarketplace: "Enable Marketplace (Trade Board)",
-    featureEvaluations: "Enable Evaluation System",
-    featureReminders: "Automated Email Reminders (Upcoming Games)",
-    reminderPreferences: "My Notifications",
-    receiveReminders: "Receive email reminders for my upcoming games",
-    runRemindersNow: "Run Reminders Cron",
-    invoiceTitle: "Travel Invoice",
-    digitalSubmission: "Digital Submission",
-    personalInfo: "Personal Information",
-    pnr: "Personal ID (PNR)",
-    streetAddress: "Street Address",
-    zipCity: "Zip Code & City",
-    bankAccount: "Bank Account",
-    tripsAllowance: "Trips (Mileage & Travel Time)",
-    assignmentDetails: "Assignment (Which teams played?)",
-    travelFrom: "Travel From",
-    travelTo: "Travel To",
-    roundTrip: "Round Trip",
-    distanceMil: "Distance (Mil)",
-    calcAuto: "Calculate Distance (Auto)",
-    calculating: "Calculating...",
-    addTrip: "Add another trip",
-    expensesAllowance: "Other Expenses & Allowance",
-    description: "Description",
-    amount: "Amount (SEK)",
-    addExpense: "Add Expense",
-    overnightNights: "Overnight Allowance (Nights)",
-    advanceDeduction: "Advance Deduction (SEK)",
-    summary: "Summary",
-    mileageComp: "Mileage Compensation",
-    travelTimeComp: "Travel Time Compensation",
-    overnightComp: "Overnight Allowance",
-    otherExpenses: "Other Expenses",
-    totalToReceive: "Total to Receive",
-    downloadPDF: "Download PDF",
-    sendToFed: "Send to Federation",
-    sendToSelf: "Send Test to Me",
-    sentSuccess: "Submitted Successfully!",
-    sentSuccessFed: "Your invoice has been submitted to the Federation.",
-    sentSuccessSelf: "A test copy has been sent to your email.",
-    newInvoice: "Create new invoice",
-    selectGame: "-- Select an assigned game --",
-    homeLocation: "Home",
-    homeAddressLabel: "Home Address",
-    foundAssignments: "Found assignments:",
-    pastInvoices: "Past Invoices",
-    historicalStats: "Historical Stats",
-    historicalGames: "Total officiated games",
-    historicalNote: "Data can be edited by an admin.",
-    streetAddressHidden: "Street Address (Hidden)",
-    cityPublic: "City (Public)",
-    changePicture: "Change Picture",
-    backToUmpireList: "Back to Umpire List",
-    contactInfo: "Contact Information",
-    notProvided: "Not provided",
-    homeAddress1: "Home Address 1",
-    cityPlaceholder: "Stockholm",
-    saveDetails: "Save Details",
-    assignedMatchesCount: "assigned games",
-    updateHistory: "Update History",
-    fillFromTo: "Fill in both 'From' and 'To' to calculate the distance automatically.",
-    addressMissing: "Street address and city are missing.",
-    coordsMissing: "Could not find exact coordinates.",
-    routeMissing: "Could not find a valid driving route.",
-    autoCalcFailed: "Automatic calculation failed. Please enter the distance manually.",
-    errorOccurred: "An error occurred. Please try again.",
-    testInvoiceSentTo: "For testing purposes, the invoice was sent to",
-    savedSuccess: "Saved!",
-    conflictApply: "Cannot apply! You are already booked in {location} on this day.",
-    interestRegistered: "Interest registered! Administrators can now see that you want to take the game.",
-    conflictAssign: "Cannot assign! {name} is already booked in {location} on this day.",
-    sandboxLoaded: "50 test games have been loaded into your local Sandbox!",
-    downloadICS: "Download (.ICS)",
-    availabilityWarningTitle: "The deadline for submitting availability is today.",
-    availabilityWarningDesc1: "If you have not submitted your availability, you will not receive any games this coming season.",
-    availabilityWarningDesc2: "We are assigning games until the end of June.",
-    assigned: "ASSIGNED",
-    takeOverFrom: "Take over from",
-    spotsAvailable: "spot(s) available",
-    noInterestsYet: "No interests marked yet.",
-    currentCrew: "Current Crew",
-    noUmpiresAssigned: "No umpires assigned.",
-    manualAssign: "+ Manual Assignment...",
-    assignBtn: "Assign",
-    removeBtn: "Remove",
-    pasteSchedulePlaceholder: "Paste schedule here...",
-    unknown: "Unknown",
-    sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED TO PRODUCTION",
-    deleteAvatarConfirm: "Are you sure you want to remove your profile picture?",
-    deleteAvatar: "Remove picture",
-    open: "Open"
+    requiredUmpires: "Crew Size", level: "Level", name: "Name", sortBy: "Sort by", week: "W.", login: "Login", register: "Register",
+    email: "Email Address", phone: "Phone Number", password: "Password", loginToContinue: "Login to continue",
+    noAccount: "No account? Register here", hasAccount: "Already have an account? Login", adminManagement: "Admin Roles",
+    masterAdminInfo: "You are logged in as Master Admin.", linkedAccount: "Account:", notLinked: "No account",
+    umpireProfile: "Umpire Profile", back: "Back", assignedMatches: "Assigned Matches", totalAssignments: "Assignments",
+    totalInterests: "Interests", deleteUmpireConfirm: "Are you sure you want to remove", globalAnnouncement: "Global Announcement",
+    saveAnnouncement: "Publish", clearAnnouncement: "Clear", announcementPlaceholder: "Type an important message for everyone...",
+    bookedIn: "Booked in", coUmpires: "Co-umpires:", noCoUmpires: "No co-umpires", calendarColumn: "Calendar",
+    gameDetails: "Game Details", mapDirections: "Open Map", officials: "Officials", supervisor: "Supervisor",
+    techComm: "Technical Commissioner", notAssigned: "Not Assigned", yourGame: "Your Game", marketplace: "Marketplace",
+    marketplaceDesc: "Find games that other umpires are giving away or missing umpires.", tradeGame: "Give Away",
+    cancelTrade: "Cancel Give Away", takeGame: "Take Game", expressInterest: "Express Interest", gamesForTrade: "Games Up For Trade",
+    missingUmpires: "Games missing umpires", noMarketplaceGames: "No games are up for trade right now.",
+    tradeSuccess: "You have taken over the game!", tradeConfirm: "Are you sure you want to take over this game?",
+    evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved",
+    yourEval: "Evaluation", selectAdmin: "Select Admin...", enterTCName: "Enter TC name...", umpireShort: "UMP", supShort: "SUP", tcShort: "TC",
+    address: "Address", facilities: "Facilities", noFacilities: "No facilities listed", addFacility: "Add facility...",
+    editLocation: "Edit Location", matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
+    acceptTime: "Accept New Time", declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required",
+    superAdminSettings: "System Architecture (Super Admin)", featureMarketplace: "Enable Marketplace (Trade Board)",
+    featureEvaluations: "Enable Evaluation System", featureReminders: "Automated Email Reminders", reminderPreferences: "My Notifications",
+    receiveReminders: "Receive email reminders for upcoming games", runRemindersNow: "Run Reminders Cron", invoiceTitle: "Travel Invoice",
+    digitalSubmission: "Digital Submission", personalInfo: "Personal Information", pnr: "Personal ID (PNR)", streetAddress: "Street Address",
+    zipCity: "Zip Code & City", bankAccount: "Bank Account", tripsAllowance: "Trips (Mileage & Travel Time)",
+    assignmentDetails: "Assignment (Which teams played?)", travelFrom: "Travel From", travelTo: "Travel To", roundTrip: "Round Trip",
+    distanceMil: "Distance (Mil)", calcAuto: "Calculate Distance (Auto)", calculating: "Calculating...", addTrip: "Add another trip",
+    expensesAllowance: "Other Expenses & Allowance", description: "Description", amount: "Amount", addExpense: "Add Expense",
+    overnightNights: "Overnight Allowance (Nights)", advanceDeduction: "Advance Deduction", summary: "Summary",
+    mileageComp: "Mileage Compensation", travelTimeComp: "Travel Time Compensation", overnightComp: "Overnight Allowance",
+    otherExpenses: "Other Expenses", totalToReceive: "Total to Receive", downloadPDF: "Download PDF", sendToFed: "Send to Federation",
+    sendToSelf: "Send Test to Me", sentSuccess: "Submitted Successfully!", sentSuccessFed: "Your invoice has been submitted.",
+    sentSuccessSelf: "A copy has been sent to your email.", newInvoice: "Create new invoice", selectGame: "-- Select an assigned game --",
+    homeLocation: "Home", homeAddressLabel: "Home Address", foundAssignments: "Found assignments:", pastInvoices: "Past Invoices",
+    historicalStats: "Historical Stats", historicalGames: "Total officiated games", historicalNote: "Data can be edited by an admin.",
+    streetAddressHidden: "Street Address (Hidden)", cityPublic: "City (Public)", changePicture: "Change Picture",
+    backToUmpireList: "Back to Umpire List", contactInfo: "Contact Information", notProvided: "Not provided", homeAddress1: "Home Address 1",
+    cityPlaceholder: "Stockholm", saveDetails: "Save Details", assignedMatchesCount: "assigned games", updateHistory: "Update History",
+    fillFromTo: "Fill in both 'From' and 'To' to calculate distance.", addressMissing: "Street address and city are missing.",
+    coordsMissing: "Could not find exact coordinates.", routeMissing: "Could not find a valid driving route.",
+    autoCalcFailed: "Automatic calculation failed. Enter distance manually.", errorOccurred: "An error occurred. Please try again.",
+    testInvoiceSentTo: "For testing purposes, the invoice was sent to", savedSuccess: "Saved!",
+    conflictApply: "Cannot apply! You are already booked in {location} on this day.", interestRegistered: "Interest registered!",
+    conflictAssign: "Cannot assign! {name} is already booked in {location} on this day.", sandboxLoaded: "50 test games loaded into Sandbox!",
+    downloadICS: "Download (.ICS)", availabilityWarningTitle: "Deadline for availability is today.",
+    availabilityWarningDesc1: "If you have not submitted your availability, you will not receive games.", availabilityWarningDesc2: "We assign games until June.",
+    assigned: "ASSIGNED", takeOverFrom: "Take over from", spotsAvailable: "spot(s) available", noInterestsYet: "No interests marked yet.",
+    currentCrew: "Current Crew", noUmpiresAssigned: "No umpires assigned.", manualAssign: "+ Manual Assignment...", assignBtn: "Assign",
+    removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown", sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED",
+    deleteAvatarConfirm: "Are you sure you want to remove your profile picture?", deleteAvatar: "Remove picture", open: "Open"
   }
 };
 
@@ -689,7 +306,6 @@ function UmpireProfileModal({
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
-        {/* Modal Header */}
         <div className="relative pt-12 pb-6 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
            <button onClick={() => setSelectedProfileId(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
            
@@ -728,7 +344,6 @@ function UmpireProfileModal({
            </div>
         </div>
 
-        {/* Modal Scrollable Body */}
         <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
@@ -847,7 +462,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-             // Fall-back på profilens Gatuadress/Ort om tomt i invoiceData
             setPersonalInfo(prev => ({ 
                ...prev, 
                ...docSnap.data(), 
@@ -1295,7 +909,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                         <div className="sm:col-span-9 bg-blue-100 p-2 rounded-lg flex items-center gap-2 mt-1">
                           <span className="text-[10px] font-black text-blue-800 uppercase">{t.foundAssignments}</span>
                           <select 
-                            className="flex-1 text-xs p-1.5 rounded-md border border-blue-200 bg-white outline-none"
+                            className="flex-1 text-xs p-1.5 rounded-md border border-blue-200 bg-white"
                             onChange={(e) => {
                                const g = gamesOnDate.find(x => x.id === e.target.value);
                                if(g) {
@@ -1313,16 +927,16 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
 
                       <div className={`space-y-1 ${gamesOnDate.length > 0 ? 'sm:col-span-12' : 'sm:col-span-9'}`}>
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.assignmentDetails}</label>
-                        <input required type="text" value={trip.assignment} onChange={(e) => handleTripChange(trip.id, 'assignment', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                        <input required type="text" value={trip.assignment} onChange={(e) => handleTripChange(trip.id, 'assignment', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
                       </div>
                       
                       <div className="sm:col-span-4 space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelFrom}</label>
-                        <input required type="text" list="location-list" value={trip.from} onChange={(e) => handleTripChange(trip.id, 'from', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                        <input required type="text" list="location-list" value={trip.from} onChange={(e) => handleTripChange(trip.id, 'from', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
                       </div>
                       <div className="sm:col-span-4 space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelTo}</label>
-                        <input required type="text" list="location-list" value={trip.to} onChange={(e) => handleTripChange(trip.id, 'to', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                        <input required type="text" list="location-list" value={trip.to} onChange={(e) => handleTripChange(trip.id, 'to', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
                       </div>
                       <div className="sm:col-span-2 space-y-1 flex flex-col justify-end">
                         <label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]">
@@ -1332,7 +946,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                       </div>
                       <div className="sm:col-span-2 space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.distanceMil}</label>
-                        <input required type="number" step="0.1" value={trip.distance} onChange={(e) => handleTripChange(trip.id, 'distance', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-blue-600 outline-none" />
+                        <input required type="number" step="0.1" value={trip.distance} onChange={(e) => handleTripChange(trip.id, 'distance', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-blue-600" />
                       </div>
                     </div>
 
@@ -1365,8 +979,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             <div className="space-y-4 mb-6">
               {expenses.map((exp) => (
                 <div key={exp.id} className="flex items-center gap-4">
-                  <input type="text" placeholder={t.description} value={exp.description} onChange={(e) => handleExpenseChange(exp.id, 'description', e.target.value)} className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
-                  <input type="number" placeholder={t.amount} value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-32 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
+                  <input type="text" placeholder={t.description} value={exp.description} onChange={(e) => handleExpenseChange(exp.id, 'description', e.target.value)} className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
+                  <input type="number" placeholder={t.amount} value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-32 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
                   {expenses.length > 1 && (
                     <button type="button" onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-red-500"><X className="w-5 h-5"/></button>
                   )}
@@ -1701,8 +1315,7 @@ function MainApp() {
   const [federation, setFederation] = useState('swe');
   const federations = [
     { id: 'swe', name: '🇸🇪 Sweden', defaultLang: 'sv' },
-    { id: 'fin', name: '🇫🇮 Finland', defaultLang: 'fi' },
-    { id: 'sui', name: '🇨🇭 Switzerland', defaultLang: 'de' }
+    { id: 'int', name: '🇬🇧 English', defaultLang: 'en' }
   ];
 
   // Language & UI Context
@@ -2056,6 +1669,7 @@ function MainApp() {
     setEvaluatingUmpire(null);
     setEvalGrade(0);
     setEvalComment('');
+    setEditingGameData(null);
   }, [selectedGameDetails]);
 
   // Firebase Real-time listeners
@@ -2244,6 +1858,23 @@ function MainApp() {
     
     return () => clearInterval(interval);
   }, [isAdmin, mailQueue, appId, t]);
+
+  // AUTO REMOVE PENDING CHANGES AFTER 7 DAYS
+  useEffect(() => {
+    if (!isAdmin || assignments.length === 0) return;
+    const now = Date.now();
+    const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+    
+    const expiredAssignments = assignments.filter(asg => 
+      asg.pendingChange && 
+      asg.pendingChangeTimestamp && 
+      (now - asg.pendingChangeTimestamp > ONE_WEEK)
+    );
+
+    expiredAssignments.forEach(asg => {
+      deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id)).catch(() => {});
+    });
+  }, [isAdmin, assignments, appId, db]);
 
   useEffect(() => {
     if (analytics) {
@@ -2571,7 +2202,7 @@ function MainApp() {
   const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
     
-    // KROCK-SKYDD: Kolla om domaren redan är bokad på annan ort samma dag
+    // KROCK-SKYDD
     const game = games.find(g => g.id === gameId);
     if (game) {
       const umpireAssignedGamesToday = assignments
@@ -2599,7 +2230,7 @@ function MainApp() {
   };
 
   const removeAssignment = async (gameId, uId) => {
-    if (!isAdmin && uId !== umpireId) return; // Allow user to decline their own
+    if (!isAdmin && uId !== umpireId) return; 
     const asgId = `${gameId}_${uId}`;
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
   };
@@ -2749,7 +2380,7 @@ function MainApp() {
         const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
         affectedAssignments.forEach((asg) => {
           const asgRef = doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id);
-          batch.update(asgRef, { pendingChange: true });
+          batch.update(asgRef, { pendingChange: true, pendingChangeTimestamp: Date.now() });
         });
         const affectedApplications = applications.filter(a => a.gameId === editingGameData.id);
         affectedApplications.forEach((app) => {
@@ -2786,6 +2417,10 @@ function MainApp() {
              });
           }
         }
+      }
+      
+      if (selectedGameDetails && selectedGameDetails.id === editingGameData.id) {
+         setSelectedGameDetails({ ...selectedGameDetails, ...editingGameData, requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 });
       }
       setEditingGameData(null);
     } catch (e) { } finally {
@@ -2926,7 +2561,6 @@ function MainApp() {
     }
   };
 
-  // Helper för inloggad domare
   const myUmpireData = masterUmpires.find(u => u.id === umpireId);
 
   // 8. HUVUD-RENDERING
@@ -2959,7 +2593,6 @@ function MainApp() {
     );
   }
 
-  // --- TOP NAVIGATION TABS DEFINITION ---
   const tabs = [
     { id: 'schedule', label: t.schedule, icon: CalendarIcon },
     { id: 'locations', label: t.locations, icon: MapPin },
@@ -2982,7 +2615,6 @@ function MainApp() {
       
       <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-40">
         <div className="max-w-5xl mx-auto flex justify-between items-center gap-3">
-          {/* Vänster: Logga och titel (Klickbar för scroll till toppen) */}
           <div className="flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <Trophy className="w-6 h-6 shrink-0" />
             <div className="truncate">
@@ -2991,7 +2623,6 @@ function MainApp() {
             </div>
           </div>
 
-          {/* Höger: Kontroller, Inställningar och Profil/Login */}
           <div className="flex items-center gap-3 shrink-0">
             {isDemoEnv && (
               <select value={federation} onChange={(e) => { setFederation(e.target.value); const newFed = federations.find(f => f.id === e.target.value); if (newFed) setLang(newFed.defaultLang); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none hidden sm:block">
@@ -3042,7 +2673,6 @@ function MainApp() {
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         {view !== 'help' && (
           <>
-            {/* Desktop Tabs */}
             <div className="hidden md:flex flex-wrap bg-white p-1 rounded-2xl shadow-sm border border-slate-200 sticky top-[68px] z-20 gap-1">
               {tabs.map(tab => {
                 const isActive = view === tab.id;
@@ -3061,7 +2691,6 @@ function MainApp() {
               })}
             </div>
 
-            {/* Mobile Dropdown Menu */}
             <div className="md:hidden sticky top-[68px] z-20">
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
@@ -3184,7 +2813,6 @@ function MainApp() {
                         {!showHistory && (
                           <>
                             <div className="flex flex-col items-end">
-                              {/* ADMINS SER NAMNEN, ANDRA SER BARA ANTALET */}
                               {isAdmin ? (
                                 gameApplications.length > 0 ? (
                                    <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">
@@ -3317,7 +2945,7 @@ function MainApp() {
              <div>
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> {t.missingUmpires}</h3>
                 {games.filter(g => !showHistory && g.date >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).length === 0 ? (
-                  <p className="text-slate-400 text-sm italic">Inga matcher saknar domare just nu.</p>
+                  <p className="text-slate-400 text-sm italic">{t.noMarketplaceGames}</p>
                 ) : (
                   <div className="grid gap-4">
                     {games.filter(g => !showHistory && g.date >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
@@ -3551,7 +3179,7 @@ function MainApp() {
                           <span className="text-xs font-bold text-slate-500">| {safeDateDay(game.date)} {game.date} @ {game.time}</span>
                        </div>
                        <div className="flex items-center gap-4 justify-between sm:justify-end">
-                          <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} TILLSATTA</span>
+                          <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assigned}</span>
                           <button onClick={() => handleDeleteGame(game.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4"/></button>
                        </div>
                     </div>
@@ -3574,7 +3202,7 @@ function MainApp() {
 
                                   if (conflictGame) {
                                     return (
-                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`Bokad i ${conflictGame.location}`}>
+                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`${t.bookedIn} ${conflictGame.location}`}>
                                          <span className="text-xs font-bold text-red-900 line-through decoration-red-500 truncate">{app.userName}</span>
                                          <span className="text-[9px] font-black uppercase text-red-600 px-2 text-right truncate max-w-[100px]">{conflictGame.location}</span>
                                       </div>
@@ -3584,29 +3212,29 @@ function MainApp() {
                                   return (
                                     <div key={app.userId} className="flex justify-between items-center bg-blue-50 p-2.5 rounded-xl border border-blue-100">
                                        <span className="text-xs font-bold text-blue-900">{app.userName}</span>
-                                       <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Tilldela</button>
+                                       <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-[9px] font-black tracking-widest uppercase bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">{t.assignBtn}</button>
                                     </div>
                                   );
                                 })}
                              </div>
                           ) : (
-                             <p className="text-xs text-slate-400 italic">Inga intresseanmälningar ännu.</p>
+                             <p className="text-xs text-slate-400 italic">{t.noInterestsYet}</p>
                           )}
                        </div>
 
                        <div className="space-y-3">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aktuellt Domarteam</h4>
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.currentCrew}</h4>
                           {gameAssignments.length > 0 ? (
                              <div className="flex flex-col gap-2 mb-3">
                                 {gameAssignments.map(asg => (
                                    <div key={asg.userId} className="flex justify-between items-center bg-green-50 p-2.5 rounded-xl border border-green-200">
                                       <span className="text-xs font-bold text-green-900 flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-600"/> {asg.userName}</span>
-                                      <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-[9px] font-black tracking-widest uppercase text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">Ta bort</button>
+                                      <button onClick={() => removeAssignment(game.id, asg.userId)} className="text-[9px] font-black tracking-widest uppercase text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">{t.removeBtn}</button>
                                    </div>
                                 ))}
                              </div>
                           ) : (
-                             <p className="text-xs text-slate-400 italic mb-3">Inga domare tillsatta.</p>
+                             <p className="text-xs text-slate-400 italic mb-3">{t.noUmpiresAssigned}</p>
                           )}
 
                           {!isFullyStaffed && (
@@ -3614,11 +3242,11 @@ function MainApp() {
                                 <select 
                                   value="" 
                                   onChange={(e) => { 
-                                    if(e.target.value) { assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || 'Okänd')); } 
+                                    if(e.target.value) { assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || t.unknown)); } 
                                   }} 
                                   className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none text-slate-600 focus:ring-2 focus:ring-blue-500/20"
                                 >
-                                  <option value="">+ Manuell tilldelning...</option>
+                                  <option value="">{t.manualAssign}</option>
                                   {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name} ({u.level})</option>)}
                                 </select>
                              </div>
@@ -3673,129 +3301,177 @@ function MainApp() {
             <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-lg shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto relative custom-scrollbar">
               <button onClick={() => setSelectedGameDetails(null)} className="absolute top-4 right-4 p-2 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5"/></button>
               
-              <div className="space-y-6 pt-4">
-                <div>
-                  <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                  <h3 className="text-2xl font-black mt-3">{game.away} @ {game.home}</h3>
-                  <p className="text-sm text-slate-500 font-bold uppercase mt-1">{game.date} @ {game.time}</p>
-                </div>
-                
-                <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center border border-blue-100 shadow-inner">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p>
-                    <p className="font-bold text-blue-900 text-sm mt-0.5">{game.location}</p>
-                  </div>
-                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.location)}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2 hover:bg-blue-600 hover:text-white transition-colors border border-blue-200">
-                    <Map className="w-4 h-4"/> {t.mapDirections}
-                  </a>
-                </div>
+              {isAdmin && !editingGameData && (
+                <button onClick={() => setEditingGameData({...game})} className="absolute top-4 right-14 p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors">
+                  <Edit2 className="w-5 h-5" />
+                </button>
+              )}
 
-                <div className="space-y-4 mt-6">
+              {editingGameData && editingGameData.id === game.id ? (
+                <div className="space-y-4 pt-4">
+                  <h3 className="text-xl font-black text-slate-800">{t.editMatch}</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
+                      <input type="date" value={editingGameData.date} onChange={e => setEditingGameData({...editingGameData, date: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.time}</label>
+                      <input type="time" value={editingGameData.time} onChange={e => setEditingGameData({...editingGameData, time: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.league}</label>
+                      <input type="text" value={editingGameData.league} onChange={e => setEditingGameData({...editingGameData, league: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.requiredUmpires}</label>
+                      <input type="number" min="1" max="4" value={editingGameData.requiredUmpires || 2} onChange={e => setEditingGameData({...editingGameData, requiredUmpires: parseInt(e.target.value)})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.away}</label>
+                      <input type="text" value={editingGameData.away} onChange={e => setEditingGameData({...editingGameData, away: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.home}</label>
+                      <input type="text" value={editingGameData.home} onChange={e => setEditingGameData({...editingGameData, home: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.location}</label>
+                      <input type="text" list="location-list" value={editingGameData.location} onChange={e => setEditingGameData({...editingGameData, location: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-4 border-t border-slate-100">
+                    <button onClick={saveEditedGame} disabled={syncing} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-black uppercase text-xs hover:bg-green-700 flex items-center justify-center gap-2">
+                      {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t.saveChanges}
+                    </button>
+                    <button onClick={() => setEditingGameData(null)} className="flex-1 bg-slate-200 text-slate-700 py-3 rounded-xl font-black uppercase text-xs hover:bg-slate-300">{t.cancel}</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6 pt-4">
                   <div>
-                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">{t.crew}</h4>
-                    {gameAssignments.length > 0 ? (
-                      <div className="grid gap-3">
-                        {gameAssignments.map(asg => {
-                          const m = masterUmpires.find(mu => mu.id === asg.userId);
-                          const existingEval = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
-                          
-                          return (
-                            <div key={asg.userId} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-white shadow-sm border border-slate-200 text-slate-500 rounded-full flex items-center justify-center font-black text-xs overflow-hidden">
-                                     {m?.avatarUrl ? (
-                                        <img src={m.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                     ) : (
-                                        (asg.userName || '?').charAt(0)
-                                     )}
-                                  </div>
-                                  <div>
-                                    <span className="font-bold text-sm text-slate-800 block cursor-pointer hover:text-blue-600" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileId(asg.userId); }}>{asg.userName}</span>
-                                    {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase px-1.5 py-0.5 rounded border ${(m.level || '').toLowerCase().includes('elit') ? 'text-green-600 border-green-200 bg-green-50' : 'text-slate-500 border-slate-200 bg-white'}`}>{m.level}</span>}
+                    <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                    <h3 className="text-2xl font-black mt-3">{game.away} @ {game.home}</h3>
+                    <p className="text-sm text-slate-500 font-bold uppercase mt-1">{game.date} @ {game.time}</p>
+                  </div>
+                  
+                  <div className="bg-blue-50 p-4 rounded-2xl flex justify-between items-center border border-blue-100 shadow-inner">
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-blue-800">{t.location}</p>
+                      <p className="font-bold text-blue-900 text-sm mt-0.5">{game.location}</p>
+                    </div>
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.location)}`} target="_blank" rel="noreferrer" className="bg-white text-blue-600 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-sm flex items-center gap-2 hover:bg-blue-600 hover:text-white transition-colors border border-blue-200">
+                      <Map className="w-4 h-4"/> {t.mapDirections}
+                    </a>
+                  </div>
+
+                  <div className="space-y-4 mt-6">
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">{t.crew}</h4>
+                      {gameAssignments.length > 0 ? (
+                        <div className="grid gap-3">
+                          {gameAssignments.map(asg => {
+                            const m = masterUmpires.find(mu => mu.id === asg.userId);
+                            const existingEval = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
+                            
+                            return (
+                              <div key={asg.userId} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-white shadow-sm border border-slate-200 text-slate-500 rounded-full flex items-center justify-center font-black text-xs overflow-hidden">
+                                       {m?.avatarUrl ? (
+                                          <img src={m.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                       ) : (
+                                          (asg.userName || '?').charAt(0)
+                                       )}
+                                    </div>
+                                    <div>
+                                      <span className="font-bold text-sm text-slate-800 block cursor-pointer hover:text-blue-600" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileId(asg.userId); }}>{asg.userName}</span>
+                                      {m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase px-1.5 py-0.5 rounded border ${(m.level || '').toLowerCase().includes('elit') ? 'text-green-600 border-green-200 bg-green-50' : 'text-slate-500 border-slate-200 bg-white'}`}>{m.level}</span>}
+                                    </div>
                                   </div>
                                 </div>
+                                
+                                {features.evaluations && canEvaluate && !existingEval && (
+                                  <div className="mt-3 pt-3 border-t border-slate-200">
+                                    <p className="text-[10px] font-black uppercase text-purple-600 mb-2">{t.evaluate}</p>
+                                    <div className="flex flex-col gap-2">
+                                      <select onChange={(e) => setEvalGrade(parseInt(e.target.value))} className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-purple-400">
+                                        <option value="0">{t.grade}...</option>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                                      </select>
+                                      <textarea placeholder={t.feedback} onChange={(e) => setEvalComment(e.target.value)} className="p-3 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-purple-400 min-h-[80px]" />
+                                      <button onClick={() => { if(evalGrade > 0) submitEvaluation(game.id, asg.userId, evalGrade, evalComment); }} className="bg-purple-600 hover:bg-purple-700 transition-colors text-white py-3 rounded-xl text-[10px] font-black uppercase shadow-sm tracking-widest mt-1">
+                                        {t.saveEval}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {existingEval && Boolean(umpireId && (isAdmin || isGameSupervisor || asg.userId === umpireId)) && (
+                                  <div className="mt-3 pt-3 border-t border-slate-200 bg-purple-50 p-3 rounded-xl flex flex-col gap-2">
+                                    <p className="text-[10px] font-black uppercase text-purple-600 tracking-widest">{t.yourEval}</p>
+                                    <div className="flex items-start gap-3">
+                                      <span className="bg-purple-600 text-white w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-sm font-black shadow-sm">{existingEval.grade}</span>
+                                      <span className="text-xs text-purple-900 font-medium italic leading-relaxed pt-1">"{existingEval.comment}"</span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                              
-                              {features.evaluations && canEvaluate && !existingEval && (
-                                <div className="mt-3 pt-3 border-t border-slate-200">
-                                  <p className="text-[10px] font-black uppercase text-purple-600 mb-2">{t.evaluate}</p>
-                                  <div className="flex flex-col gap-2">
-                                    <select onChange={(e) => setEvalGrade(parseInt(e.target.value))} className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-purple-400">
-                                      <option value="0">{t.grade}...</option>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                                    </select>
-                                    <textarea placeholder={t.feedback} onChange={(e) => setEvalComment(e.target.value)} className="p-3 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-purple-400 min-h-[80px]" />
-                                    <button onClick={() => { if(evalGrade > 0) submitEvaluation(game.id, asg.userId, evalGrade, evalComment); }} className="bg-purple-600 hover:bg-purple-700 transition-colors text-white py-3 rounded-xl text-[10px] font-black uppercase shadow-sm tracking-widest mt-1">
-                                      {t.saveEval}
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs italic text-slate-400 font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">{t.notAssigned || "Inga domare tillsatta än."}</p>
+                      )}
+                    </div>
+
+                    {isAdmin && (
+                      <>
+                        <div>
+                          <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2">{t.interests} ({gameApplications.length})</h4>
+                          {gameApplications.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {gameApplications.map(app => {
+                                const m = masterUmpires.find(mu => mu.id === app.userId);
+                                return (
+                                  <div key={app.userId} className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3">
+                                    <span className="text-xs font-bold text-blue-800">{app.userName}</span>
+                                    {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+                                    <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="ml-2 text-white bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-700 font-black text-[9px] uppercase tracking-widest shadow-sm transition-colors">
+                                      {t.assignBtn}
                                     </button>
                                   </div>
-                                </div>
-                              )}
-                              
-                              {existingEval && Boolean(umpireId && (isAdmin || isGameSupervisor || asg.userId === umpireId)) && (
-                                <div className="mt-3 pt-3 border-t border-slate-200 bg-purple-50 p-3 rounded-xl flex flex-col gap-2">
-                                  <p className="text-[10px] font-black uppercase text-purple-600 tracking-widest">{t.yourEval}</p>
-                                  <div className="flex items-start gap-3">
-                                    <span className="bg-purple-600 text-white w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-sm font-black shadow-sm">{existingEval.grade}</span>
-                                    <span className="text-xs text-purple-900 font-medium italic leading-relaxed pt-1">"{existingEval.comment}"</span>
-                                  </div>
-                                </div>
-                              )}
+                                );
+                              })}
                             </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs italic text-slate-400 font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">{t.notAssigned || "Inga domare tillsatta än."}</p>
+                          ) : (
+                            <p className="text-xs italic text-slate-400 font-medium">{t.noInterests}</p>
+                          )}
+                        </div>
+
+                        <div className="pt-6 border-t border-slate-100 space-y-3 bg-slate-50 p-5 rounded-2xl border mt-4">
+                          <h4 className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1.5 tracking-widest mb-3"><Shield className="w-3.5 h-3.5" /> {t.officials} (Admin)</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 pl-1">{t.supervisor}</label>
+                              <select value={game.supervisorId || ''} onChange={(e) => assignOfficial(game.id, 'supervisor', e.target.value)} className="w-full mt-1.5 p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400">
+                                <option value="">{t.selectAdmin}</option>
+                                {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 pl-1">{t.techComm}</label>
+                              <input type="text" value={game.tcName || ''} onChange={(e) => assignOfficial(game.id, 'tc', e.target.value)} placeholder={t.enterTCName} className="w-full mt-1.5 p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400" />
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  {isAdmin && (
-                    <>
-                      <div>
-                        <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2">{t.interests} ({gameApplications.length})</h4>
-                        {gameApplications.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {gameApplications.map(app => {
-                              const m = masterUmpires.find(mu => mu.id === app.userId);
-                              return (
-                                <div key={app.userId} className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3">
-                                  <span className="text-xs font-bold text-blue-800">{app.userName}</span>
-                                  {m?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-                                  <button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="ml-2 text-white bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-700 font-black text-[9px] uppercase tracking-widest shadow-sm transition-colors">
-                                    Tilldela
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-xs italic text-slate-400 font-medium">{t.noInterests}</p>
-                        )}
-                      </div>
-
-                      <div className="pt-6 border-t border-slate-100 space-y-3 bg-slate-50 p-5 rounded-2xl border mt-4">
-                        <h4 className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1.5 tracking-widest mb-3"><Shield className="w-3.5 h-3.5" /> {t.officials} (Admin)</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-500 pl-1">{t.supervisor}</label>
-                            <select value={game.supervisorId || ''} onChange={(e) => assignOfficial(game.id, 'supervisor', e.target.value)} className="w-full mt-1.5 p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400">
-                              <option value="">{t.selectAdmin}</option>
-                              {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-500 pl-1">{t.techComm}</label>
-                            <input type="text" value={game.tcName || ''} onChange={(e) => assignOfficial(game.id, 'tc', e.target.value)} placeholder={t.enterTCName} className="w-full mt-1.5 p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400" />
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 mt-6 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors">{t.close}</button>
                 </div>
-
-                <button onClick={() => setSelectedGameDetails(null)} className="w-full py-4 mt-6 bg-slate-100 text-slate-600 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors">{t.close}</button>
-              </div>
+              )}
             </div>
           </div>
         );
