@@ -27,7 +27,7 @@ import {
   logEvent 
 } from 'firebase/analytics';
 
-// Import Icons (TravelInvoice removed from imports)
+// Import Icons
 import { 
   Calendar as CalendarIcon, Shield, CheckCircle, Clock, Settings, Trash2, 
   MapPin, RefreshCw, Trophy, FileText, Plus, ChevronDown, ChevronUp, Search, 
@@ -69,9 +69,12 @@ const translations = {
     upcoming: "Kommande",
     archived: "Arkiverade matcher",
     activeSchedule: "Aktivt schema",
-    searchPlaceholder: "Sök...",
+    searchPlaceholder: "Sök matcher...",
     allSeries: "Alla serier",
     allLocations: "Alla platser",
+    filterStatusAll: "Alla statusar",
+    needsUmpire: "Saknar domare",
+    noInterests: "Inga anmälningar",
     noGames: "Inga matcher hittades.",
     syncNow: "Synka förbundsdata nu",
     applied: "Anmälda",
@@ -80,7 +83,6 @@ const translations = {
     assignedTo: "Tillsatta",
     staffed: "Bemannad",
     partiallyStaffed: "Delvis bemannad",
-    needsUmpire: "Behöver domare",
     bulkImport: "Massimport",
     pendingAssignments: "Bemanningsöversikt",
     staffingControl: "Bemanningskontroll",
@@ -88,7 +90,6 @@ const translations = {
     showAll: "Visa alla matcher",
     removeAssignment: "Ta bort",
     deleteGame: "Ta bort match",
-    deleteConfirm: "Är du säker på att du vill ta bort matchen?",
     deleteAllGames: "Rensa hela säsongen",
     deleteAllConfirm: "ÄR DU HELT SÄKER? Detta kommer radera ALLA matcher, intresseanmälningar och tillsättningar för det valda året.",
     deleteAllSuccess: "Säsongen har rensats.",
@@ -99,7 +100,7 @@ const translations = {
     assignmentRate: "Tillsättningsgrad",
     noStats: "Ingen data finns registrerad än.",
     mySchedule: "Mitt Schema",
-    noInterest: "Du har inga bekräftade matchuppdrag än.",
+    noAssignedMatches: "Du har inga bekräftade matchuppdrag än.",
     noPendingInterest: "Du har inte anmält intresse för några matcher.",
     confirmed: "Bekräftad",
     settings: "Inställningar",
@@ -136,6 +137,7 @@ const translations = {
     away: "Borta",
     time: "Tid",
     location: "Plats",
+    locations: "Platser",
     league: "Serie",
     saveChanges: "Spara ändringar",
     listView: "Lista",
@@ -172,7 +174,6 @@ const translations = {
     umpireProfile: "Domarprofil",
     back: "Tillbaka",
     assignedMatches: "Tillsatta matcher",
-    noAssignedMatches: "Inga tillsatta matcher än.",
     totalAssignments: "Tillsättningar",
     totalInterests: "Intresseanmälningar",
     deleteUmpireConfirm: "Är du säker på att du vill ta bort",
@@ -228,8 +229,6 @@ const translations = {
     emailPreview: "Förhandsgranskning av E-post",
     emailsSentSuccess: "Alla spelscheman har skickats!",
     bookedIn: "Bokad i",
-    filterStatusAll: "Alla statusar",
-    noInterests: "Inga anmälningar",
     coUmpires: "Dömer med:",
     noCoUmpires: "Inga meddomare",
     calendarColumn: "Kalender",
@@ -266,7 +265,6 @@ const translations = {
     umpireShort: "DOMARE",
     supShort: "SUP",
     tcShort: "TC",
-    locations: "Platser",
     address: "Adress",
     facilities: "Faciliteter",
     noFacilities: "Inga faciliteter angivna",
@@ -278,8 +276,8 @@ const translations = {
     declineTime: "Kan inte (Avboka)",
     timeChangedBadge: "Tid Ändrad",
     pendingReply: "Väntar på svar",
-    emailMatchMovedSubject: "Spelschema uppdaterat ({count} st) / Schedule Updated",
-    emailMatchMovedBody: "Hej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.\n\n---\n\nHello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.",
+    emailMatchMovedSubject: "Spelschema uppdaterat ({count} st)",
+    emailMatchMovedBody: "Hej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma dessa matcher, eller om du måste lämna återbud.",
     pendingEmailsQueued: "⏳ {count} e-postmeddelanden väntar på att skickas till domare om ändrade matcher.",
     sendQueuedNow: "Skicka direkt",
     actionRequired: "Kräver åtgärd",
@@ -290,8 +288,8 @@ const translations = {
     reminderPreferences: "Mina Notiser",
     receiveReminders: "Få e-postpåminnelser om mina kommande matcher",
     runRemindersNow: "Kör Påminnelser Nu",
-    reminderEmailSubject: "Påminnelse: Kommande Matcher / Upcoming Games",
-    reminderEmailBody: "Hej {name},\n\nDetta är en automatisk påminnelse om att du är tillsatt på följande matcher under de kommande dagarna:\n\n{gamesListSv}\n\nGlöm inte att logga in i domarportalen om du behöver byta bort en match i sista minuten.\n\n---\n\nHello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement.",
+    reminderEmailSubject: "Påminnelse: Kommande Matcher",
+    reminderEmailBody: "Hej {name},\n\nDetta är en automatisk påminnelse om att du är tillsatt på följande matcher under de kommande dagarna:\n\n{gamesListSv}\n\nGlöm inte att logga in i domarportalen om du behöver byta bort en match i sista minuten.",
     invoiceTitle: "Reseräkning",
     digitalSubmission: "Digital inlämning",
     personalInfo: "Personuppgifter",
@@ -345,6 +343,9 @@ const translations = {
     searchPlaceholder: "Search...",
     allSeries: "All Series",
     allLocations: "All Locations",
+    filterStatusAll: "All Statuses",
+    needsUmpire: "Needs Umpire",
+    noInterests: "No Interests",
     noGames: "No games found.",
     syncNow: "Sync Federation Data Now",
     applied: "Interested",
@@ -353,7 +354,6 @@ const translations = {
     assignedTo: "Crew",
     staffed: "Fully Staffed",
     partiallyStaffed: "Partially Staffed",
-    needsUmpire: "Needs Umpire",
     bulkImport: "Bulk Import",
     pendingAssignments: "Staffing Desk",
     staffingControl: "Staffing Control",
@@ -361,7 +361,6 @@ const translations = {
     showAll: "Show All Games",
     removeAssignment: "Remove",
     deleteGame: "Delete Game",
-    deleteConfirm: "Are you sure you want delete this game?",
     deleteAllGames: "Clear Entire Season",
     deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
     deleteAllSuccess: "Season cleared successfully.",
@@ -372,7 +371,7 @@ const translations = {
     assignmentRate: "Assignment Rate",
     noStats: "No engagement data recorded yet.",
     mySchedule: "My Schedule",
-    noInterest: "You have no confirmed assignments yet.",
+    noAssignedMatches: "You have no confirmed assignments yet.",
     noPendingInterest: "You haven't marked interest in any matches.",
     confirmed: "Confirmed",
     settings: "Settings",
@@ -409,6 +408,7 @@ const translations = {
     away: "Away",
     time: "Time",
     location: "Location",
+    locations: "Locations",
     league: "League",
     saveChanges: "Save Changes",
     listView: "List",
@@ -445,7 +445,6 @@ const translations = {
     umpireProfile: "Umpire Profile",
     back: "Back",
     assignedMatches: "Assigned Matches",
-    noAssignedMatches: "No assigned matches yet.",
     totalAssignments: "Assignments",
     totalInterests: "Interests",
     deleteUmpireConfirm: "Are you sure you want to remove",
@@ -501,8 +500,6 @@ const translations = {
     emailPreview: "Email Preview",
     emailsSentSuccess: "All schedules have been sent successfully!",
     bookedIn: "Booked in",
-    filterStatusAll: "All Statuses",
-    noInterests: "No Interests",
     coUmpires: "Co-umpires:",
     noCoUmpires: "No co-umpires",
     calendarColumn: "Calendar",
@@ -539,7 +536,6 @@ const translations = {
     umpireShort: "UMP",
     supShort: "SUP",
     tcShort: "TC",
-    locations: "Locations",
     address: "Address",
     facilities: "Facilities",
     noFacilities: "No facilities listed",
@@ -551,8 +547,8 @@ const translations = {
     declineTime: "Cannot Make It",
     timeChangedBadge: "Time Changed",
     pendingReply: "Pending Reply",
-    emailMatchMovedSubject: "Schedule Updated ({count} games) / Spelschema uppdaterat",
-    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma nämnda matcher, eller om du måste lämna återbud.",
+    emailMatchMovedSubject: "Schedule Updated ({count} games)",
+    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.",
     pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games.",
     sendQueuedNow: "Send Now",
     actionRequired: "Action Required",
@@ -563,8 +559,8 @@ const translations = {
     reminderPreferences: "My Notifications",
     receiveReminders: "Receive email reminders for my upcoming games",
     runRemindersNow: "Run Reminders Cron",
-    reminderEmailSubject: "Upcoming Games Reminder / Påminnelse om kommande matcher",
-    reminderEmailBody: "Hello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement.\n\n---\n\nHej {name},\n\nDetta är en automatisk påminnelse om att du är tillsatt på följande matcher under de kommande dagarna:\n\n{gamesListSv}\n\nGlöm inte att logga in i domarportalen om du behöver byta bort en match i sista minuten.",
+    reminderEmailSubject: "Upcoming Games Reminder",
+    reminderEmailBody: "Hello {name},\n\nThis is an automated reminder that you are scheduled to officiate the following games in the coming days:\n\n{gamesListEn}\n\nPlease log into the umpire portal if you need to arrange a last-minute replacement.",
     invoiceTitle: "Travel Invoice",
     digitalSubmission: "Digital Submission",
     personalInfo: "Personal Information",
@@ -654,7 +650,7 @@ const renderMarkdown = (text) => {
   });
 };
 
-// TravelInvoice is now bundled inside App.jsx to prevent import errors
+// TravelInvoice Component
 function TravelInvoice({ db, appId, locationsData, user, userName, t, myAssignedGames }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -896,7 +892,7 @@ TOTALT ATT ERHÅLLA: ${calculated.total} kr
       `;
 
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: personalInfo.email, // TEST MODE: Går till inloggad e-post istället för förbundet
+        to: personalInfo.email,
         message: {
           subject: `Reseräkning: ${personalInfo.name} (${calculated.total} kr) - TEST`,
           text: emailBody,
@@ -947,7 +943,6 @@ TOTALT ATT ERHÅLLA: ${calculated.total} kr
         </datalist>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          
           <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
               <User className="w-4 h-4" /> {t.personalInfo}
@@ -1430,7 +1425,6 @@ function MainApp() {
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
   
-  // State för att visa gamla matcher
   const [showHistory, setShowHistory] = useState(false);
   
   const [editingUmpireId, setEditingUmpireId] = useState(null);
@@ -1471,40 +1465,8 @@ function MainApp() {
     const base = typeof window !== 'undefined' && window.__app_id 
       ? String(window.__app_id).replace(/[\/\\]/g, '-') 
       : 'baseball-umpire-scheduler';
-    
-    // RÄTTELSE: Ta bort "federation" (-swe-) så att vi kopplar upp mot din befintliga, riktiga databas igen!
     return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
   }, [selectedYear, isDemoEnv]);
-
-  const calendarWeeks = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const shiftedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
-
-    let currentWeek = [];
-    const weeks = [];
-
-    for (let i = 0; i < shiftedFirstDay; i++) currentWeek.push(null);
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      currentWeek.push(new Date(year, month, d));
-      if (currentWeek.length === 7) {
-        const validDate = currentWeek.find(day => day !== null);
-        weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
-        currentWeek = [];
-      }
-    }
-
-    if (currentWeek.length > 0) {
-      while (currentWeek.length < 7) currentWeek.push(null);
-      const validDate = currentWeek.find(day => day !== null);
-      weeks.push({ weekNumber: validDate ? getISOWeekNumber(validDate) : '-', days: currentWeek });
-    }
-
-    return weeks;
-  }, [currentDate]);
 
   const groupedAssignments = useMemo(() => {
     const map = {};
@@ -1564,7 +1526,6 @@ function MainApp() {
           statusMatch = applicants.length === 0;
       }
       
-      // Returnera ENDAST gamla matcher om 'showHistory' är sant, annars ENDAST kommande matcher
       if (showHistory) {
         return isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
       } else {
@@ -1605,7 +1566,6 @@ function MainApp() {
     if (!umpireId) return [];
     const myGames = games.filter(game => groupedAssignments[game.id]?.some(asg => asg.userId === umpireId));
     
-    // Samma logik: Filtrera ut gamla matcher om inte showHistory är sant
     return myGames.filter(game => {
       const isHistorical = (game.date || '') < today;
       if (showHistory) return isHistorical;
@@ -1635,13 +1595,6 @@ function MainApp() {
     });
     return map;
   }, [assignments, masterUmpires, games]);
-
-  const emailCandidates = useMemo(() => {
-    const list = Object.values(umpiresWithAssignmentsMap).filter(obj => obj.umpire !== undefined);
-    const ready = list.filter(obj => obj.umpire.linkedEmail);
-    const missing = list.filter(obj => !obj.umpire.linkedEmail);
-    return { ready, missing };
-  }, [umpiresWithAssignmentsMap]);
 
   const unconnectedEmails = useMemo(() => {
     const linked = masterUmpires.map(u => (u.linkedEmail || '').toLowerCase()).filter(Boolean);
@@ -1697,18 +1650,6 @@ function MainApp() {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return '-';
     return d.getDate();
-  };
-
-  const toLocalISO = (date) => {
-    if (!date || isNaN(date.getTime())) return "";
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
-  const scrollToTop = () => {
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getLeagueStyles = (league) => {
@@ -1925,54 +1866,6 @@ function MainApp() {
     }
   }, [user, umpireId, masterUmpires, appId]);
 
-  useEffect(() => {
-    if (!isAdmin || mailQueue.length === 0) return;
-    
-    const interval = setInterval(() => {
-       const now = Date.now();
-       const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
-       
-       if (readyToProcess.length > 0) {
-           readyToProcess.forEach(async (queueItem) => {
-              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
-              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
-              
-              const emailBody = t.emailMatchMovedBody
-                 .replace(/\{name\}/g, queueItem.userName)
-                 .replace(/\{changesListSv\}/g, changesTextSv)
-                 .replace(/\{changesListEn\}/g, changesTextEn);
-                 
-              try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-                   to: queueItem.email,
-                   message: {
-                     subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
-                     text: emailBody
-                   },
-                   createdAt: Date.now()
-                });
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
-              } catch(e) { }
-           });
-       }
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [isAdmin, mailQueue, appId, t]);
-
-  useEffect(() => {
-    if (analytics) {
-      logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
-    }
-    const handleScroll = () => { 
-      if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); 
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, [view, selectedYear, lang]);
-
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -2006,27 +1899,6 @@ function MainApp() {
       key, 
       direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' 
     }));
-  };
-
-  const handleContactSubmit = async (e) => {
-    e.preventDefault();
-    setContactStatus('sending');
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-        to: 'admin@domarweb.se',
-        replyTo: contactEmail,
-        message: {
-          subject: `[Kontaktformulär] ${contactSubject}`,
-          text: `Nytt meddelande från Domarportalen:\n\nAvsändare: ${contactName}\nE-post: ${contactEmail}\n\nMeddelande:\n${contactMessage}`
-        },
-        createdAt: Date.now()
-      });
-      setContactStatus('success');
-      setContactSubject('');
-      setContactMessage('');
-    } catch (error) {
-      setContactStatus('error');
-    }
   };
 
   const updateProfile = async (name, id) => {
@@ -2072,15 +1944,6 @@ function MainApp() {
          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'cron'), { lastReminderSentDate: 'FORCED' }, { merge: true });
          if (typeof window !== 'undefined') alert(t.remindersSent || "Reminders queued!");
      } catch (e) { console.error(e); }
-  };
-
-  const copyGuideLink = () => {
-    if (typeof window !== 'undefined') {
-      const link = `${window.location.origin}${window.location.pathname}?view=help&tab=guide`;
-      navigator.clipboard.writeText(link).then(() => {
-        alert(t.linkCopied);
-      }).catch(() => { });
-    }
   };
 
   const toggleUmpireAdmin = async (uId) => {
@@ -2166,6 +2029,14 @@ function MainApp() {
     const asgId = `${gameId}_${uId}`;
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId));
   };
+
+  const handleDeleteGame = async (gameId) => {
+    if (!isAdmin) return;
+    if (typeof window !== 'undefined' && !window.confirm(t.deleteConfirm)) return;
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
+    } catch(e) {}
+  };
   
   const toggleTradeStatus = async (asgId, status) => {
     if (!umpireId && !isAdmin) return; 
@@ -2177,7 +2048,7 @@ function MainApp() {
   const takeTrade = async (oldAsg, game) => {
     if (!user || !user.email) { setShowAuthModal(true); return; }
     if (!umpireId) { setShowNamePrompt(true); return; }
-    if (oldAsg.userId === umpireId) return; 
+    if (oldAsg && oldAsg.userId === umpireId) return; 
     
     const umpireAssignedGamesToday = assignments
       .filter(asg => asg.userId === umpireId)
@@ -2198,7 +2069,9 @@ function MainApp() {
     setSyncing(true);
     try {
       const batch = writeBatch(db);
-      batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
+      if (oldAsg && oldAsg.id) {
+         batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
+      }
       const newAsgId = `${game.id}_${umpireId}`;
       batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', newAsgId), {
         gameId: game.id,
@@ -2242,100 +2115,6 @@ function MainApp() {
       if(typeof window !== 'undefined') alert(t.importSuccess);
     } catch (e) { } finally { 
       setSyncing(false); 
-    }
-  };
-
-  const saveEditedGame = async () => {
-    if (!isAdmin || !editingGameData) return;
-    setSyncing(true);
-    try {
-      const originalGame = games.find(g => g.id === editingGameData.id);
-      const isTimeChanged = originalGame && (originalGame.date !== editingGameData.date || originalGame.time !== editingGameData.time);
-
-      const batch = writeBatch(db);
-      const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id);
-      batch.update(gameRef, { 
-        date: editingGameData.date, 
-        time: editingGameData.time, 
-        league: editingGameData.league, 
-        home: editingGameData.home, 
-        away: editingGameData.away, 
-        location: editingGameData.location, 
-        requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 
-      });
-
-      if (isTimeChanged) {
-        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
-        affectedAssignments.forEach((asg) => {
-          const asgRef = doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id);
-          batch.update(asgRef, { pendingChange: true });
-        });
-        const affectedApplications = applications.filter(a => a.gameId === editingGameData.id);
-        affectedApplications.forEach((app) => {
-          const appRef = doc(db, 'artifacts', appId, 'public', 'data', 'applications', app.id);
-          batch.delete(appRef);
-        });
-      }
-
-      await batch.commit();
-
-      if (isTimeChanged) {
-        const affectedAssignments = assignments.filter(a => a.gameId === editingGameData.id);
-        for (const asg of affectedAssignments) {
-          const ump = masterUmpires.find(u => u.id === asg.userId);
-          if (ump && ump.linkedEmail) {
-             const existingQueue = mailQueue.find(q => q.id === asg.userId);
-             const gameChangeInfo = {
-                gameId: editingGameData.id,
-                away: editingGameData.away,
-                home: editingGameData.home,
-                oldDate: originalGame.date,
-                oldTime: originalGame.time,
-                newDate: editingGameData.date,
-                newTime: editingGameData.time
-             };
-             const currentChanges = existingQueue ? existingQueue.changes : [];
-             const updatedChanges = [...currentChanges.filter(c => c.gameId !== editingGameData.id), gameChangeInfo];
-             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', asg.userId), {
-                userId: asg.userId,
-                email: ump.linkedEmail,
-                userName: asg.userName,
-                changes: updatedChanges,
-                processAfter: Date.now() + 15 * 60 * 1000
-             });
-          }
-        }
-      }
-      setEditingGameData(null);
-    } catch (e) { } finally {
-      setSyncing(false);
-    }
-  };
-
-  const forceSendQueue = async () => {
-    if (!isAdmin) return;
-    setSyncing(true);
-    try {
-       const promises = mailQueue.map(async (queueItem) => {
-          const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
-          const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
-          const emailBody = t.emailMatchMovedBody
-             .replace(/\{name\}/g, queueItem.userName)
-             .replace(/\{changesListSv\}/g, changesTextSv)
-             .replace(/\{changesListEn\}/g, changesTextEn);
-          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
-             to: queueItem.email,
-             message: {
-               subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
-               text: emailBody
-             },
-             createdAt: Date.now()
-          });
-          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
-       });
-       await Promise.all(promises);
-    } catch(e) { } finally {
-       setSyncing(false);
     }
   };
 
@@ -2391,25 +2170,6 @@ function MainApp() {
       }, { merge: true });
       setEditingLocation(null);
     } catch (e) { }
-  };
-
-  const generateCSV = (gamesToExport) => {
-    if (gamesToExport.length === 0 || typeof window === 'undefined') return;
-    const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location\n";
-    const rows = gamesToExport.map(game => {
-      const [hours, mins] = (game.time || '00:00').split(':');
-      const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
-      const endTime = `${endHours}:${mins || '00'}`;
-      return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${endTime},"${game.league}","${game.location}"`;
-    }).join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `schedule-${selectedYear}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleDownloadBackup = () => {
@@ -2498,7 +2258,7 @@ function MainApp() {
       <div className="relative bg-slate-100 min-h-screen">
         <div className="absolute top-4 sm:top-8 left-4 sm:left-8 z-10 print:hidden">
           <button onClick={() => setView('schedule')} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200 text-xs font-black text-slate-600 uppercase tracking-widest hover:text-blue-600 hover:border-blue-200 transition-all">
-            <ArrowLeft className="w-4 h-4" /> Tillbaka till Portalen
+            <ArrowLeft className="w-4 h-4" /> Tillbaka
           </button>
         </div>
         <TravelInvoice 
@@ -2564,10 +2324,34 @@ function MainApp() {
 
         {view === 'schedule' && (
           <div className="space-y-4 animate-in fade-in">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               <h2 className="text-lg font-black uppercase">{showHistory ? t.archived : t.activeSchedule}</h2>
-              <button onClick={() => setShowHistory(!showHistory)} className="text-[10px] font-black uppercase px-3 py-1 bg-slate-100 rounded-full">{showHistory ? t.upcoming : t.history}</button>
+              <button onClick={() => setShowHistory(!showHistory)} className="text-[10px] font-black uppercase px-4 py-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors flex items-center gap-2 w-fit">
+                <HistoryIcon className="w-3.5 h-3.5" /> {showHistory ? t.upcoming : t.history}
+              </button>
             </div>
+
+            {/* Fileringsmeny */}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+              </div>
+              <select value={filterLeague} onChange={(e) => setFilterLeague(e.target.value)} className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none">
+                <option value="">{t.allSeries}</option>
+                {leagues.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+              <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none">
+                <option value="">{t.allLocations}</option>
+                {locations.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none">
+                <option value="">{t.filterStatusAll}</option>
+                <option value="needs_umpire">{t.needsUmpire}</option>
+                <option value="no_interests">{t.noInterests}</option>
+              </select>
+            </div>
+
             {filteredGames.length === 0 ? (
               <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200">
                 <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
@@ -2587,17 +2371,17 @@ function MainApp() {
                 const required = game.requiredUmpires || 2;
 
                 return (
-                  <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white rounded-2xl shadow-sm border overflow-hidden cursor-pointer hover:border-blue-300 group ${showHistory ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+                  <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white rounded-2xl shadow-sm border overflow-hidden cursor-pointer hover:border-blue-300 group transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : ''}`}>
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex gap-4">
-                        <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border group-hover:bg-blue-50">
+                        <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border group-hover:bg-blue-50 transition-colors">
                           <p className="text-[10px] font-black text-slate-400 uppercase">{safeDateDay(game.date)}</p>
                           <p className="text-2xl font-black text-slate-800 leading-none">{safeDateNum(game.date)}</p>
                           <p className="text-[9px] font-black text-slate-400 uppercase mt-0.5">{safeDateMonth(game.date)}</p>
                         </div>
                         <div>
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
-                          <h3 className="font-bold text-slate-900 mt-1 text-base group-hover:text-blue-700">{game.away} @ {game.home}</h3>
+                          <h3 className="font-bold text-slate-900 mt-1 text-base group-hover:text-blue-700 transition-colors">{game.away} @ {game.home}</h3>
                           <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500 font-semibold">
                             <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {game.time}</span>
                             <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {game.location}</span>
@@ -2618,7 +2402,7 @@ function MainApp() {
                                 <CheckCircle className="w-4 h-4" /> {t.yourGame}
                               </div>
                             ) : (
-                              <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className={`px-6 py-2 rounded-xl text-xs font-black uppercase ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                              <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-colors ${isApplied ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                                 {isApplied ? t.withdraw : t.interested}
                               </button>
                             )}
@@ -2633,13 +2417,102 @@ function MainApp() {
           </div>
         )}
 
-        {view === 'my-apps' && (
-          <div className="space-y-6 animate-in fade-in">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-black uppercase">{t.mySchedule}</h2>
-              <button onClick={() => setShowHistory(!showHistory)} className="text-[10px] font-black uppercase px-3 py-1 bg-slate-100 rounded-full">{showHistory ? t.upcoming : t.history}</button>
+        {/* LOCATIONS VIEW */}
+        {view === 'locations' && (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative">
+              <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               {allLocationNames.filter(name => name.toLowerCase().includes(searchQuery.toLowerCase())).map(locName => {
+                  const locData = locationsData.find(l => l.id === locName) || { id: locName, address: '', facilities: [] };
+                  return (
+                    <div key={locName} onClick={() => setSelectedLocation(locName)} className="bg-white p-6 rounded-2xl border border-slate-200 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all group">
+                       <h3 className="font-black text-lg text-slate-800 group-hover:text-blue-600">{locName}</h3>
+                       {locData.address && <p className="text-xs font-medium text-slate-500 mt-2 truncate flex items-center gap-1"><MapPin className="w-3 h-3"/>{locData.address}</p>}
+                       <div className="mt-4"><span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">{locData.facilities.length || 0} {t.facilities}</span></div>
+                    </div>
+                  );
+               })}
+            </div>
+          </div>
+        )}
 
+        {/* UMPIRE LIST VIEW */}
+        {view === 'umpire-list' && (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="flex gap-4 mb-4">
+               <div className="flex-1 relative bg-white rounded-2xl shadow-sm border border-slate-200">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-3 bg-transparent text-sm outline-none" />
+               </div>
+               <select value={umpireSort} onChange={(e) => setUmpireSort(e.target.value)} className="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase outline-none shadow-sm">
+                  <option value="name">{t.name}</option>
+                  <option value="level">{t.level}</option>
+               </select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {sortedUmpireList.map(u => (
+                <div key={u.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-blue-300 transition-all">
+                  <span className="font-bold text-slate-800 text-sm">{u.name}</span>
+                  {u.level && <span className={`text-[9px] font-black px-2 py-1 rounded-lg border uppercase ${getLevelStyles(u.level)}`}>{u.level}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MARKETPLACE VIEW */}
+        {view === 'marketplace' && (
+          <div className="space-y-6 animate-in fade-in">
+             <div className="text-center mb-8 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+               <ArrowRightLeft className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+               <h2 className="text-2xl font-black text-slate-800 uppercase">{t.marketplace}</h2>
+               <p className="text-slate-500 font-medium mt-2">{t.marketplaceDesc}</p>
+             </div>
+             
+             {games.filter(g => !showHistory && g.date >= today && (assignments.some(a => a.gameId === g.id && a.forTrade) || (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2))).length === 0 ? (
+               <div className="bg-white p-12 text-center rounded-3xl border-2 border-dashed border-slate-200">
+                 <p className="text-slate-400 font-medium">{t.noMarketplaceGames}</p>
+               </div>
+             ) : (
+               <div className="space-y-4">
+                 {games.filter(g => !showHistory && g.date >= today && (assignments.some(a => a.gameId === g.id && a.forTrade) || (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2))).map(game => {
+                   const tradeAssignments = assignments.filter(a => a.gameId === game.id && a.forTrade);
+                   const missingSpots = Math.max(0, (game.requiredUmpires || 2) - (groupedAssignments[game.id]?.length || 0));
+                   
+                   return (
+                     <div key={game.id} className="bg-white p-4 rounded-2xl shadow-sm border border-blue-200 flex flex-col sm:flex-row justify-between gap-4">
+                       <div>
+                         <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                         <h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3>
+                         <p className="text-sm text-slate-500">{game.date} kl {game.time} • {game.location}</p>
+                       </div>
+                       <div className="flex flex-col justify-center gap-2">
+                         {tradeAssignments.map(asg => (
+                           <button key={asg.id} onClick={() => takeTrade(asg, game)} className="bg-yellow-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors">
+                             <ArrowRightLeft className="w-4 h-4"/> Ta över från {asg.userName}
+                           </button>
+                         ))}
+                         {Array.from({ length: missingSpots }).map((_, i) => (
+                           <button key={i} onClick={() => takeTrade(null, game)} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors">
+                             <UserPlus className="w-4 h-4"/> {t.takeGame} (Saknas domare)
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                   );
+                 })}
+               </div>
+             )}
+          </div>
+        )}
+
+        {/* MY GAMES VIEW */}
+        {view === 'my-apps' && (
+          <div className="space-y-8 animate-in fade-in">
+            {/* Warning if any game has changed time */}
             {myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).length > 0 && (
               <div className="bg-yellow-50 p-4 rounded-3xl border border-yellow-200">
                 <h3 className="text-xs font-black text-yellow-700 uppercase mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> {t.actionRequired}</h3>
@@ -2648,28 +2521,118 @@ function MainApp() {
                     <p className="font-bold">{game.away} @ {game.home}</p>
                     <p className="text-xs text-slate-500 mb-3">{game.date} @ {game.time}</p>
                     <div className="flex gap-2">
-                      <button onClick={() => confirmScheduleChange(groupedAssignments[game.id].find(a => a.userId === umpireId).id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase">{t.acceptTime}</button>
-                      <button onClick={() => removeAssignment(game.id, umpireId)} className="bg-slate-100 text-red-600 px-4 py-2 rounded-lg text-[10px] font-black uppercase">{t.declineTime}</button>
+                      <button onClick={() => confirmScheduleChange(groupedAssignments[game.id].find(a => a.userId === umpireId).id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-blue-700">{t.acceptTime}</button>
+                      <button onClick={() => removeAssignment(game.id, umpireId)} className="bg-slate-100 text-red-600 px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-red-50">{t.declineTime}</button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Confirmed Games */}
             <div className="space-y-4">
-              {myAssignedGames.filter(g => !groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).map(game => (
-                <div key={game.id} className="bg-white p-4 rounded-2xl border border-green-200 flex justify-between items-center">
-                  <div>
-                    <p className="font-bold">{game.away} @ {game.home}</p>
-                    <p className="text-xs text-slate-500">{game.date} @ {game.time}</p>
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                <h2 className="text-lg font-black uppercase text-slate-800">{t.confirmedGames}</h2>
+                <button onClick={() => setShowHistory(!showHistory)} className="text-[10px] font-black uppercase px-3 py-1.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors flex items-center gap-1"><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button>
+              </div>
+
+              {myAssignedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200">{t.noAssignedMatches}</div>}
+              
+              {myAssignedGames.filter(g => !groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).map(game => {
+                const myAsg = groupedAssignments[game.id].find(a => a.userId === umpireId);
+                const coUmpires = groupedAssignments[game.id].filter(a => a.userId !== umpireId);
+                
+                return (
+                  <div key={game.id} className="bg-white p-5 rounded-2xl border border-green-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                      <h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3>
+                      <p className="text-sm text-slate-500 flex items-center gap-2 mt-1"><Clock className="w-3 h-3"/> {game.date} @ {game.time} &bull; {game.location}</p>
+                      
+                      {/* Co-umpires section */}
+                      <div className="mt-3 flex gap-2 items-center flex-wrap">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.coUmpires}</span>
+                        {coUmpires.length > 0 ? (
+                          coUmpires.map(a => (
+                            <span key={a.userId} className="text-[10px] bg-slate-50 border border-slate-200 text-slate-700 px-2 py-1 rounded-lg font-bold">{a.userName}</span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic font-medium">{t.noCoUmpires}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:items-end gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                      <span className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase text-center inline-block">{t.confirmed}</span>
+                      {game.date >= today && features.marketplace && (
+                        <button 
+                          onClick={() => toggleTradeStatus(myAsg.id, !myAsg.forTrade)}
+                          className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl transition-colors ${myAsg.forTrade ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                          {myAsg.forTrade ? t.cancelTrade : t.tradeGame}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <span className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{t.confirmed}</span>
+              )})}
+            </div>
+
+            {/* Interested Games */}
+            {!showHistory && (
+              <div className="space-y-4 pt-4">
+                <div className="border-b border-slate-200 pb-2">
+                  <h2 className="text-lg font-black uppercase text-slate-800">{t.interestedGames}</h2>
                 </div>
-              ))}
-              {myAssignedGames.length === 0 && <div className="text-center text-slate-400 p-8">{t.noAssignedMatches}</div>}
+                {myInterestedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200">{t.noPendingInterest}</div>}
+                {myInterestedGames.map(game => (
+                  <div key={game.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
+                      <h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3>
+                      <p className="text-sm text-slate-500 mt-1">{game.date} @ {game.time} &bull; {game.location}</p>
+                    </div>
+                    <button onClick={() => toggleApplication(game.id)} className="bg-red-50 text-red-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase border border-red-100 hover:bg-red-100 transition-colors w-full sm:w-auto">
+                      {t.withdraw}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STATS VIEW */}
+        {view === 'stats' && isAdmin && (
+          <div className="space-y-6 animate-in fade-in">
+             <h2 className="text-xl font-black uppercase">{t.analytics}</h2>
+             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
+               <table className="w-full text-left min-w-[600px]">
+                 <thead className="bg-slate-50 border-b">
+                   <tr>
+                     <th onClick={() => handleSort('name')} className="px-6 py-4 text-[10px] font-black uppercase cursor-pointer hover:bg-slate-100">{t.umpire} {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                     <th onClick={() => handleSort('interest')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer hover:bg-slate-100">{t.interests} {sortConfig.key === 'interest' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                     <th onClick={() => handleSort('games')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer hover:bg-slate-100">{t.gamesAssigned} {sortConfig.key === 'games' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                     <th onClick={() => handleSort('rate')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer hover:bg-slate-100">{t.assignmentRate} {sortConfig.key === 'rate' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {sortedStatistics.map(stat => (
+                     <tr key={stat.userId} className="border-b border-slate-50 hover:bg-slate-50">
+                       <td className="px-6 py-4 font-bold text-slate-800">{stat.name}</td>
+                       <td className="px-6 py-4 text-center font-medium text-slate-600">{stat.interest}</td>
+                       <td className="px-6 py-4 text-center font-black text-blue-600">{stat.games}</td>
+                       <td className="px-6 py-4 text-center font-bold text-slate-700">
+                         <span className={`px-3 py-1 rounded-lg text-[10px] ${stat.rate >= 80 ? 'bg-green-100 text-green-700 border border-green-200' : stat.rate >= 40 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>{stat.rate}%</span>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
             </div>
           </div>
         )}
 
+        {/* ADMIN STAFFING VIEW */}
         {view === 'admin' && (
           <div className="space-y-6 animate-in fade-in">
              <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -2678,8 +2641,8 @@ function MainApp() {
                  <p className="text-xs text-slate-500">{selectedYear} Season</p>
                </div>
                <div className="flex flex-wrap items-center gap-2">
-                 <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 flex items-center gap-2"><Download className="w-4 h-4" /> Backup</button>
-                 <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-slate-200"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
+                 <button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase hover:bg-slate-200 flex items-center gap-2 transition-colors"><Download className="w-4 h-4" /> Backup</button>
+                 <button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2 hover:bg-slate-200 transition-colors"><Plus className="w-4 h-4" /> {t.bulkImport}</button>
                </div>
              </div>
 
@@ -2697,8 +2660,8 @@ function MainApp() {
              <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
                <h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-600" /> {t.pendingAssignments}</h3>
                <div className="flex gap-2">
-                 <button onClick={() => setShowHistory(!showHistory)} className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl flex items-center gap-2 ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button>
-                 <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
+                 <button onClick={() => setShowHistory(!showHistory)} className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl flex items-center gap-2 transition-colors ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button>
+                 <button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 transition-colors ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button>
                </div>
              </div>
              
@@ -2708,25 +2671,46 @@ function MainApp() {
                const isFullyStaffed = gameAssignments.length >= required;
 
                return (
-                 <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${isFullyStaffed ? 'opacity-60 grayscale' : 'border-slate-200'}`}>
-                   <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center hover:bg-slate-100/50 cursor-pointer" onClick={() => setSelectedGameDetails(game)}>
+                 <div key={game.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-colors ${isFullyStaffed ? 'opacity-60 grayscale hover:grayscale-0' : 'border-slate-200 hover:border-blue-300'}`}>
+                   {/* Card Header */}
+                   <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center cursor-pointer" onClick={() => setSelectedGameDetails(game)}>
                      <div className="flex items-center gap-3 flex-wrap">
                        <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span>
                        <p className="text-xs font-bold text-slate-600">{game.away} @ {game.home} | {safeDateDay(game.date)} {game.date} @ {game.time}</p>
                        <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getAssignmentStatusStyles(gameAssignments.length, required)}`}>{gameAssignments.length} / {required} {t.assignedTo}</span>
                      </div>
-                     <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                     <button onClick={(e) => { e.stopPropagation(); handleDeleteGame(game.id); }} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                    </div>
                    
+                   {/* Card Body - Assignments & Quick Assign */}
                    <div className="p-4 space-y-4">
+                     {/* Assigned Umpires List */}
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {gameAssignments.map(asg => (
                           <div key={asg.userId} className="flex items-center justify-between p-2 rounded-xl border border-green-100 bg-green-50/30">
                             <div className="flex items-center gap-2"><Users2 className="w-3 h-3 text-green-600" /><span className="text-xs font-bold text-slate-700">{asg.userName}</span></div>
-                            <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><UserMinus className="w-3.5 h-3.5" /></button>
+                            <button onClick={(e) => { e.stopPropagation(); removeAssignment(game.id, asg.userId); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><UserMinus className="w-3.5 h-3.5" /></button>
                           </div>
                         ))}
                      </div>
+                     
+                     {/* Quick Assign Dropdown */}
+                     {!isFullyStaffed && (
+                       <div className="pt-2 flex flex-col sm:flex-row gap-2 items-center">
+                          <select 
+                            value="" 
+                            onChange={(e) => { 
+                              if(e.target.value) { 
+                                assignUmpire(game.id, e.target.value, masterUmpires.find(u=>u.id===e.target.value).name); 
+                              } 
+                            }} 
+                            className="text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none flex-1 text-slate-600 focus:ring-2 focus:ring-blue-500/20 w-full"
+                          >
+                            <option value="">+ Lägg till domare snabbt...</option>
+                            {masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name} ({u.level})</option>)}
+                          </select>
+                       </div>
+                     )}
                    </div>
                  </div>
                );
@@ -3173,7 +3157,6 @@ function MainApp() {
   );
 }
 
-// Export the application wrapped in our ErrorBoundary so it handles crashes gracefully
 export default function App() {
   return (
     <ErrorBoundary>
