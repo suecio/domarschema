@@ -3,7 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, doc, setDoc, getDoc, onSnapshot, 
   deleteDoc, writeBatch, addDoc, updateDoc, query, orderBy
-} from 'firebase/firestore';
+} from 'firebase/firestore'; 
 import { 
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, sendPasswordResetEmail,
