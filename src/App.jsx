@@ -985,12 +985,12 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                     <div className="mt-3 flex justify-end">
                       <button 
                         type="button" 
-                        onClick={() => calculateDistance(index)}
-                        disabled={calculatingIndex === index}
+                        onClick={() => calculateDistance(trip.id)}
+                        disabled={calculatingIndex === trip.id}
                         className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-colors"
                       >
-                        {calculatingIndex === index ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
-                        {calculatingIndex === index ? t.calculating : t.calcAuto}
+                        {calculatingIndex === trip.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
+                        {calculatingIndex === trip.id ? t.calculating : t.calcAuto}
                       </button>
                     </div>
                   </div>
