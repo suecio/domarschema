@@ -1,15 +1,33 @@
 import React, { useState, useEffect, useMemo, Component } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
-  getFirestore, collection, doc, setDoc, getDoc, onSnapshot, 
-  deleteDoc, writeBatch, addDoc, updateDoc, query, orderBy
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc,
+  onSnapshot, 
+  deleteDoc,
+  writeBatch,
+  addDoc,
+  updateDoc,
+  query,
+  orderBy
 } from 'firebase/firestore';
 import { 
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-  createUserWithEmailAndPassword, sendPasswordResetEmail,
-  signInAnonymously, signInWithCustomToken, signOut
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signInAnonymously,
+  signInWithCustomToken,
+  signOut
 } from 'firebase/auth';
-import { getAnalytics, logEvent } from 'firebase/analytics';
+import { 
+  getAnalytics, 
+  logEvent 
+} from 'firebase/analytics';
 
 // Import Icons
 import { 
@@ -18,7 +36,8 @@ import {
   BarChart3, History as HistoryIcon, Info, User, UserPlus, Download, 
   UserCheck, Edit2, LogOut, ChevronRight, List, ChevronLeft, 
   ArrowUp, Users2, X, AlertTriangle, ArrowLeft, Megaphone, 
-  Send, Map, Mail, ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
+  MessageCircle, Code, Send, Share2, Map, Mail,
+  ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
   Calculator, Printer, Car, CreditCard, Save, Camera
 } from 'lucide-react';
 
@@ -39,159 +58,589 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : nu
 
 const translations = {
   sv: {
-    appTitle: "Domarportalen", season: "Säsong", schedule: "Spelschema", myGames: "Mina Matcher",
-    myProfile: "Min profil", umpireList: "Domarlista", staffing: "Bemanning", analytics: "Statistik",
-    history: "Historik", upcoming: "Kommande", archived: "Arkiverade matcher", activeSchedule: "Aktivt schema",
-    searchPlaceholder: "Sök matcher...", allSeries: "Alla serier", allLocations: "Alla platser",
-    filterStatusAll: "Alla statusar", needsUmpire: "Saknar domare", noInterests: "Inga anmälningar",
-    noGames: "Inga matcher hittades.", syncNow: "Synka förbundsdata nu", applied: "Anmälda",
-    interested: "Intresserad", withdraw: "Dra tillbaka", assignedTo: "Tillsatta", staffed: "Bemannad",
-    partiallyStaffed: "Delvis bemannad", bulkImport: "Massimport", pendingAssignments: "Bemanningsöversikt",
-    staffingControl: "Bemanningskontroll", hideStaffed: "Dölj helt bemannade", showAll: "Visa alla matcher",
-    removeAssignment: "Ta bort", deleteGame: "Ta bort match", deleteAllGames: "Rensa hela säsongen",
-    deleteAllConfirm: "ÄR DU HELT SÄKER?", deleteAllSuccess: "Säsongen har rensats.",
-    downloadBackup: "Ladda ner backup", umpire: "Domare", interests: "Intresseanmälningar",
-    gamesAssigned: "Dömda matcher", assignmentRate: "Tillsättningsgrad", noStats: "Ingen data finns registrerad än.",
-    mySchedule: "Mitt Schema", noAssignedMatches: "Du har inga bekräftade matchuppdrag än.",
-    noPendingInterest: "Du har inte anmält intresse för några matcher.", confirmed: "Bekräftad",
-    settings: "Inställningar", userSettings: "Användarinställningar", profileAccess: "Konfigurera profil & åtkomst",
-    displayName: "Visningsnamn", namePlaceholder: "Sök eller skriv ditt namn...", logout: "Logga ut",
-    close: "Stäng", status: "Status", setProfile: "Välj din profil", pasteSheet: "Klistra in från Google Sheets",
-    addGames: "Lägg till matcher", importSuccess: "Import lyckades", cancel: "Avbryt", date: "Datum",
-    crew: "Domarteam", addToCalendar: "Spara i kalender", downloadFullSchedule: "Ladda ner (.ICS)",
-    confirmedGames: "Bekräftade uppdrag", interestedGames: "Anmält intresse", nameRequiredTitle: "Vem är du?",
+    appTitle: "Domarportalen",
+    season: "Säsong",
+    schedule: "Spelschema",
+    myGames: "Mina Matcher",
+    myProfile: "Min profil",
+    umpireList: "Domarlista",
+    staffing: "Bemanning",
+    analytics: "Statistik",
+    history: "Historik",
+    upcoming: "Kommande",
+    archived: "Arkiverade matcher",
+    activeSchedule: "Aktivt schema",
+    searchPlaceholder: "Sök matcher...",
+    allSeries: "Alla serier",
+    allLocations: "Alla platser",
+    filterStatusAll: "Alla statusar",
+    needsUmpire: "Saknar domare",
+    noInterests: "Inga anmälningar",
+    noGames: "Inga matcher hittades.",
+    syncNow: "Synka förbundsdata nu",
+    applied: "Anmälda",
+    interested: "Intresserad",
+    withdraw: "Dra tillbaka",
+    assignedTo: "Tillsatta",
+    staffed: "Bemannad",
+    partiallyStaffed: "Delvis bemannad",
+    bulkImport: "Massimport",
+    pendingAssignments: "Bemanningsöversikt",
+    staffingControl: "Bemanningskontroll",
+    hideStaffed: "Dölj helt bemannade",
+    showAll: "Visa alla matcher",
+    removeAssignment: "Ta bort",
+    deleteGame: "Ta bort match",
+    deleteAllGames: "Rensa hela säsongen",
+    deleteAllConfirm: "ÄR DU HELT SÄKER?",
+    deleteAllSuccess: "Säsongen har rensats.",
+    downloadBackup: "Ladda ner backup",
+    umpire: "Domare",
+    interests: "Intresseanmälningar",
+    gamesAssigned: "Dömda matcher",
+    assignmentRate: "Tillsättningsgrad",
+    noStats: "Ingen data finns registrerad än.",
+    mySchedule: "Mitt Schema",
+    noAssignedMatches: "Du har inga bekräftade matchuppdrag än.",
+    noPendingInterest: "Du har inte anmält intresse för några matcher.",
+    confirmed: "Bekräftad",
+    settings: "Inställningar",
+    userSettings: "Användarinställningar",
+    profileAccess: "Konfigurera profil & åtkomst",
+    displayName: "Visningsnamn",
+    namePlaceholder: "Sök eller skriv ditt namn...",
+    logout: "Logga ut",
+    close: "Stäng",
+    status: "Status",
+    setProfile: "Välj din profil",
+    pasteSheet: "Klistra in från Google Sheets",
+    addGames: "Lägg till matcher",
+    importSuccess: "Import lyckades",
+    cancel: "Avbryt",
+    date: "Datum",
+    crew: "Domarteam",
+    addToCalendar: "Spara i kalender",
+    downloadFullSchedule: "Ladda ner (.ICS)",
+    confirmedGames: "Bekräftade uppdrag",
+    interestedGames: "Anmält intresse",
+    nameRequiredTitle: "Vem är du?",
     nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.",
-    saveName: "Välj profil", addNewName: "Hittar du inte ditt namn?", createUmpire: "Skapa ny profil",
-    masterList: "Domarlista", editName: "Ändra namn", save: "Spara", selectFromList: "Välj från listan",
-    changeUser: "Byt användare", editMatch: "Ändra matchdata", home: "Hemma", away: "Borta",
-    time: "Tid", location: "Plats", locations: "Platser", league: "Serie", saveChanges: "Spara ändringar",
-    listView: "Lista", calendarView: "Kalender", days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
+    saveName: "Välj profil",
+    addNewName: "Hittar du inte ditt namn?",
+    createUmpire: "Skapa ny profil",
+    masterList: "Domarlista",
+    editName: "Ändra namn",
+    save: "Spara",
+    selectFromList: "Välj från listan",
+    changeUser: "Byt användare",
+    editMatch: "Ändra matchdata",
+    home: "Hemma",
+    away: "Borta",
+    time: "Tid",
+    location: "Plats",
+    locations: "Platser",
+    league: "Serie",
+    saveChanges: "Spara ändringar",
+    listView: "Lista",
+    calendarView: "Kalender",
+    days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
     months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"],
-    requiredUmpires: "Antal domare", level: "Nivå", name: "Namn", sortBy: "Sortera", week: "V.",
-    login: "Logga in", register: "Skapa konto", email: "E-postadress", phone: "Telefonnummer",
-    password: "Lösenord", loginToContinue: "Logga in för att fortsätta", noAccount: "Inget konto? Registrera dig här",
-    hasAccount: "Har du redan ett konto? Logga in", adminManagement: "Administratörer", masterAdminInfo: "Du är inloggad som Master Admin.",
-    linkedAccount: "Konto:", notLinked: "Inget konto", umpireProfile: "Domarprofil", back: "Tillbaka",
-    assignedMatches: "Tillsatta matcher", totalAssignments: "Tillsättningar", totalInterests: "Intresseanmälningar",
-    deleteUmpireConfirm: "Är du säker på att du vill ta bort", globalAnnouncement: "Globalt Meddelande",
-    saveAnnouncement: "Publicera", clearAnnouncement: "Ta bort", announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...",
-    bookedIn: "Bokad i", coUmpires: "Dömer med:", noCoUmpires: "Inga meddomare", calendarColumn: "Kalender",
-    gameDetails: "Matchinformation", mapDirections: "Öppna Karta", officials: "Domarteam", supervisor: "Supervisor",
-    techComm: "Technical Commissioner", notAssigned: "Ej tillsatt", yourGame: "Din match", marketplace: "Marknad",
-    marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.", tradeGame: "Byt bort",
-    cancelTrade: "Ångra byte", takeGame: "Ta match", expressInterest: "Anmäl intresse", gamesForTrade: "Matcher som bytes bort",
-    missingUmpires: "Matcher som saknar domare", noMarketplaceGames: "Inga matcher på marknaden just nu.",
-    tradeSuccess: "Du har tagit över matchen!", tradeConfirm: "Är du säker på att du vill ta över denna match?",
-    evaluate: "Utvärdera", grade: "Betyg", feedback: "Feedback", saveEval: "Spara utvärdering", evalSaved: "Utvärdering sparad",
-    yourEval: "Utvärdering", selectAdmin: "Välj Admin...", enterTCName: "Ange namn på TC...", umpireShort: "DOMARE",
-    supShort: "SUP", tcShort: "TC", address: "Adress", facilities: "Faciliteter", noFacilities: "Inga faciliteter",
-    addFacility: "Lägg till facilitet...", editLocation: "Redigera plats", matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.",
-    acceptTime: "Acceptera ny tid", declineTime: "Kan inte (Avboka)", timeChangedBadge: "Tid Ändrad", actionRequired: "Kräver åtgärd",
-    superAdminSettings: "Systemarkitektur (Super Admin)", featureMarketplace: "Aktivera Marknadsplats",
-    featureEvaluations: "Aktivera Utvärderingar", featureReminders: "E-postpåminnelser", reminderPreferences: "Mina Notiser",
-    receiveReminders: "Få e-postpåminnelser", runRemindersNow: "Kör Påminnelser Nu", invoiceTitle: "Reseräkning",
-    digitalSubmission: "Digital inlämning", personalInfo: "Personuppgifter", pnr: "Personnummer", streetAddress: "Gatuadress",
-    zipCity: "Postnummer & Ort", bankAccount: "Bank & Kontonummer", tripsAllowance: "Resor (Milersättning & Restid)",
-    assignmentDetails: "Ändamål (Vilka lag spelade?)", travelFrom: "Resa Från", travelTo: "Resa Till", roundTrip: "Tur & Retur",
-    distanceMil: "Antal Mil", calcAuto: "Beräkna avstånd (Auto)", calculating: "Beräknar...", addTrip: "Lägg till ytterligare en resa",
-    expensesAllowance: "Övriga Utlägg & Traktamente", description: "Beskrivning", amount: "Belopp (kr)", addExpense: "Lägg till utlägg",
-    overnightNights: "Övernattningstraktamente (Antal nätter)", advanceDeduction: "Avgår förskott (kr)", summary: "Sammanställning",
-    mileageComp: "Milersättning", travelTimeComp: "Restidsersättning", overnightComp: "Övernattningstraktamente",
-    otherExpenses: "Övriga Utlägg", totalToReceive: "Totalt att erhålla", downloadPDF: "Ladda ner PDF", sendToFed: "Skicka till Förbundet",
-    sendToSelf: "Skicka test till mig", sentSuccess: "Insänt & Klart!", sentSuccessFed: "Din reseräkning har skickats in till Förbundet.",
-    sentSuccessSelf: "En kopia har skickats till din e-post.", newInvoice: "Skapa ny reseräkning", selectGame: "-- Välj en av dina matcher --",
-    homeLocation: "Hem", homeAddressLabel: "Hemadress", foundAssignments: "Hittade uppdrag:", pastInvoices: "Tidigare reseräkningar",
-    historicalStats: "Historisk Statistik (Tidigare säsonger)", historicalGames: "Totalt dömda matcher",
-    historicalNote: "Datan kan redigeras av administratörer.", streetAddressHidden: "Gatuadress (Dold för andra)",
-    cityPublic: "Ort (Offentlig)", changePicture: "Byt bild", backToUmpireList: "Tillbaka till Domarlistan", contactInfo: "Kontaktuppgifter",
-    notProvided: "Ej angivet", homeAddress1: "Hemadress 1", cityPlaceholder: "Stockholm", saveDetails: "Spara uppgifter",
-    assignedMatchesCount: "tillsatta matcher", updateHistory: "Uppdatera historik", fillFromTo: "Fyll i både 'Från' och 'Till' för att beräkna avstånd.",
-    addressMissing: "Gatuadress och postort saknas.", coordsMissing: "Kunde inte hitta exakta koordinater.", routeMissing: "Kunde inte hitta en giltig körrutt.",
-    autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.", errorOccurred: "Ett fel uppstod. Vänligen försök igen.",
-    testInvoiceSentTo: "I test-syfte har reseräkningen skickats till", savedSuccess: "Sparat!",
-    conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.", interestRegistered: "Intresse anmält! Administratörerna ser nu din anmälan.",
-    conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.", sandboxLoaded: "50 test-matcher har laddats in i Sandbox!",
-    downloadICS: "Ladda ner (.ICS)", availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.",
+    requiredUmpires: "Antal domare",
+    level: "Nivå",
+    name: "Namn",
+    sortBy: "Sortera",
+    week: "V.",
+    login: "Logga in",
+    register: "Skapa konto",
+    email: "E-postadress",
+    phone: "Telefonnummer",
+    password: "Lösenord",
+    loginToContinue: "Logga in för att fortsätta",
+    noAccount: "Inget konto? Registrera dig här",
+    hasAccount: "Har du redan ett konto? Logga in",
+    adminManagement: "Administratörer",
+    masterAdminInfo: "Du är inloggad som Master Admin.",
+    linkedAccount: "Konto:",
+    notLinked: "Inget konto",
+    umpireProfile: "Domarprofil",
+    back: "Tillbaka",
+    assignedMatches: "Tillsatta matcher",
+    totalAssignments: "Tillsättningar",
+    totalInterests: "Intresseanmälningar",
+    deleteUmpireConfirm: "Är du säker på att du vill ta bort",
+    globalAnnouncement: "Globalt Meddelande",
+    saveAnnouncement: "Publicera",
+    clearAnnouncement: "Ta bort",
+    announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...",
+    bookedIn: "Bokad i",
+    coUmpires: "Dömer med:",
+    noCoUmpires: "Inga meddomare",
+    calendarColumn: "Kalender",
+    gameDetails: "Matchinformation",
+    mapDirections: "Öppna Karta",
+    officials: "Domarteam",
+    supervisor: "Supervisor",
+    techComm: "Technical Commissioner",
+    notAssigned: "Ej tillsatt",
+    yourGame: "Din match",
+    marketplace: "Marknad",
+    marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.",
+    tradeGame: "Byt bort",
+    cancelTrade: "Ångra byte",
+    takeGame: "Ta match",
+    expressInterest: "Anmäl intresse",
+    gamesForTrade: "Matcher som bytes bort",
+    missingUmpires: "Matcher som saknar domare",
+    noMarketplaceGames: "Inga matcher på marknaden just nu.",
+    tradeSuccess: "Du har tagit över matchen!",
+    tradeConfirm: "Är du säker på att du vill ta över denna match?",
+    evaluate: "Utvärdera",
+    grade: "Betyg",
+    feedback: "Feedback",
+    saveEval: "Spara utvärdering",
+    evalSaved: "Utvärdering sparad",
+    yourEval: "Utvärdering",
+    selectAdmin: "Välj Admin...",
+    enterTCName: "Ange namn på TC...",
+    umpireShort: "DOMARE",
+    supShort: "SUP",
+    tcShort: "TC",
+    address: "Adress",
+    facilities: "Faciliteter",
+    noFacilities: "Inga faciliteter",
+    addFacility: "Lägg till facilitet...",
+    editLocation: "Redigera plats",
+    matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.",
+    acceptTime: "Acceptera ny tid",
+    declineTime: "Kan inte (Avboka)",
+    timeChangedBadge: "Tid Ändrad",
+    actionRequired: "Kräver åtgärd",
+    superAdminSettings: "Systemarkitektur (Super Admin)",
+    featureMarketplace: "Aktivera Marknadsplats",
+    featureEvaluations: "Aktivera Utvärderingar",
+    featureReminders: "E-postpåminnelser",
+    reminderPreferences: "Mina Notiser",
+    receiveReminders: "Få e-postpåminnelser",
+    runRemindersNow: "Kör Påminnelser Nu",
+    invoiceTitle: "Reseräkning",
+    digitalSubmission: "Digital inlämning",
+    personalInfo: "Personuppgifter",
+    pnr: "Personnummer",
+    streetAddress: "Gatuadress",
+    zipCity: "Postnummer & Ort",
+    bankAccount: "Bank & Kontonummer",
+    tripsAllowance: "Resor (Milersättning & Restid)",
+    assignmentDetails: "Ändamål (Vilka lag spelade?)",
+    travelFrom: "Resa Från",
+    travelTo: "Resa Till",
+    roundTrip: "Tur & Retur",
+    distanceMil: "Antal Mil",
+    calcAuto: "Beräkna avstånd (Auto)",
+    calculating: "Beräknar...",
+    addTrip: "Lägg till ytterligare en resa",
+    expensesAllowance: "Övriga Utlägg & Traktamente",
+    description: "Beskrivning",
+    amount: "Belopp (kr)",
+    addExpense: "Lägg till utlägg",
+    overnightNights: "Övernattningstraktamente (Antal nätter)",
+    advanceDeduction: "Avgår förskott (kr)",
+    summary: "Sammanställning",
+    mileageComp: "Milersättning",
+    travelTimeComp: "Tilläggsarvode (Lång resa)",
+    overnightComp: "Övernattningstraktamente",
+    otherExpenses: "Övriga Utlägg",
+    totalToReceive: "Totalt att erhålla",
+    downloadPDF: "Ladda ner PDF",
+    sendToFed: "Skicka till Förbundet",
+    sendToSelf: "Skicka test till mig",
+    sentSuccess: "Insänt & Klart!",
+    sentSuccessFed: "Din reseräkning har skickats in till Förbundet.",
+    sentSuccessSelf: "En kopia har skickats till din e-post.",
+    newInvoice: "Skapa ny reseräkning",
+    selectGame: "-- Välj en av dina matcher --",
+    homeLocation: "Hem",
+    homeAddressLabel: "Hemadress",
+    foundAssignments: "Hämta från schema:",
+    pastInvoices: "Tidigare reseräkningar",
+    historicalStats: "Historisk Statistik (Tidigare säsonger)",
+    historicalGames: "Totalt dömda matcher",
+    historicalNote: "Datan kan redigeras av administratörer.",
+    streetAddressHidden: "Gatuadress (Dold för andra)",
+    cityPublic: "Ort (Offentlig)",
+    changePicture: "Byt bild",
+    backToUmpireList: "Tillbaka till Domarlistan",
+    contactInfo: "Kontaktuppgifter",
+    notProvided: "Ej angivet",
+    homeAddress1: "Hemadress 1",
+    cityPlaceholder: "Stockholm",
+    saveDetails: "Spara uppgifter",
+    assignedMatchesCount: "tillsatta matcher",
+    updateHistory: "Uppdatera historik",
+    fillFromTo: "Fyll i både 'Från' och 'Till' för att kunna beräkna avståndet automatiskt.",
+    addressMissing: "Gatuadress och postort saknas.",
+    coordsMissing: "Kunde inte hitta exakta koordinater.",
+    routeMissing: "Kunde inte hitta en giltig körrutt.",
+    autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.",
+    errorOccurred: "Ett fel uppstod. Vänligen försök igen.",
+    testInvoiceSentTo: "I test-syfte har reseräkningen skickats till",
+    savedSuccess: "Sparat!",
+    conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.",
+    interestRegistered: "Intresse anmält! Administratörerna ser nu din anmälan.",
+    conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.",
+    sandboxLoaded: "50 test-matcher har laddats in i Sandbox!",
+    downloadICS: "Ladda ner (.ICS)",
+    availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.",
     availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.",
-    availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.", assigned: "TILLSATTA", takeOverFrom: "Ta över från",
-    spotsAvailable: "plats(er) lediga", noInterestsYet: "Inga intresseanmälningar ännu.", currentCrew: "Aktuellt Domarteam",
-    noUmpiresAssigned: "Inga domare tillsatta.", manualAssign: "+ Manuell tilldelning...", assignBtn: "Tilldela", removeBtn: "Ta bort",
-    pasteSchedulePlaceholder: "Klistra in spelschema...", unknown: "Okänd", sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
-    deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?", deleteAvatar: "Ta bort bild", open: "Öppna"
+    availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.",
+    assigned: "TILLSATTA",
+    takeOverFrom: "Ta över från",
+    spotsAvailable: "plats(er) lediga",
+    noInterestsYet: "Inga intresseanmälningar ännu.",
+    currentCrew: "Aktuellt Domarteam",
+    noUmpiresAssigned: "Inga domare tillsatta.",
+    manualAssign: "+ Manuell tilldelning...",
+    assignBtn: "Tilldela",
+    removeBtn: "Ta bort",
+    pasteSchedulePlaceholder: "Klistra in spelschema...",
+    unknown: "Okänd",
+    sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
+    deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?",
+    deleteAvatar: "Ta bort bild",
+    open: "Öppna",
+    droveCar: "Egen bil",
+    carpooling: "Samåker",
+    invoiceCommentLabel: "Övriga kommentarer",
+    invoiceCommentPlaceholder: "T.ex. privat övernattning, samåker med [Namn], eller avvikande rutt...",
+    receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se."
   },
   en: {
-    appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile",
-    umpireList: "Umpire List", staffing: "Staffing", analytics: "Analytics", history: "History", upcoming: "Upcoming",
-    archived: "Archived Games", activeSchedule: "Active Schedule", searchPlaceholder: "Search...", allSeries: "All Series",
-    allLocations: "All Locations", noGames: "No games found.", syncNow: "Sync Data Now", applied: "Interested",
-    interested: "Interested", withdraw: "Withdraw", assignedTo: "Crew", staffed: "Fully Staffed", partiallyStaffed: "Partially Staffed",
-    needsUmpire: "Needs Umpire", bulkImport: "Bulk Import", pendingAssignments: "Staffing Desk", staffingControl: "Staffing Control",
-    hideStaffed: "Hide Fully Staffed", showAll: "Show All Games", removeAssignment: "Remove", deleteGame: "Delete Game",
-    deleteConfirm: "Are you sure you want delete this game?", deleteAllGames: "Clear Entire Season",
-    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.", deleteAllSuccess: "Season cleared successfully.",
-    downloadBackup: "Download Backup (JSON)", umpire: "Umpire", interests: "Interests", gamesAssigned: "Games Assigned",
-    assignmentRate: "Assignment Rate", noStats: "No data recorded yet.", mySchedule: "My Schedule",
-    noAssignedMatches: "You have no confirmed assignments yet.", noPendingInterest: "You haven't marked interest in any matches.",
-    confirmed: "Confirmed", settings: "Settings", userSettings: "User Settings", profileAccess: "Configure profile & access",
-    displayName: "Display Name", namePlaceholder: "Search or type name...", logout: "Logout", close: "Close", status: "Status",
-    setProfile: "Select Your Profile", pasteSheet: "Paste from Google Sheets", addGames: "Add Games", importSuccess: "Import Successful",
-    cancel: "Cancel", date: "Date", crew: "Umpire Crew", addToCalendar: "Add to Calendar", downloadFullSchedule: "Download (.ics)",
-    confirmedGames: "Confirmed Assignments", interestedGames: "Interested Matches", nameRequiredTitle: "Who are you?",
-    nameRequiredDesc: "Select your name from the list below to sync your schedule.", saveName: "Select Profile",
-    addNewName: "Can't find your name?", createUmpire: "Create new profile", masterList: "Umpire Master List",
-    editName: "Edit Name", save: "Save", selectFromList: "Select from list", changeUser: "Change User", editMatch: "Edit Match",
-    home: "Home", away: "Away", time: "Time", location: "Location", locations: "Locations", league: "League", saveChanges: "Save Changes",
-    listView: "List", calendarView: "Calendar", days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    appTitle: "Umpire Portal",
+    season: "Season",
+    schedule: "Schedule",
+    myGames: "My Games",
+    myProfile: "My Profile",
+    umpireList: "Umpire List",
+    staffing: "Staffing",
+    analytics: "Analytics",
+    history: "History",
+    upcoming: "Upcoming",
+    archived: "Archived Games",
+    activeSchedule: "Active Schedule",
+    searchPlaceholder: "Search...",
+    allSeries: "All Series",
+    allLocations: "All Locations",
+    filterStatusAll: "All Statuses",
+    needsUmpire: "Needs Umpire",
+    noInterests: "No Interests",
+    noGames: "No games found.",
+    syncNow: "Sync Federation Data Now",
+    applied: "Interested",
+    interested: "Interested",
+    withdraw: "Withdraw",
+    assignedTo: "Crew",
+    staffed: "Fully Staffed",
+    partiallyStaffed: "Partially Staffed",
+    bulkImport: "Bulk Import",
+    pendingAssignments: "Staffing Desk",
+    staffingControl: "Staffing Control",
+    hideStaffed: "Hide Fully Staffed",
+    showAll: "Show All Games",
+    removeAssignment: "Remove",
+    deleteGame: "Delete Game",
+    deleteConfirm: "Are you sure you want delete this game?",
+    deleteAllGames: "Clear Entire Season",
+    deleteAllConfirm: "ARE YOU ABSOLUTELY SURE? This will delete ALL data.",
+    deleteAllSuccess: "Season cleared successfully.",
+    downloadBackup: "Download Backup (JSON)",
+    umpire: "Umpire",
+    interests: "Interests",
+    gamesAssigned: "Games Assigned",
+    assignmentRate: "Assignment Rate",
+    noStats: "No engagement data recorded yet.",
+    mySchedule: "My Schedule",
+    noAssignedMatches: "You have no confirmed assignments yet.",
+    noPendingInterest: "You haven't marked interest in any matches.",
+    confirmed: "Confirmed",
+    settings: "Settings",
+    userSettings: "User Settings",
+    profileAccess: "Configure profile & access",
+    displayName: "Display Name",
+    namePlaceholder: "Search or type name...",
+    logout: "Logout",
+    close: "Close",
+    status: "Status",
+    setProfile: "Select Your Profile",
+    pasteSheet: "Paste from Google Sheets",
+    addGames: "Add Games",
+    importSuccess: "Import Successful",
+    cancel: "Cancel",
+    date: "Date",
+    crew: "Umpire Crew",
+    addToCalendar: "Add to Calendar",
+    downloadFullSchedule: "Download (.ics)",
+    confirmedGames: "Confirmed Assignments",
+    interestedGames: "Interested Matches",
+    nameRequiredTitle: "Who are you?",
+    nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.",
+    saveName: "Select Profile",
+    addNewName: "Can't find your name?",
+    createUmpire: "Create new profile",
+    masterList: "Umpire Master List",
+    editName: "Edit Name",
+    save: "Save",
+    selectFromList: "Select from list",
+    changeUser: "Change User",
+    editMatch: "Edit Match Details",
+    home: "Home",
+    away: "Away",
+    time: "Time",
+    location: "Location",
+    locations: "Locations",
+    league: "League",
+    saveChanges: "Save Changes",
+    listView: "List",
+    calendarView: "Calendar",
+    days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    requiredUmpires: "Crew Size", level: "Level", name: "Name", sortBy: "Sort by", week: "W.", login: "Login", register: "Register",
-    email: "Email Address", phone: "Phone Number", password: "Password", loginToContinue: "Login to continue",
-    noAccount: "No account? Register here", hasAccount: "Already have an account? Login", adminManagement: "Admin Roles",
-    masterAdminInfo: "You are logged in as Master Admin.", linkedAccount: "Account:", notLinked: "No account",
-    umpireProfile: "Umpire Profile", back: "Back", assignedMatches: "Assigned Matches", totalAssignments: "Assignments",
-    totalInterests: "Interests", deleteUmpireConfirm: "Are you sure you want to remove", globalAnnouncement: "Global Announcement",
-    saveAnnouncement: "Publish", clearAnnouncement: "Clear", announcementPlaceholder: "Type an important message for everyone...",
-    bookedIn: "Booked in", coUmpires: "Co-umpires:", noCoUmpires: "No co-umpires", calendarColumn: "Calendar",
-    gameDetails: "Game Details", mapDirections: "Open Map", officials: "Officials", supervisor: "Supervisor",
-    techComm: "Technical Commissioner", notAssigned: "Not Assigned", yourGame: "Your Game", marketplace: "Marketplace",
-    marketplaceDesc: "Find games that other umpires are giving away or missing umpires.", tradeGame: "Give Away",
-    cancelTrade: "Cancel Give Away", takeGame: "Take Game", expressInterest: "Express Interest", gamesForTrade: "Games Up For Trade",
-    missingUmpires: "Games missing umpires", noMarketplaceGames: "No games are up for trade right now.",
-    tradeSuccess: "You have taken over the game!", tradeConfirm: "Are you sure you want to take over this game?",
-    evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved",
-    yourEval: "Evaluation", selectAdmin: "Select Admin...", enterTCName: "Enter TC name...", umpireShort: "UMP", supShort: "SUP", tcShort: "TC",
-    address: "Address", facilities: "Facilities", noFacilities: "No facilities listed", addFacility: "Add facility...",
-    editLocation: "Edit Location", matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
-    acceptTime: "Accept New Time", declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required",
-    superAdminSettings: "System Architecture (Super Admin)", featureMarketplace: "Enable Marketplace (Trade Board)",
-    featureEvaluations: "Enable Evaluation System", featureReminders: "Automated Email Reminders", reminderPreferences: "My Notifications",
-    receiveReminders: "Receive email reminders for upcoming games", runRemindersNow: "Run Reminders Cron", invoiceTitle: "Travel Invoice",
-    digitalSubmission: "Digital Submission", personalInfo: "Personal Information", pnr: "Personal ID (PNR)", streetAddress: "Street Address",
-    zipCity: "Zip Code & City", bankAccount: "Bank Account", tripsAllowance: "Trips (Mileage & Travel Time)",
-    assignmentDetails: "Assignment (Which teams played?)", travelFrom: "Travel From", travelTo: "Travel To", roundTrip: "Round Trip",
-    distanceMil: "Distance (Mil)", calcAuto: "Calculate Distance (Auto)", calculating: "Calculating...", addTrip: "Add another trip",
-    expensesAllowance: "Other Expenses & Allowance", description: "Description", amount: "Amount", addExpense: "Add Expense",
-    overnightNights: "Overnight Allowance (Nights)", advanceDeduction: "Advance Deduction", summary: "Summary",
-    mileageComp: "Mileage Compensation", travelTimeComp: "Travel Time Compensation", overnightComp: "Overnight Allowance",
-    otherExpenses: "Other Expenses", totalToReceive: "Total to Receive", downloadPDF: "Download PDF", sendToFed: "Send to Federation",
-    sendToSelf: "Send Test to Me", sentSuccess: "Submitted Successfully!", sentSuccessFed: "Your invoice has been submitted.",
-    sentSuccessSelf: "A copy has been sent to your email.", newInvoice: "Create new invoice", selectGame: "-- Select an assigned game --",
-    homeLocation: "Home", homeAddressLabel: "Home Address", foundAssignments: "Found assignments:", pastInvoices: "Past Invoices",
-    historicalStats: "Historical Stats", historicalGames: "Total officiated games", historicalNote: "Data can be edited by an admin.",
-    streetAddressHidden: "Street Address (Hidden)", cityPublic: "City (Public)", changePicture: "Change Picture",
-    backToUmpireList: "Back to Umpire List", contactInfo: "Contact Information", notProvided: "Not provided", homeAddress1: "Home Address 1",
-    cityPlaceholder: "Stockholm", saveDetails: "Save Details", assignedMatchesCount: "assigned games", updateHistory: "Update History",
-    fillFromTo: "Fill in both 'From' and 'To' to calculate distance.", addressMissing: "Street address and city are missing.",
-    coordsMissing: "Could not find exact coordinates.", routeMissing: "Could not find a valid driving route.",
-    autoCalcFailed: "Automatic calculation failed. Enter distance manually.", errorOccurred: "An error occurred. Please try again.",
-    testInvoiceSentTo: "For testing purposes, the invoice was sent to", savedSuccess: "Saved!",
-    conflictApply: "Cannot apply! You are already booked in {location} on this day.", interestRegistered: "Interest registered!",
-    conflictAssign: "Cannot assign! {name} is already booked in {location} on this day.", sandboxLoaded: "50 test games loaded into Sandbox!",
-    downloadICS: "Download (.ICS)", availabilityWarningTitle: "Deadline for availability is today.",
-    availabilityWarningDesc1: "If you have not submitted your availability, you will not receive games.", availabilityWarningDesc2: "We assign games until June.",
-    assigned: "ASSIGNED", takeOverFrom: "Take over from", spotsAvailable: "spot(s) available", noInterestsYet: "No interests marked yet.",
-    currentCrew: "Current Crew", noUmpiresAssigned: "No umpires assigned.", manualAssign: "+ Manual Assignment...", assignBtn: "Assign",
-    removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown", sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED",
-    deleteAvatarConfirm: "Are you sure you want to remove your profile picture?", deleteAvatar: "Remove picture", open: "Open"
+    requiredUmpires: "Crew Size",
+    level: "Level",
+    name: "Name",
+    sortBy: "Sort by",
+    week: "W.",
+    systemUpdates: "System Updates",
+    fetchError: "Could not fetch data",
+    login: "Login",
+    register: "Register",
+    email: "Email Address",
+    phone: "Phone Number",
+    password: "Password",
+    forgotPassword: "Forgot Password?",
+    loginToContinue: "Login to continue",
+    createAnAccount: "Create a new account",
+    noAccount: "No account? Register here",
+    hasAccount: "Already have an account? Login",
+    loginRequiredMsg: "You must be logged in to view this.",
+    adminManagement: "Admin Roles",
+    addAdmin: "Add Admin",
+    adminAdded: "Admin added",
+    adminRemoved: "Admin removed",
+    masterAdminInfo: "You are logged in as Master Admin.",
+    linkedAccount: "Account:",
+    notLinked: "No account",
+    linkEmailPlaceholder: "Link email...",
+    selectEmail: "-- Select Email --",
+    otherEmail: "+ Enter other...",
+    umpireProfile: "Umpire Profile",
+    back: "Back",
+    assignedMatches: "Assigned Matches",
+    noAssignedMatches: "No assigned matches yet.",
+    totalAssignments: "Assignments",
+    totalInterests: "Interests",
+    deleteUmpireConfirm: "Are you sure you want to remove",
+    umpireDeletedSubject: "Your umpire profile has been removed",
+    umpireDeletedBody: "Hello,\n\nAn admin has removed your umpire profile from the scheduling system.",
+    assignmentEmailSubject: "New Match Assignment",
+    assignmentEmailBody: "Hello {name},\n\nYou have been assigned to the match {away} @ {home} on {date} at {time}.",
+    myGamesReminder: "Important! If you need to cancel an assigned game, it is your responsibility to find a replacement and notify the elite umpire group.",
+    globalAnnouncement: "Global Announcement",
+    saveAnnouncement: "Publish",
+    clearAnnouncement: "Clear",
+    announcementPlaceholder: "Type an important message to display to everyone...",
+    helpAndInfo: "Help & Info",
+    guide: "Getting Started",
+    faq: "FAQ",
+    about: "About App",
+    guideStep1Title: "1. Create an account",
+    guideStep1Desc: "Click the login icon and select 'Create a new account'. Fill in your email address and a secure password.",
+    guideStep2Title: "2. Search for your profile",
+    guideStep2Desc: "Immediately after logging in, the 'Who are you?' prompt appears. Type your name into the search bar.",
+    guideStep3Title: "3. Confirm & Link",
+    guideStep3Desc: "Click your name in the list. This permanently links your account to the official profile, syncing your schedule across devices.",
+    guideStep4Title: "4. Name Missing?",
+    guideStep4Desc: "If you are completely new and not in the list, click 'Can't find your name?' to create a brand new profile from scratch.",
+    faq1Q: "Can I change my linked profile if I made a mistake?",
+    faq1A: "No, for security reasons your account is locked to the chosen profile. Contact an administrator to reset the link.",
+    faq2Q: "How do I apply to umpire a game?",
+    faq2A: "Navigate to 'Schedule' and click the blue 'Interested' button next to the games you are available for.",
+    faq3Q: "Who assigns the games?",
+    faq3A: "You mark your interest, but the Elite Umpire Group/Administrators make the final staffing assignments.",
+    faq4Q: "Why is my stats page empty?",
+    faq4A: "Your statistics will be generated as soon as you mark interest for a game or receive an assignment.",
+    faq5Q: "How does the marketplace work?",
+    faq5A: "If you cannot umpire a game, click 'Give Away' under My Games. It will be listed on the Marketplace. You are responsible for the game until someone else clicks 'Take Game'.",
+    loadingReadme: "Fetching README from GitHub...",
+    contactUs: "Contact Us",
+    contactDesc: "Need help or have a question? Send us a message and we'll assist you.",
+    subject: "Subject",
+    message: "Message",
+    sendMsg: "Send Message",
+    sending: "Sending...",
+    msgSentTitle: "Message Sent!",
+    msgSentDesc: "Thank you for your message. We will get back to you as soon as possible at the provided email address.",
+    sendAnother: "Send another message",
+    shareGuide: "Share Guide",
+    linkCopied: "Link copied to clipboard!",
+    sendSchedules: "Send Schedules",
+    reviewEmails: "Review Emails",
+    customEmailMessage: "Custom Message (Optional)",
+    customEmailPlaceholder: "Type a message to appear at the top of the email for everyone...",
+    sendAllEmails: "Send to {count} umpires",
+    missingEmailWarning: "{count} umpires have assignments but no email linked:",
+    emailPreview: "Email Preview",
+    emailsSentSuccess: "All schedules have been sent successfully!",
+    bookedIn: "Booked in",
+    filterStatusAll: "All Statuses",
+    noInterests: "No Interests",
+    coUmpires: "Co-umpires:",
+    noCoUmpires: "No co-umpires",
+    calendarColumn: "Calendar",
+    gameDetails: "Game Details",
+    mapDirections: "Open Map",
+    officials: "Officials",
+    supervisor: "Supervisor",
+    techComm: "Technical Commissioner",
+    notAssigned: "Not Assigned",
+    yourGame: "Your Game",
+    marketplace: "Marketplace",
+    marketplaceDesc: "Find games that other umpires are giving away or games missing umpires. Taking a game immediately assigns it to you.",
+    tradeGame: "Give Away",
+    cancelTrade: "Cancel Give Away",
+    takeGame: "Take Game",
+    gamesForTrade: "Games Up For Trade",
+    noMarketplaceGames: "No games are up for trade right now.",
+    tradeSuccess: "You have taken over the game! Your schedule is updated.",
+    tradeConfirm: "Are you sure you want to take over this game?",
+    downloadCalendar: "Download",
+    formatICS: ".ICS File",
+    subtextICS: "For Apple & Outlook",
+    formatCSV: ".CSV File",
+    subtextCSV: "For Google Calendar",
+    evaluate: "Evaluate",
+    grade: "Grade",
+    feedback: "Feedback / Comment",
+    saveEval: "Save Evaluation",
+    evalSaved: "Evaluation Saved",
+    yourEval: "Evaluation",
+    selectAdmin: "Select Admin...",
+    selectUmpire: "Select Umpire...",
+    enterTCName: "Enter TC name...",
+    umpireShort: "UMP",
+    supShort: "SUP",
+    tcShort: "TC",
+    locations: "Locations",
+    address: "Address",
+    facilities: "Facilities",
+    noFacilities: "No facilities listed",
+    addFacility: "Add facility...",
+    editLocation: "Edit Location",
+    noLocationsInfo: "Click on a location to view details or add an address and facilities.",
+    matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
+    acceptTime: "Accept New Time",
+    declineTime: "Cannot Make It",
+    timeChangedBadge: "Time Changed",
+    pendingReply: "Pending Reply",
+    emailMatchMovedSubject: "Schedule Updated ({count} games) / Spelschema uppdaterat",
+    emailMatchMovedBody: "Hello {name},\n\nThe following games you are assigned to have been rescheduled:\n\n{changesListEn}\n\nPlease log in to the portal to confirm if you can still make these games, or withdraw if you cannot.\n\n---\n\nHej {name},\n\nFöljande matcher som du är tillsatt på har bytt datum eller tid:\n\n{changesListSv}\n\nVänligen logga in på domarportalen för att bekräfta om du fortfarande kan döma nämnda matcher, eller om du måste lämna återbud.",
+    pendingEmailsQueued: "⏳ {count} email notifications are queued for rescheduled games.",
+    sendQueuedNow: "Send Now",
+    actionRequired: "Action Required",
+    superAdminSettings: "System Architecture (Super Admin)",
+    featureMarketplace: "Enable Marketplace (Trade Board)",
+    featureEvaluations: "Enable Evaluation System",
+    featureReminders: "Automated Email Reminders (Upcoming Games)",
+    reminderPreferences: "My Notifications",
+    receiveReminders: "Receive email reminders for my upcoming games",
+    runRemindersNow: "Run Reminders Cron",
+    invoiceTitle: "Travel Invoice",
+    digitalSubmission: "Digital Submission",
+    personalInfo: "Personal Information",
+    pnr: "Personal ID (PNR)",
+    streetAddress: "Street Address",
+    zipCity: "Zip Code & City",
+    bankAccount: "Bank Account",
+    tripsAllowance: "Trips (Mileage & Travel Time)",
+    assignmentDetails: "Assignment (Which teams played?)",
+    travelFrom: "Travel From",
+    travelTo: "Travel To",
+    roundTrip: "Round Trip",
+    distanceMil: "Distance (Mil)",
+    calcAuto: "Calculate Distance (Auto)",
+    calculating: "Calculating...",
+    addTrip: "Add another trip",
+    expensesAllowance: "Other Expenses & Allowance",
+    description: "Description",
+    amount: "Amount (SEK)",
+    addExpense: "Add Expense",
+    overnightNights: "Overnight Allowance (Nights)",
+    advanceDeduction: "Advance Deduction (SEK)",
+    summary: "Summary",
+    mileageComp: "Mileage Compensation",
+    travelTimeComp: "Additional Fee (Long travel)",
+    overnightComp: "Overnight Allowance",
+    otherExpenses: "Other Expenses",
+    totalToReceive: "Total to Receive",
+    downloadPDF: "Download PDF",
+    sendToFed: "Send to Federation",
+    sendToSelf: "Send Test to Me",
+    sentSuccess: "Submitted Successfully!",
+    sentSuccessFed: "Your invoice has been submitted to the Federation.",
+    sentSuccessSelf: "A copy has been sent to your email.",
+    newInvoice: "Create new invoice",
+    selectGame: "-- Select an assigned game --",
+    homeLocation: "Home",
+    homeAddressLabel: "Home Address",
+    foundAssignments: "Load from schedule:",
+    pastInvoices: "Past Invoices",
+    historicalStats: "Historical Stats",
+    historicalGames: "Total officiated games",
+    historicalNote: "Data can be edited by an admin.",
+    streetAddressHidden: "Street Address (Hidden)",
+    cityPublic: "City (Public)",
+    changePicture: "Change Picture",
+    backToUmpireList: "Back to Umpire List",
+    contactInfo: "Contact Information",
+    notProvided: "Not provided",
+    homeAddress1: "Home Address 1",
+    cityPlaceholder: "Stockholm",
+    saveDetails: "Save Details",
+    assignedMatchesCount: "assigned games",
+    updateHistory: "Update History",
+    fillFromTo: "Fill in both 'From' and 'To' to calculate distance.",
+    addressMissing: "Street address and city are missing.",
+    coordsMissing: "Could not find exact coordinates.",
+    routeMissing: "Could not find a valid driving route.",
+    autoCalcFailed: "Automatic calculation failed. Enter distance manually.",
+    errorOccurred: "An error occurred. Please try again.",
+    testInvoiceSentTo: "For testing purposes, the invoice was sent to",
+    savedSuccess: "Saved!",
+    conflictApply: "Cannot apply! You are already booked in {location} on this day.",
+    interestRegistered: "Interest registered! Administrators can now see that you want to take the game.",
+    conflictAssign: "Cannot assign! {name} is already booked in {location} on this day.",
+    sandboxLoaded: "50 test games have been loaded into your local Sandbox!",
+    downloadICS: "Download (.ICS)",
+    availabilityWarningTitle: "The deadline for submitting availability is today.",
+    availabilityWarningDesc1: "If you have not submitted your availability, you will not receive any games this coming season.",
+    availabilityWarningDesc2: "We are assigning games until the end of June.",
+    assigned: "ASSIGNED",
+    takeOverFrom: "Take over from",
+    spotsAvailable: "spot(s) available",
+    noInterestsYet: "No interests marked yet.",
+    currentCrew: "Current Crew",
+    noUmpiresAssigned: "No umpires assigned.",
+    manualAssign: "+ Manual Assignment...",
+    assignBtn: "Assign",
+    removeBtn: "Remove",
+    pasteSchedulePlaceholder: "Paste schedule here...",
+    unknown: "Unknown",
+    sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED TO PRODUCTION",
+    deleteAvatarConfirm: "Are you sure you want to remove your profile picture?",
+    deleteAvatar: "Remove picture",
+    open: "Open",
+    droveCar: "My Car",
+    carpooling: "Carpool",
+    invoiceCommentLabel: "Additional Comments",
+    invoiceCommentPlaceholder: "E.g. private accommodation, carpooling with [Name], or route changes...",
+    receiptsReminder: "NOTE! If you have additional expenses, don't forget to email the receipts to info@sbslf.se."
   }
 };
 
@@ -306,6 +755,7 @@ function UmpireProfileModal({
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
+        {/* Modal Header */}
         <div className="relative pt-12 pb-6 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
            <button onClick={() => setSelectedProfileId(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
            
@@ -344,6 +794,7 @@ function UmpireProfileModal({
            </div>
         </div>
 
+        {/* Modal Scrollable Body */}
         <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
@@ -445,7 +896,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
   });
 
   const [trips, setTrips] = useState([
-    { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true }
+    { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true, isDriver: true }
   ]);
 
   const [expenses, setExpenses] = useState([
@@ -454,6 +905,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
 
   const [advance, setAdvance] = useState('');
   const [overnightCount, setOvernightCount] = useState('');
+  const [invoiceComment, setInvoiceComment] = useState('');
 
   useEffect(() => {
     if (user && user.uid) {
@@ -507,7 +959,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
   };
 
   const addTrip = () => {
-    setTrips([...trips, { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true }]);
+    setTrips([...trips, { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true, isDriver: true }]);
   };
 
   const removeTrip = (id) => {
@@ -585,13 +1037,15 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
 
     trips.forEach(trip => {
       const dist = parseFloat(trip.distance) || 0;
-      totalMilage += dist;
+      if (trip.isDriver) {
+         totalMilage += dist;
+      }
       if (dist >= 20) travelBonus += 200;
       else if (dist >= 10) travelBonus += 100;
     });
 
     const milageCost = totalMilage * 25; 
-    const overnightCost = (parseInt(overnightCount) || 0) * 150;
+    const overnightCost = (parseInt(overnightCount) || 0) * 300;
     
     let totalExpenses = 0;
     expenses.forEach(exp => { totalExpenses += (parseFloat(exp.amount) || 0); });
@@ -626,6 +1080,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     if (inv.expenses && inv.expenses.length > 0) setExpenses(inv.expenses);
     setAdvance(inv.advance || '');
     setOvernightCount(inv.overnightCount || '');
+    setInvoiceComment(inv.invoiceComment || '');
     
     if (typeof window !== 'undefined') {
        window.scrollTo({ top: 300, behavior: 'smooth' });
@@ -670,7 +1125,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                  trips,
                  expenses,
                  advance,
-                 overnightCount
+                 overnightCount,
+                 invoiceComment
               });
            } catch(e) {}
         }
@@ -691,9 +1147,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         } catch(e) {}
       }
 
-      const tripsText = trips.map(t => `- ${t.date}: ${t.from} till ${t.to} (${t.roundTrip ? 'T&R' : 'Enkel'}), ${t.distance} mil. Ändamål: ${t.assignment}`).join('\n');
-      const expensesText = expenses.filter(e => e.description && e.amount).map(e => `- ${e.description}: ${e.amount} kr`).join('\n') || 'Inga övriga utlägg';
-
       const emailHtml = `
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
           <h2 style="color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px;">Reseräkning - ${personalInfo.name}</h2>
@@ -710,13 +1163,13 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
             <tr style="background: #f8fafc;">
               <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Datum & Ändamål</th>
-              <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Sträcka</th>
+              <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Rutt</th>
               <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Mil</th>
             </tr>
             ${trips.map(tr => `
               <tr>
                 <td style="padding: 8px; border: 1px solid #cbd5e1;">${tr.date}<br><small style="color: #64748b;">${tr.assignment}</small></td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${tr.from} &rarr; ${tr.to}<br><small style="color: #64748b;">${tr.roundTrip ? 'Tur & Retur' : 'Enkel'}</small></td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${tr.from} &rarr; ${tr.to} <small style="color: #64748b;">${tr.roundTrip ? '(T&R)' : '(Enkel)'}</small><br><small style="color: #1e3a8a; font-weight: bold;">${tr.isDriver ? 'Egen bil' : 'Samåker'}</small></td>
                 <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold;">${tr.distance}</td>
               </tr>
             `).join('')}
@@ -734,10 +1187,15 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
           </table>
           ` : ''}
 
+          ${invoiceComment ? `
+          <h3 style="color: #475569; margin-top: 20px;">Övriga kommentarer</h3>
+          <div style="padding: 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 14px; white-space: pre-wrap;">${invoiceComment}</div>
+          ` : ''}
+
           <h3 style="color: #475569; margin-top: 20px;">Sammanställning</h3>
           <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
             <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Milersättning</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; width: 120px;">${calculated.milageCost} kr</td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Restidsersättning</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${calculated.travelBonus} kr</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Tilläggsarvode</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${calculated.travelBonus} kr</td></tr>
             <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Övernattningstraktamente</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${calculated.overnightCost} kr</td></tr>
             <tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Övriga utlägg</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${calculated.totalExpenses} kr</td></tr>
             ${calculated.advance > 0 ? `<tr><td style="padding: 8px; border: 1px solid #cbd5e1;">Avgår förskott</td><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; color: #ef4444;">-${calculated.advance} kr</td></tr>` : ''}
@@ -771,7 +1229,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             trips,
             expenses,
             advance,
-            overnightCount
+            overnightCount,
+            invoiceComment
          });
       }
 
@@ -859,7 +1318,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                 <input required type="text" name="name" value={personalInfo.name} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-postadress</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-postadress (Kvitto skickas hit)</label>
                 <input required type="email" name="email" value={personalInfo.email} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
               </div>
               <div className="space-y-1">
@@ -890,7 +1349,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             
             <div className="space-y-6">
               {trips.map((trip, index) => {
-                const gamesOnDate = trip.date ? myAssignedGames.filter(g => g.date === trip.date) : [];
                 return (
                   <div key={trip.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative">
                     {trips.length > 1 && (
@@ -900,19 +1358,16 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                     )}
                     
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                      <div className="sm:col-span-3 space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
-                        <input required type="date" value={trip.date} onChange={(e) => handleTripChange(trip.id, 'date', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
-                      </div>
                       
-                      {gamesOnDate.length > 0 && (
-                        <div className="sm:col-span-9 bg-blue-100 p-2 rounded-lg flex items-center gap-2 mt-1">
-                          <span className="text-[10px] font-black text-blue-800 uppercase">{t.foundAssignments}</span>
+                      {myAssignedGames.length > 0 && (
+                        <div className="sm:col-span-12 bg-blue-100 p-2 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
+                          <span className="text-[10px] font-black text-blue-800 uppercase shrink-0">{t.foundAssignments}</span>
                           <select 
-                            className="flex-1 text-xs p-1.5 rounded-md border border-blue-200 bg-white"
+                            className="w-full sm:flex-1 text-xs p-1.5 rounded-md border border-blue-200 bg-white outline-none focus:ring-2 focus:ring-blue-500/20"
                             onChange={(e) => {
-                               const g = gamesOnDate.find(x => x.id === e.target.value);
+                               const g = myAssignedGames.find(x => x.id === e.target.value);
                                if(g) {
+                                  handleTripChange(trip.id, 'date', g.date);
                                   handleTripChange(trip.id, 'assignment', `${g.away} @ ${g.home}`);
                                   handleTripChange(trip.id, 'to', g.location);
                                   handleTripChange(trip.id, 'from', t.homeLocation);
@@ -920,33 +1375,45 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                             }}
                           >
                              <option value="">{t.selectGame}</option>
-                             {gamesOnDate.map(g => <option key={g.id} value={g.id}>{g.away} @ {g.home} ({g.time})</option>)}
+                             {myAssignedGames.map(g => <option key={g.id} value={g.id}>{g.date} | {g.away} @ {g.home}</option>)}
                           </select>
                         </div>
                       )}
 
-                      <div className={`space-y-1 ${gamesOnDate.length > 0 ? 'sm:col-span-12' : 'sm:col-span-9'}`}>
+                      <div className="sm:col-span-3 space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label>
+                        <input required type="date" value={trip.date} onChange={(e) => handleTripChange(trip.id, 'date', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                      </div>
+
+                      <div className="sm:col-span-9 space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.assignmentDetails}</label>
-                        <input required type="text" value={trip.assignment} onChange={(e) => handleTripChange(trip.id, 'assignment', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
+                        <input required type="text" value={trip.assignment} onChange={(e) => handleTripChange(trip.id, 'assignment', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
                       </div>
                       
                       <div className="sm:col-span-4 space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelFrom}</label>
-                        <input required type="text" list="location-list" value={trip.from} onChange={(e) => handleTripChange(trip.id, 'from', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
+                        <input required type="text" list="location-list" value={trip.from} onChange={(e) => handleTripChange(trip.id, 'from', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
                       </div>
                       <div className="sm:col-span-4 space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelTo}</label>
-                        <input required type="text" list="location-list" value={trip.to} onChange={(e) => handleTripChange(trip.id, 'to', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" />
+                        <input required type="text" list="location-list" value={trip.to} onChange={(e) => handleTripChange(trip.id, 'to', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
                       </div>
-                      <div className="sm:col-span-2 space-y-1 flex flex-col justify-end">
+                      <div className="sm:col-span-4 space-y-1 flex flex-col justify-end">
                         <label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]">
                           <input type="checkbox" checked={trip.roundTrip} onChange={(e) => handleTripChange(trip.id, 'roundTrip', e.target.checked)} className="w-4 h-4 text-blue-600" />
                           <span className="text-[10px] font-black uppercase text-slate-600">{t.roundTrip}</span>
                         </label>
                       </div>
-                      <div className="sm:col-span-2 space-y-1">
+
+                      <div className="sm:col-span-8 space-y-1 flex flex-col justify-end">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]">
+                          <input type="checkbox" checked={trip.isDriver} onChange={(e) => handleTripChange(trip.id, 'isDriver', e.target.checked)} className="w-4 h-4 text-blue-600" />
+                          <span className="text-[10px] font-black uppercase text-slate-600 truncate">{trip.isDriver ? t.droveCar : t.carpooling}</span>
+                        </label>
+                      </div>
+                      <div className="sm:col-span-4 space-y-1">
                         <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.distanceMil}</label>
-                        <input required type="number" step="0.1" value={trip.distance} onChange={(e) => handleTripChange(trip.id, 'distance', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-blue-600" />
+                        <input required type="number" step="0.1" value={trip.distance} onChange={(e) => handleTripChange(trip.id, 'distance', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500/20" />
                       </div>
                     </div>
 
@@ -975,12 +1442,17 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
               <CreditCard className="w-4 h-4" /> {t.expensesAllowance}
             </h2>
+
+            <div className="bg-amber-50 text-amber-800 p-3 rounded-xl text-xs font-medium mb-4 flex items-start gap-2">
+              <Info className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>{t.receiptsReminder}</p>
+            </div>
             
             <div className="space-y-4 mb-6">
               {expenses.map((exp) => (
                 <div key={exp.id} className="flex items-center gap-4">
-                  <input type="text" placeholder={t.description} value={exp.description} onChange={(e) => handleExpenseChange(exp.id, 'description', e.target.value)} className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                  <input type="number" placeholder={t.amount} value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-32 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
+                  <input type="text" placeholder={t.description} value={exp.description} onChange={(e) => handleExpenseChange(exp.id, 'description', e.target.value)} className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                  <input type="number" placeholder={t.amount} value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-32 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
                   {expenses.length > 1 && (
                     <button type="button" onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-red-500"><X className="w-5 h-5"/></button>
                   )}
@@ -996,7 +1468,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                 <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.overnightNights}</label>
                 <div className="relative">
                   <input type="number" min="0" value={overnightCount} onChange={(e) => setOvernightCount(e.target.value)} placeholder="0" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">á 150 kr</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">á 300 kr</span>
                 </div>
               </div>
               <div className="space-y-1">
@@ -1004,6 +1476,18 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                 <input type="number" value={advance} onChange={(e) => setAdvance(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
               </div>
             </div>
+          </div>
+
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+             <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" /> {t.invoiceCommentLabel}
+             </h2>
+             <textarea 
+               value={invoiceComment} 
+               onChange={(e) => setInvoiceComment(e.target.value)} 
+               placeholder={t.invoiceCommentPlaceholder}
+               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[100px]" 
+             />
           </div>
 
           <div className="bg-slate-800 text-white p-6 sm:p-8 rounded-3xl shadow-xl">
@@ -1017,11 +1501,11 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                 <span>{calculated.milageCost} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">{t.travelTimeComp} (>10 mil: 100kr, >20 mil: 200kr)</span>
+                <span className="text-slate-300">{t.travelTimeComp}</span>
                 <span>{calculated.travelBonus} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-                <span className="text-slate-300">{t.overnightComp} ({overnightCount || 0} st)</span>
+                <span className="text-slate-300">{t.overnightComp} ({overnightCount || 0} st á 300kr)</span>
                 <span>{calculated.overnightCost} kr</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-700 pb-2">
@@ -1120,9 +1604,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             <tr className="bg-gray-100">
               <th className="border border-black p-1.5 text-left">{t.date}</th>
               <th className="border border-black p-1.5 text-left">Ändamål</th>
-              <th className="border border-black p-1.5 text-left">Från</th>
-              <th className="border border-black p-1.5 text-left">Till</th>
-              <th className="border border-black p-1.5 text-center">T&R</th>
+              <th className="border border-black p-1.5 text-left">Rutt</th>
+              <th className="border border-black p-1.5 text-center">Fordon</th>
               <th className="border border-black p-1.5 text-right">Mil</th>
             </tr>
           </thead>
@@ -1131,9 +1614,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
               <tr key={idx}>
                 <td className="border border-black p-1.5">{trip.date}</td>
                 <td className="border border-black p-1.5">{trip.assignment}</td>
-                <td className="border border-black p-1.5">{trip.from}</td>
-                <td className="border border-black p-1.5">{trip.to}</td>
-                <td className="border border-black p-1.5 text-center">{trip.roundTrip ? 'Ja' : 'Nej'}</td>
+                <td className="border border-black p-1.5">{trip.from} &rarr; {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
+                <td className="border border-black p-1.5 text-center">{trip.isDriver ? 'Egen bil' : 'Samåker'}</td>
                 <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
               </tr>
             ))}
@@ -1165,8 +1647,15 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         <table className="w-full mb-8">
           <tbody>
             <tr>
-              <td className="w-1/2"></td>
-              <td className="w-1/2">
+              <td className="w-1/2 align-top pr-6">
+                {invoiceComment && (
+                   <>
+                     <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Övriga kommentarer</h3>
+                     <div className="border border-black p-2 text-[10px] whitespace-pre-wrap min-h-[60px]">{invoiceComment}</div>
+                   </>
+                )}
+              </td>
+              <td className="w-1/2 align-top">
                 <table className="w-full border-collapse border border-black text-[11px]">
                   <tbody>
                     <tr>
@@ -1174,11 +1663,11 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                       <td className="border border-black p-1.5 text-right">{calculated.milageCost} kr</td>
                     </tr>
                     <tr>
-                      <td className="border border-black p-1.5">Restidsersättning</td>
+                      <td className="border border-black p-1.5">Tilläggsarvode</td>
                       <td className="border border-black p-1.5 text-right">{calculated.travelBonus} kr</td>
                     </tr>
                     <tr>
-                      <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 150kr)</td>
+                      <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 300kr)</td>
                       <td className="border border-black p-1.5 text-right">{calculated.overnightCost} kr</td>
                     </tr>
                     <tr>
@@ -1326,7 +1815,7 @@ function MainApp() {
     const selected = translations[languageCode] || translations['en'];
     const fallback = translations['en'];
     return new Proxy(selected, {
-      get: (target, prop) => target[prop] !== undefined ? target[prop] : (fallback[prop] || '')
+      get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop]
     });
   };
   const t = getTranslation(lang);
@@ -2561,6 +3050,7 @@ function MainApp() {
     }
   };
 
+  // Helper för inloggad domare
   const myUmpireData = masterUmpires.find(u => u.id === umpireId);
 
   // 8. HUVUD-RENDERING
@@ -2593,6 +3083,7 @@ function MainApp() {
     );
   }
 
+  // --- TOP NAVIGATION TABS DEFINITION ---
   const tabs = [
     { id: 'schedule', label: t.schedule, icon: CalendarIcon },
     { id: 'locations', label: t.locations, icon: MapPin },
@@ -2615,6 +3106,7 @@ function MainApp() {
       
       <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-40">
         <div className="max-w-5xl mx-auto flex justify-between items-center gap-3">
+          {/* Vänster: Logga och titel (Klickbar för scroll till toppen) */}
           <div className="flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <Trophy className="w-6 h-6 shrink-0" />
             <div className="truncate">
@@ -2623,6 +3115,7 @@ function MainApp() {
             </div>
           </div>
 
+          {/* Höger: Kontroller, Inställningar och Profil/Login */}
           <div className="flex items-center gap-3 shrink-0">
             {isDemoEnv && (
               <select value={federation} onChange={(e) => { setFederation(e.target.value); const newFed = federations.find(f => f.id === e.target.value); if (newFed) setLang(newFed.defaultLang); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none hidden sm:block">
@@ -2673,6 +3166,7 @@ function MainApp() {
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         {view !== 'help' && (
           <>
+            {/* Desktop Tabs */}
             <div className="hidden md:flex flex-wrap bg-white p-1 rounded-2xl shadow-sm border border-slate-200 sticky top-[68px] z-20 gap-1">
               {tabs.map(tab => {
                 const isActive = view === tab.id;
@@ -2691,6 +3185,7 @@ function MainApp() {
               })}
             </div>
 
+            {/* Mobile Dropdown Menu */}
             <div className="md:hidden sticky top-[68px] z-20">
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
@@ -3658,3 +4153,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+              
