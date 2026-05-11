@@ -2131,7 +2131,7 @@ function MainApp() {
   const updateProfile = async (name, id) => {
     if (!user || !user.email) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
   };
 
   const logoutUmpire = async () => {
