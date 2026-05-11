@@ -231,9 +231,6 @@ const generateCSV = (gamesToExport, selectedYear) => {
   document.body.removeChild(link);
 };
 
-// ==========================================
-// UMPIRE PROFILE MODAL COMPONENT
-// ==========================================
 function UmpireProfileModal({ 
   selectedProfileId, setSelectedProfileId, masterUmpires, assignments, 
   umpireId, isAdmin, selectedYear, t, getLevelStyles, db, appId 
@@ -315,7 +312,6 @@ function UmpireProfileModal({
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
-        {/* Modal Header */}
         <div className="relative pt-12 pb-6 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
            <button onClick={() => setSelectedProfileId(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
            
@@ -354,7 +350,6 @@ function UmpireProfileModal({
            </div>
         </div>
 
-        {/* Modal Scrollable Body */}
         <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
@@ -441,9 +436,6 @@ function UmpireProfileModal({
   );
 }
 
-// ==========================================
-// TRAVEL INVOICE COMPONENT
-// ==========================================
 function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -538,14 +530,18 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     setExpenses(expenses.filter(exp => exp.id !== id));
   };
 
-  const calculateDistance = async (index) => {
-    const trip = trips[index];
-    if (!trip.from || !trip.to) {
+  const calculateDistance = async (tripId, overrideFrom, overrideTo, overrideRoundTrip) => {
+    const currentTrip = trips.find(t => t.id === tripId) || {};
+    const fromVal = overrideFrom !== undefined ? overrideFrom : currentTrip.from;
+    const toVal = overrideTo !== undefined ? overrideTo : currentTrip.to;
+    const isRoundTrip = overrideRoundTrip !== undefined ? overrideRoundTrip : currentTrip.roundTrip;
+
+    if (!fromVal || !toVal) {
       alert(t.fillFromTo);
       return;
     }
 
-    setCalculatingIndex(index);
+    setCalculatingIndex(tripId);
     try {
       const resolveAddress = (input) => {
         if (input.toLowerCase() === t.homeLocation.toLowerCase() || input.toLowerCase() === 'hem' || input.toLowerCase() === 'home') {
@@ -555,8 +551,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         return found && found.address ? found.address : input;
       };
 
-      const fromAddress = resolveAddress(trip.from);
-      const toAddress = resolveAddress(trip.to);
+      const fromAddress = resolveAddress(fromVal);
+      const toAddress = resolveAddress(toVal);
 
       if(!fromAddress || !toAddress || fromAddress === ', ' || toAddress === ', ') {
          throw new Error(t.addressMissing);
@@ -579,8 +575,9 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
       if (routeData.routes && routeData.routes.length > 0) {
         const distanceMeters = routeData.routes[0].distance;
         let mil = distanceMeters / 10000; 
-        if (trip.roundTrip) mil *= 2;
-        handleTripChange(trip.id, 'distance', mil.toFixed(1));
+        if (isRoundTrip) mil *= 2;
+        
+        setTrips(prev => prev.map(tr => tr.id === tripId ? { ...tr, distance: mil.toFixed(1) } : tr));
       } else {
          throw new Error(t.routeMissing);
       }
@@ -932,10 +929,17 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                             onChange={(e) => {
                                const g = myAssignedGames.find(x => x.id === e.target.value);
                                if(g) {
-                                  handleTripChange(trip.id, 'date', g.date);
-                                  handleTripChange(trip.id, 'assignment', `${g.away} @ ${g.home}`);
-                                  handleTripChange(trip.id, 'to', g.location);
-                                  handleTripChange(trip.id, 'from', t.homeLocation);
+                                  const fromVal = t.homeLocation;
+                                  const toVal = g.location;
+                                  
+                                  // Uppdatera alla fält i listan direkt (Förhindrar krockar)
+                                  setTrips(currentTrips => currentTrips.map(tr => 
+                                    tr.id === trip.id 
+                                      ? { ...tr, date: g.date, assignment: `${g.away} @ ${g.home}`, to: toVal, from: fromVal }
+                                      : tr
+                                  ));
+                                  // Beräkna avstånd direkt baserat på nya datan
+                                  calculateDistance(trip.id, fromVal, toVal, trip.roundTrip);
                                }
                             }}
                           >
@@ -1169,8 +1173,9 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             <tr className="bg-gray-100">
               <th className="border border-black p-1.5 text-left">{t.date}</th>
               <th className="border border-black p-1.5 text-left">Ändamål</th>
-              <th className="border border-black p-1.5 text-left">Rutt</th>
-              <th className="border border-black p-1.5 text-center">Fordon</th>
+              <th className="border border-black p-1.5 text-left">Från</th>
+              <th className="border border-black p-1.5 text-left">Till</th>
+              <th className="border border-black p-1.5 text-center">T&R</th>
               <th className="border border-black p-1.5 text-right">Mil</th>
             </tr>
           </thead>
@@ -2126,7 +2131,7 @@ function MainApp() {
   const updateProfile = async (name, id) => {
     if (!user || !user.email) return;
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge true });
   };
 
   const logoutUmpire = async () => {
@@ -2315,7 +2320,7 @@ function MainApp() {
   const takeTrade = async (oldAsg, game) => {
     if (!user || !user.email) { setShowAuthModal(true); return; }
     if (!umpireId) { setShowNamePrompt(true); return; }
-    if (oldAsg && oldAsg.userId === umpireId) return; 
+    if (oldAsg.userId === umpireId) return; 
     
     const umpireAssignedGamesToday = assignments
       .filter(asg => asg.userId === umpireId)
@@ -2336,9 +2341,7 @@ function MainApp() {
     setSyncing(true);
     try {
       const batch = writeBatch(db);
-      if (oldAsg && oldAsg.id) {
-         batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
-      }
+      batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
       const newAsgId = `${game.id}_${umpireId}`;
       batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', newAsgId), {
         gameId: game.id,
@@ -3280,7 +3283,7 @@ function MainApp() {
 
                                   if (conflictGame) {
                                     return (
-                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`Bokad i ${conflictGame.location}`}>
+                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`${t.bookedIn} ${conflictGame.location}`}>
                                          <span className="text-xs font-bold text-red-900 line-through decoration-red-500 truncate">{app.userName}</span>
                                          <span className="text-[9px] font-black uppercase text-red-600 px-2 text-right truncate max-w-[100px]">{conflictGame.location}</span>
                                       </div>
