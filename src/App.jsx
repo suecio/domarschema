@@ -42,6 +42,7 @@ const generateCSV = (gamesToExport, selectedYear) => {
     const endTime = `${endHours}:${mins || '00'}`;
     return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${endTime},"${game.league}","${game.location}"`;
   }).join('\n');
+  
   const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -93,7 +94,7 @@ function PrintableInvoice({ data, t, containerId }) {
             <tr key={idx}>
               <td className="border border-black p-1.5">{trip.date}</td>
               <td className="border border-black p-1.5">{trip.assignment}</td>
-              <td className="border border-black p-1.5">{trip.from} → {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
+              <td className="border border-black p-1.5">{trip.from} &rarr; {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
               <td className="border border-black p-1.5 text-center">{trip.isDriver ? 'Egen bil' : 'Samåker'}</td>
               <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
             </tr>
@@ -185,19 +186,10 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload = () => {
       const element = document.getElementById('admin-print-invoice-view');
-      element.classList.remove('hidden');
-      element.classList.remove('print:block');
-      const opt = {
-        margin: 10,
-        filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+      element.classList.remove('hidden'); element.classList.remove('print:block');
+      const opt = { margin: 10, filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
       window.html2pdf().set(opt).from(element).save().then(() => {
-        element.classList.add('hidden');
-        element.classList.add('print:block');
-        setIsDownloading(false);
+        element.classList.add('hidden'); element.classList.add('print:block'); setIsDownloading(false);
       });
     };
     document.body.appendChild(script);
@@ -400,7 +392,8 @@ class ErrorBoundary extends Component {
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-black text-slate-800 mb-2">Ett fel uppstod</h2>
             <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap bg-red-50 p-4 rounded-xl text-left overflow-auto max-h-60 border border-red-200">
-              {this.state.error?.toString()}{'\n'}{this.state.errorInfo?.componentStack}
+              {this.state.error?.toString()}{'
+'}{this.state.errorInfo?.componentStack}
             </pre>
             <button onClick={() => window.location.reload()} className="mt-8 bg-slate-800 text-white px-8 py-4 rounded-xl font-black uppercase text-xs hover:bg-black">Ladda om</button>
           </div>
@@ -409,6 +402,326 @@ class ErrorBoundary extends Component {
     }
     return this.props.children; 
   }
+}
+
+function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData, allInvoices }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [sentTarget, setSentTarget] = useState('');
+  const [calculatingIndex, setCalculatingIndex] = useState(null);
+
+  const [personalInfo, setPersonalInfo] = useState({ name: '', pnr: '', address: '', zipCity: '', bank: '', email: '' });
+  const [trips, setTrips] = useState([{ id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true, isDriver: true }]);
+  const [expenses, setExpenses] = useState([{ id: Date.now(), description: '', amount: '' }]);
+  const [advance, setAdvance] = useState('');
+  const [overnightCount, setOvernightCount] = useState('');
+  const [invoiceComment, setInvoiceComment] = useState('');
+
+  const pastInvoices = useMemo(() => {
+     if(!user || !user.uid) return [];
+     return allInvoices.filter(i => i.userId === user.uid);
+  }, [allInvoices, user]);
+
+  useEffect(() => {
+    if (user && user.uid) {
+      const fetchProfile = async () => {
+        try {
+          const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setPersonalInfo(prev => ({ ...prev, ...docSnap.data(), address: docSnap.data().address || myUmpireData?.address || '', zipCity: docSnap.data().zipCity || myUmpireData?.city || '', email: user?.email || docSnap.data().email || prev.email || '' }));
+          } else {
+            setPersonalInfo(prev => ({ ...prev, name: userName || myUmpireData?.name || '', email: user?.email || '', address: myUmpireData?.address || '', zipCity: myUmpireData?.city || '' }));
+          }
+        } catch(e) {}
+      };
+      fetchProfile();
+    } else if (userName) {
+       setPersonalInfo(prev => ({ ...prev, name: userName, email: user?.email || '', address: myUmpireData?.address || '', zipCity: myUmpireData?.city || '' }));
+    }
+  }, [user, appId, userName, db, myUmpireData]);
+
+  const handlePersonalInfoChange = (e) => { setPersonalInfo({ ...personalInfo, [e.target.name]: e.target.value }); };
+  const handleTripChange = (id, field, value) => setTrips(trips.map(trip => trip.id === id ? { ...trip, [field]: value } : trip));
+  const addTrip = () => setTrips([...trips, { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true, isDriver: true }]);
+  const removeTrip = (id) => { if (trips.length > 1) setTrips(trips.filter(trip => trip.id !== id)); };
+  
+  const handleExpenseChange = (id, field, value) => setExpenses(expenses.map(exp => exp.id === id ? { ...exp, [field]: value } : exp));
+  const addExpense = () => setExpenses([...expenses, { id: Date.now(), description: '', amount: '' }]);
+  const removeExpense = (id) => setExpenses(expenses.filter(exp => exp.id !== id));
+
+  const calculateDistance = async (tripId, overrideFrom, overrideTo, overrideRoundTrip) => {
+    const currentTrip = trips.find(t => t.id === tripId) || {};
+    const fromVal = overrideFrom !== undefined ? overrideFrom : currentTrip.from;
+    const toVal = overrideTo !== undefined ? overrideTo : currentTrip.to;
+    const isRoundTrip = overrideRoundTrip !== undefined ? overrideRoundTrip : currentTrip.roundTrip;
+
+    if (!fromVal || !toVal) { alert(t.fillFromTo); return; }
+    setCalculatingIndex(tripId);
+    try {
+      const resolveAddress = (input) => {
+        if (['hem', 'home', t.homeLocation.toLowerCase()].includes(input.toLowerCase())) return `${personalInfo.address}, ${personalInfo.zipCity}`;
+        const found = locationsData.find(l => l.id.toLowerCase() === input.toLowerCase());
+        return found && found.address ? found.address : input;
+      };
+
+      const fromAddress = resolveAddress(fromVal);
+      const toAddress = resolveAddress(toVal);
+      if(!fromAddress || !toAddress || fromAddress === ', ' || toAddress === ', ') throw new Error(t.addressMissing);
+
+      const fromRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fromAddress + ', Sweden')}`);
+      const fromData = await fromRes.json();
+      const toRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(toAddress + ', Sweden')}`);
+      const toData = await toRes.json();
+
+      if (fromData.length === 0 || toData.length === 0) throw new Error(t.coordsMissing);
+      
+      const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${fromData[0].lon},${fromData[0].lat};${toData[0].lon},${toData[0].lat}?overview=false`);
+      const routeData = await routeRes.json();
+
+      if (routeData.routes && routeData.routes.length > 0) {
+        let mil = routeData.routes[0].distance / 10000; 
+        if (isRoundTrip) mil *= 2;
+        setTrips(prev => prev.map(tr => tr.id === tripId ? { ...tr, distance: mil.toFixed(1) } : tr));
+      } else { throw new Error(t.routeMissing); }
+    } catch (err) { alert(t.autoCalcFailed); } finally { setCalculatingIndex(null); }
+  };
+
+  const calculated = useMemo(() => {
+    let totalMilage = 0, travelBonus = 0, totalExpenses = 0;
+    trips.forEach(trip => {
+      const dist = parseFloat(trip.distance) || 0;
+      if (trip.isDriver) totalMilage += dist;
+      if (dist >= 20) travelBonus += 200; else if (dist >= 10) travelBonus += 100;
+    });
+    const milageCost = totalMilage * 25; 
+    const overnightCost = (parseInt(overnightCount) || 0) * 300;
+    expenses.forEach(exp => { totalExpenses += (parseFloat(exp.amount) || 0); });
+    const advanceNum = parseFloat(advance) || 0;
+    const total = (milageCost + travelBonus + overnightCost + totalExpenses) - advanceNum;
+
+    return { totalMilage: Number(totalMilage.toFixed(1)), milageCost: Number(milageCost.toFixed(2)), travelBonus, overnightCost, totalExpenses: Number(totalExpenses.toFixed(2)), advance: advanceNum, total: Number(total.toFixed(2)) };
+  }, [trips, expenses, overnightCount, advance]);
+
+  const invoiceDataObj = { personalInfo, trips, expenses, overnightCount, advance, calculated, invoiceComment };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (window.confirm("Vill du verkligen ta bort denna reseräkning från historiken?")) {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'all_invoices', invoiceId));
+        if (user && user.uid) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'invoices', invoiceId)).catch(()=>{});
+      } catch (e) {}
+    }
+  };
+
+  const handleReopenInvoice = (inv) => {
+    if (inv.personalInfo) setPersonalInfo(inv.personalInfo);
+    if (inv.trips && inv.trips.length > 0) setTrips(inv.trips);
+    if (inv.expenses && inv.expenses.length > 0) setExpenses(inv.expenses);
+    setAdvance(inv.advance || ''); setOvernightCount(inv.overnightCount || ''); setInvoiceComment(inv.invoiceComment || '');
+    if (typeof window !== 'undefined') window.scrollTo({ top: 300, behavior: 'smooth' });
+  };
+
+  const handleDownloadPDF = () => {
+    const form = document.getElementById('invoice-form');
+    if (!form.checkValidity()) return form.reportValidity();
+    setIsSubmitting(true);
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => {
+      const element = document.getElementById('print-invoice-view');
+      element.classList.remove('hidden'); element.classList.remove('print:block');
+      const opt = { margin: 10, filename: `Reserakning_${personalInfo.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('sv-SE')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+      window.html2pdf().set(opt).from(element).save().then(async () => {
+        element.classList.add('hidden'); element.classList.add('print:block'); setIsSubmitting(false);
+        if (user && user.uid) {
+           try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'all_invoices'), { ...invoiceDataObj, createdAt: Date.now(), userId: user.uid, userName: personalInfo.name, total: calculated.total, status: "Nedladdad (PDF)" }); } catch(e) {}
+        }
+      });
+    };
+    document.body.appendChild(script);
+  };
+
+  const handleSubmit = async (e, target) => {
+    e.preventDefault(); setIsSubmitting(true); setSentTarget(target);
+    try {
+      if (user && user.uid) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData'), personalInfo, { merge: true }).catch(()=>{});
+
+      const tripsText = trips.map(t => `- ${t.date}: ${t.from} till ${t.to} (${t.roundTrip ? 'T&R' : 'Enkel'}), ${t.distance} mil. Ändamål: ${t.assignment}`).join('
+');
+      const expensesText = expenses.filter(e => e.description && e.amount).map(e => `- ${e.description}: ${e.amount} kr`).join('
+') || 'Inga övriga utlägg';
+      const emailHtml = `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+          <h2 style="color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px;">Reseräkning - ${personalInfo.name}</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;"><strong>Namn</strong></td><td>${personalInfo.name}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;"><strong>Bankkonto</strong></td><td>${personalInfo.bank}</td></tr>
+          </table>
+          <h3 style="color: #475569;">Resor</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            ${trips.map(tr => `<tr><td>${tr.date}<br>${tr.assignment}</td><td>${tr.from} → ${tr.to}</td><td>${tr.distance} mil</td></tr>`).join('')}
+          </table>
+          <h3 style="color: #475569;">Sammanställning</h3>
+          <p>Total att utbetala: <strong>${calculated.total} kr</strong></p>
+        </div>`;
+
+      const toEmail = target === 'federation' ? 'info@sbslf.se' : personalInfo.email;
+      const emailSubject = target === 'federation' ? `Reseräkning: ${personalInfo.name} (${calculated.total} kr)` : `TEST: Reseräkning ${personalInfo.name}`;
+
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: toEmail, replyTo: personalInfo.email, message: { subject: emailSubject, text: "Ny reseräkning inskickad.", html: emailHtml }, createdAt: Date.now() });
+
+      if (user && user.uid && target === 'federation') {
+         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'all_invoices'), { ...invoiceDataObj, createdAt: Date.now(), userId: user.uid, userName: personalInfo.name, total: calculated.total, status: "Ej betald" });
+      }
+      setSuccess(true);
+    } catch (err) { alert(t.errorOccurred); }
+    setIsSubmitting(false);
+  };
+
+  if (success) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center">
+          <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
+          <h2 className="text-2xl font-black text-slate-800 mb-2">{t.sentSuccess}</h2>
+          <p className="text-slate-600 mb-8 font-medium">{sentTarget === 'federation' ? t.sentSuccessFed : t.sentSuccessSelf}</p>
+          <button onClick={() => setSuccess(false)} className="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-black uppercase text-xs hover:bg-slate-200">Skapa ny</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full font-sans print:bg-white print:p-0">
+      <div className="max-w-4xl mx-auto space-y-6 p-4 sm:p-8 print:hidden pt-20 sm:pt-8">
+        <div className="text-center space-y-2 mb-8">
+          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><FileText className="w-8 h-8 text-white" /></div>
+          <h1 className="text-3xl font-black text-slate-800">{t.invoiceTitle}</h1>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t.digitalSubmission}</p>
+        </div>
+
+        {pastInvoices.length > 0 && (
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-8">
+             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><HistoryIcon className="w-4 h-4" /> {t.pastInvoices}</h3>
+             <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+               {pastInvoices.map(inv => (
+                 <div key={inv.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                   <div className="flex-1">
+                     <span className="text-xs font-bold text-slate-700">{new Date(inv.createdAt).toLocaleDateString('sv-SE')}</span>
+                     <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[200px]">{inv.trips?.map(tr => tr.assignment).join(', ')}</p>
+                   </div>
+                   <div className="text-right mr-3">
+                     <span className="text-sm font-black text-blue-600">{inv.total} kr</span>
+                     <p className="text-[9px] font-black uppercase text-slate-500 mt-0.5">{inv.status}</p>
+                   </div>
+                   <div className="flex items-center gap-1">
+                     <button onClick={() => handleReopenInvoice(inv)} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black uppercase hover:bg-blue-200">{t.open}</button>
+                     <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                   </div>
+                 </div>
+               ))}
+             </div>
+          </div>
+        )}
+
+        <datalist id="location-list">
+          <option value={t.homeLocation}>{t.homeAddressLabel}</option>
+          {locationsData.map((loc, i) => <option key={i} value={loc.id}>{loc.address || loc.id}</option>)}
+        </datalist>
+
+        <form id="invoice-form" className="space-y-6">
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><User className="w-4 h-4" /> {t.personalInfo}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.name}</label><input required type="text" name="name" value={personalInfo.name} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-postadress</label><input required type="email" name="email" value={personalInfo.email} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.pnr}</label><input required type="text" name="pnr" value={personalInfo.pnr} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.streetAddressHidden}</label><input required type="text" name="address" value={personalInfo.address} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.zipCity}</label><input required type="text" name="zipCity" value={personalInfo.zipCity} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.bankAccount}</label><input required type="text" name="bank" value={personalInfo.bank} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><Car className="w-4 h-4" /> {t.tripsAllowance}</h2>
+            <div className="space-y-6">
+              {trips.map((trip, index) => {
+                return (
+                  <div key={trip.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative">
+                    {trips.length > 1 && <button type="button" onClick={() => removeTrip(trip.id)} className="absolute -top-3 -right-3 bg-red-100 text-red-600 p-2 rounded-full"><Trash2 className="w-4 h-4" /></button>}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                      {myAssignedGames.length > 0 && (
+                        <div className="sm:col-span-12 bg-blue-100 p-2 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
+                          <span className="text-[10px] font-black text-blue-800 uppercase shrink-0">{t.foundAssignments}</span>
+                          <select className="w-full sm:flex-1 text-xs p-1.5 rounded-md border border-blue-200 bg-white outline-none" onChange={(e) => { const g = myAssignedGames.find(x => x.id === e.target.value); if(g) { const fromVal = t.homeLocation; const toVal = g.location; setTrips(currentTrips => currentTrips.map(tr => tr.id === trip.id ? { ...tr, date: g.date, assignment: `${g.away} @ ${g.home}`, to: toVal, from: fromVal } : tr)); calculateDistance(trip.id, fromVal, toVal, trip.roundTrip); } }}>
+                             <option value="">{t.selectGame}</option>
+                             {myAssignedGames.map(g => <option key={g.id} value={g.id}>{g.date} | {g.away} @ {g.home}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      <div className="sm:col-span-3 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label><input required type="date" value={trip.date} onChange={(e) => handleTripChange(trip.id, 'date', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                      <div className="sm:col-span-9 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.assignmentDetails}</label><input required type="text" value={trip.assignment} onChange={(e) => handleTripChange(trip.id, 'assignment', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                      <div className="sm:col-span-4 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelFrom}</label><input required type="text" list="location-list" value={trip.from} onChange={(e) => handleTripChange(trip.id, 'from', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                      <div className="sm:col-span-4 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelTo}</label><input required type="text" list="location-list" value={trip.to} onChange={(e) => handleTripChange(trip.id, 'to', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                      <div className="sm:col-span-4 space-y-1 flex flex-col justify-end"><label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]"><input type="checkbox" checked={trip.roundTrip} onChange={(e) => handleTripChange(trip.id, 'roundTrip', e.target.checked)} className="w-4 h-4 text-blue-600" /><span className="text-[10px] font-black uppercase text-slate-600">{t.roundTrip}</span></label></div>
+                      <div className="sm:col-span-8 space-y-1 flex flex-col justify-end"><label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]"><input type="checkbox" checked={trip.isDriver} onChange={(e) => handleTripChange(trip.id, 'isDriver', e.target.checked)} className="w-4 h-4 text-blue-600" /><span className="text-[10px] font-black uppercase text-slate-600 truncate">{trip.isDriver ? t.droveCar : t.carpooling}</span></label></div>
+                      <div className="sm:col-span-4 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.distanceMil}</label><input required type="number" step="0.1" value={trip.distance} onChange={(e) => handleTripChange(trip.id, 'distance', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-blue-600" /></div>
+                    </div>
+                    <div className="mt-3 flex justify-end"><button type="button" onClick={() => calculateDistance(trip.id)} disabled={calculatingIndex === trip.id} className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-1">{calculatingIndex === trip.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}{calculatingIndex === trip.id ? t.calculating : t.calcAuto}</button></div>
+                  </div>
+                );
+              })}
+              <button type="button" onClick={addTrip} className="w-full py-3 border-2 border-dashed border-slate-200 text-slate-500 rounded-xl font-black uppercase text-xs hover:text-blue-600 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> {t.addTrip}</button>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><CreditCard className="w-4 h-4" /> {t.expensesAllowance}</h2>
+            <div className="bg-amber-50 text-amber-800 p-3 rounded-xl text-xs font-medium mb-4 flex items-start gap-2"><Info className="w-4 h-4 shrink-0 mt-0.5" /><p>{t.receiptsReminder}</p></div>
+            <div className="space-y-4 mb-6">
+              {expenses.map((exp) => (
+                <div key={exp.id} className="flex items-center gap-4">
+                  <input type="text" placeholder={t.description} value={exp.description} onChange={(e) => handleExpenseChange(exp.id, 'description', e.target.value)} className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
+                  <input type="number" placeholder={t.amount} value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-32 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
+                  {expenses.length > 1 && <button type="button" onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-red-500"><X className="w-5 h-5"/></button>}
+                </div>
+              ))}
+              <button type="button" onClick={addExpense} className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1 hover:underline"><Plus className="w-3 h-3" /> {t.addExpense}</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.overnightNights}</label><div className="relative"><input type="number" min="0" value={overnightCount} onChange={(e) => setOvernightCount(e.target.value)} placeholder="0" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /><span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">á 300 kr</span></div></div>
+              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.advanceDeduction}</label><input type="number" value={advance} onChange={(e) => setAdvance(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+             <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><MessageCircle className="w-4 h-4" /> {t.invoiceCommentLabel}</h2>
+             <textarea value={invoiceComment} onChange={(e) => setInvoiceComment(e.target.value)} placeholder={t.invoiceCommentPlaceholder} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm min-h-[100px]" />
+          </div>
+
+          <div className="bg-slate-800 text-white p-6 sm:p-8 rounded-3xl shadow-xl">
+            <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Calculator className="w-4 h-4" /> {t.summary}</h2>
+            <div className="space-y-3 text-sm font-medium">
+              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.mileageComp} ({calculated.totalMilage} mil á 25 kr)</span><span>{calculated.milageCost} kr</span></div>
+              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.travelTimeComp}</span><span>{calculated.travelBonus} kr</span></div>
+              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.overnightComp} ({overnightCount || 0} st á 300kr)</span><span>{calculated.overnightCost} kr</span></div>
+              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.otherExpenses}</span><span>{calculated.totalExpenses} kr</span></div>
+              {calculated.advance > 0 && <div className="flex justify-between items-center border-b border-slate-700 pb-2 text-red-400"><span>{t.advanceDeduction}</span><span>-{calculated.advance} kr</span></div>}
+            </div>
+            <div className="mt-6 pt-4 flex justify-between items-end"><span className="text-xs font-black uppercase tracking-widest text-slate-400">{t.totalToReceive}</span><span className="text-4xl font-black text-green-400">{calculated.total} <span className="text-xl">kr</span></span></div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 print:hidden">
+            <button type="button" onClick={handleDownloadPDF} disabled={isSubmitting} className="flex-1 py-4 bg-white border-2 border-slate-200 text-slate-700 font-black rounded-2xl uppercase text-[10px] flex items-center justify-center gap-2">{isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {t.downloadPDF}</button>
+            <button type="button" onClick={(e) => { const form = document.getElementById('invoice-form'); if (form.checkValidity()) handleSubmit(e, 'self'); else form.reportValidity(); }} disabled={isSubmitting} className="flex-1 py-4 bg-blue-100 text-blue-700 font-black rounded-2xl uppercase text-[10px] flex items-center justify-center gap-2"><Mail className="w-4 h-4" /> {t.sendToSelf}</button>
+            <button type="button" onClick={(e) => { const form = document.getElementById('invoice-form'); if (form.checkValidity()) handleSubmit(e, 'federation'); else form.reportValidity(); }} disabled={isSubmitting} className="flex-1 py-4 bg-yellow-500 text-white font-black rounded-2xl uppercase text-[10px] flex items-center justify-center gap-2">{isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t.sendToFed}</button>
+          </div>
+        </form>
+        <PrintableInvoice data={invoiceDataObj} t={t} containerId="print-invoice-view" />
+      </div>
+    </div>
+  );
 }
 
 function MainApp() {
@@ -444,7 +757,6 @@ function MainApp() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
   
-  const [helpTab, setHelpTab] = useState('guide');
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -499,7 +811,7 @@ function MainApp() {
   }, []);
 
   const appId = useMemo(() => {
-    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\\/]/g, '-') : 'baseball-umpire-scheduler';
+    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\/]/g, '-') : 'baseball-umpire-scheduler';
     return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
   }, [selectedYear, isDemoEnv]);
 
@@ -598,11 +910,11 @@ function MainApp() {
   useEffect(() => {
     let unsubscribeProfile = () => {};
     if (user && user.email) {
-      const isMaster = user.email.toLowerCase() === 'suecio@tryempire.com'; setIsSuperAdmin(isMaster); setContactEmail(user.email);
+      const isMaster = user.email.toLowerCase() === 'suecio@tryempire.com'; setIsSuperAdmin(isMaster);
       setDoc(doc(db, 'artifacts', appId, 'registered_users', user.uid), { email: user.email.toLowerCase(), lastSeen: Date.now() }, { merge: true }).catch(()=>{});
       unsubscribeProfile = onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), (snapshot) => {
         if (snapshot.exists() && snapshot.data().umpireId) {
-          const data = snapshot.data(); setUserName(data.name || ''); setContactName(data.name || ''); setUmpireId(data.umpireId || '');
+          const data = snapshot.data(); setUserName(data.name || ''); setUmpireId(data.umpireId || '');
           setIsAdmin(isMaster || (Array.isArray(adminUmpireIds) && adminUmpireIds.includes(data.umpireId)));
         } else {
           const preLinked = masterUmpires.find(u => u.linkedEmail && u.linkedEmail.toLowerCase() === user.email.toLowerCase());
@@ -619,8 +931,7 @@ function MainApp() {
       const myUmpire = masterUmpires.find(u => u.id === umpireId);
       if (myUmpire && myUmpire.linkedEmail !== user.email) {
         updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
-          linkedUserId: user.uid,
-          linkedEmail: user.email
+          linkedUserId: user.uid, linkedEmail: user.email
         }).catch(e => { });
       }
     }
@@ -628,28 +939,20 @@ function MainApp() {
 
   useEffect(() => {
     if (!isAdmin || mailQueue.length === 0) return;
-    
     const interval = setInterval(() => {
        const now = Date.now();
        const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
-       
        if (readyToProcess.length > 0) {
            readyToProcess.forEach(async (queueItem) => {
-              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
-              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
-              
-              const emailBody = t.emailMatchMovedBody
-                 .replace(/\{name\}/g, queueItem.userName)
-                 .replace(/\{changesListSv\}/g, changesTextSv)
-                 .replace(/\{changesListEn\}/g, changesTextEn);
-                 
+              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('
+');
+              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('
+');
+              const emailBody = t.emailMatchMovedBody ? t.emailMatchMovedBody.replace(/\{name\}/g, queueItem.userName).replace(/\{changesListSv\}/g, changesTextSv).replace(/\{changesListEn\}/g, changesTextEn) : changesTextSv;
               try {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
                    to: queueItem.email,
-                   message: {
-                     subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
-                     text: emailBody
-                   },
+                   message: { subject: "Match flyttad / Game Rescheduled", text: emailBody },
                    createdAt: Date.now()
                 });
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
@@ -657,7 +960,6 @@ function MainApp() {
            });
        }
     }, 30000);
-    
     return () => clearInterval(interval);
   }, [isAdmin, mailQueue, appId, t]);
 
@@ -675,119 +977,19 @@ function MainApp() {
     if (typeof window !== 'undefined') { window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }
   }, [view, selectedYear, lang]);
 
-  const safeDateMonth = (dateString) => {
-    if (!dateString) return ''; const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString; return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
+  const confirmScheduleChange = async (asgId) => { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { pendingChange: false }); } catch(e){} };
+  const assignOfficial = async (gameId, role, value) => {
+    if (!isAdmin) return; const updateObj = {};
+    if (role === 'supervisor') { updateObj.supervisorId = value; updateObj.supervisorName = value ? masterUmpires.find(u => u.id === value)?.name : ''; }
+    else { updateObj.tcName = value; }
+    try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), updateObj); if (selectedGameDetails?.id === gameId) setSelectedGameDetails(prev => ({ ...prev, ...updateObj })); } catch(e){}
   };
 
-  const safeDateDay = (dateString) => {
-    if (!dateString) return '-'; const d = new Date(dateString);
-    if (isNaN(d.getTime())) return '-'; return (t.days && t.days[d.getDay()]) ? t.days[d.getDay()] : '-';
+  const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
+    if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
+    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', `${gameId}_${targetUmpireId}`), { gameId, umpireId: targetUmpireId, evaluatorId: umpireId, grade, comment, timestamp: Date.now() }); alert(t.evalSaved); } catch(e){}
   };
 
-  const safeDateNum = (dateString) => {
-    if (!dateString) return '-'; const d = new Date(dateString);
-    if (isNaN(d.getTime())) return '-'; return d.getDate();
-  };
-
-  const getLeagueStyles = (league) => {
-    const l = (league || '').toLowerCase();
-    if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
-    if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
-    if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200';
-    return 'bg-slate-100 text-slate-700 border-slate-200';
-  };
-
-  const getLevelStyles = (level) => {
-    const l = (level || '').toLowerCase();
-    if (l.includes('internationell')) return 'bg-[#204d99] text-white border-[#1a3d7a]';
-    if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]';
-    if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]';
-    if (l.includes('region')) return 'bg-[#cfe2f3] text-[#3d85c6] border-[#a2c4c9]';
-    if (l.includes('förening')) return 'bg-[#efefef] text-[#666666] border-[#cccccc]';
-    return 'bg-slate-200 text-slate-500 border-slate-300';
-  };
-
-  const getAssignmentStatusStyles = (count, required) => {
-    const req = required || 2;
-    if (count === 0) return 'bg-red-100 text-red-700 border-red-200';
-    if (count < req) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    return 'bg-green-100 text-green-700 border-green-200';
-  };
-
-  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
-    const hasOfficials = gameAssignments.length > 0 || game.supervisorName || game.tcName;
-    if (!hasOfficials) return null;
-    return (
-      <div className="flex flex-wrap gap-1 mt-3 items-center">
-        {gameAssignments.map(asg => {
-            const m = masterUmpires.find(mu => mu.id === asg.userId);
-            return (
-              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
-                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} {t.umpireShort}: {asg.userName} {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
-              </div>
-            );
-        })}
-        {game.supervisorName && <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1"><Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}</div>}
-        {game.tcName && <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1"><FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}</div>}
-      </div>
-    );
-  };
-
-  const renderCalendar = (gamesToRender) => (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 overflow-hidden animate-in fade-in">
-      <div className="flex justify-between items-center mb-4 px-2">
-         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
-         <h3 className="font-black text-lg text-slate-800 uppercase">{t.months && t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
-         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight className="w-5 h-5"/></button>
-      </div>
-      <div className="grid grid-cols-7 gap-1 text-center mb-2">
-         {uiDays.map(d => <div key={d} className="text-[10px] font-black uppercase text-slate-400">{d}</div>)}
-      </div>
-      <div className="flex flex-col gap-1 bg-slate-100 border border-slate-100 rounded-xl overflow-hidden p-1">
-        {calendarWeeks.map((week, i) => (
-           <div key={i} className="grid grid-cols-7 gap-1">
-              {week.days.map((day, j) => {
-                 if (!day) return <div key={j} className="p-2" />;
-                 const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-                 const gamesOnDay = gamesToRender.filter(g => g.date === dateStr);
-                 const isToday = dateStr === today;
-                 return (
-                    <div key={j} className={`bg-white rounded-lg p-1.5 min-h-[80px] flex flex-col ${isToday ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
-                       <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>{day.getDate()}</span>
-                       <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">{gamesOnDay.map(g => <div key={g.id} onClick={() => setSelectedGameDetails(g)} className="text-[8px] sm:text-[9px] font-bold bg-blue-50 text-blue-800 rounded px-1.5 py-1 truncate cursor-pointer hover:bg-blue-100 transition-colors">{g.away}</div>)}</div>
-                    </div>
-                 )
-              })}
-           </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const handleAuthSubmit = async (e) => {
-    e.preventDefault(); setAuthError('');
-    try {
-      if (isLoginMode) await signInWithEmailAndPassword(auth, authEmail, authPassword);
-      else await createUserWithEmailAndPassword(auth, authEmail, authPassword);
-      setShowAuthModal(false);
-    } catch (err) { setAuthError(err.message); }
-  };
-
-  const handleResetPassword = async () => {
-    if (!authEmail) return setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Please enter your email address first.');
-    try { await sendPasswordResetEmail(auth, authEmail); if (typeof window !== 'undefined') alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!'); } catch (err) { setAuthError(err.message); }
-  };
-
-  const handleSort = (key) => { setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' })); };
-
-  const updateProfile = async (name, id) => {
-    if (!user || !user.email) return;
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
-  };
-
-  const logoutUmpire = async () => { await signOut(auth); try { await signInAnonymously(auth); } catch (e) { } setShowAdminModal(false); setView('schedule'); };
   const saveGlobalNote = async () => { if (isAdmin) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: editNoteText }, { merge: true }); };
   const clearGlobalNote = async () => { if (isAdmin) { setEditNoteText(''); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: '' }, { merge: true }); } };
   const toggleSystemFeature = async (featureKey) => { if (isSuperAdmin) { const nf = { ...features, [featureKey]: !features[featureKey] }; setFeatures(nf); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { features: nf }, { merge: true }); } };
@@ -860,9 +1062,10 @@ function MainApp() {
     if (!isAdmin || !bulkInput.trim()) return;
     setSyncing(true);
     try {
-      const batch = writeBatch(db); const rows = bulkInput.trim().split('\n');
+      const batch = writeBatch(db); const rows = bulkInput.trim().split('
+');
       rows.forEach((row) => {
-        const columns = row.split(/\t|,/);
+        const columns = row.split(/	|,/);
         if (columns.length >= 5) {
           const gameData = { date: columns[0].trim(), time: columns[1].trim(), league: columns[2].trim(), away: columns[3].trim(), home: columns[4].trim(), location: (columns[5] || 'Unknown').trim(), requiredUmpires: 2 };
           const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
@@ -908,12 +1111,14 @@ function MainApp() {
 
   const exportEconomyCSV = (invoicesToExport) => {
     if (invoicesToExport.length === 0 || typeof window === 'undefined') return;
-    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning\n";
+    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning
+";
     invoicesToExport.forEach(inv => {
       const date = new Date(inv.createdAt).toLocaleDateString('sv-SE');
       const tripsStr = (inv.trips || []).map(t => `${t.from}-${t.to} (${t.distance} mil)`).join(' | ');
       const expensesStr = (inv.expenses || []).map(e => `${e.description} (${e.amount}kr)`).join(' | ');
-      csv += `"${date}","${inv.personalInfo?.name || ''}","${inv.personalInfo?.pnr || ''}","${inv.personalInfo?.email || ''}",${inv.total || 0},"${inv.status || ''}","${tripsStr}","${expensesStr}","${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)","${inv.overnightCount || 0} nätter"\n`;
+      csv += `"${date}","${inv.personalInfo?.name || ''}","${inv.personalInfo?.pnr || ''}","${inv.personalInfo?.email || ''}",${inv.total || 0},"${inv.status || ''}","${tripsStr}","${expensesStr}","${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)","${inv.overnightCount || 0} nätter"
+`;
     });
     const link = document.createElement('a'); link.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.setAttribute('download', `reserakningar-${selectedYear}.csv`); link.click();
   };
@@ -973,7 +1178,7 @@ function MainApp() {
           {isMobileMenuOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border p-2 flex flex-col gap-1 z-30 max-h-[60vh] overflow-y-auto">
               {tabs.map(tab => (
-                <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase ${view === tab.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600'}`}><tab.icon className="w-5 h-5" />{tab.label}</button>
+                <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase text-left ${view === tab.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600'}`}><tab.icon className="w-5 h-5" />{tab.label}</button>
               ))}
             </div>
           )}
