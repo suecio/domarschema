@@ -35,8 +35,7 @@ const getISOWeekNumber = (date) => {
 
 const generateCSV = (gamesToExport, selectedYear) => {
   if (gamesToExport.length === 0 || typeof window === 'undefined') return;
-  const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location
-";
+  const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location";
   const rows = gamesToExport.map(game => {
     const [hours, mins] = (game.time || '00:00').split(':');
     const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
