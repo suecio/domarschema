@@ -121,7 +121,9 @@ const translations = {
     droveCar: "Egen bil", carpooling: "Samåker", invoiceCommentLabel: "Övriga kommentarer",
     invoiceCommentPlaceholder: "T.ex. privat övernattning, samåker med [Namn], eller avvikande rutt...",
     receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se.",
-    nonUmpire: "Ej domare"
+    nonUmpire: "Ej domare", economy: "Ekonomi", economyDesc: "Hantera alla inskickade reseräkningar",
+    statusNotPaid: "Ej betald", statusPaid: "Utbetald", statusVoid: "Makulerad", exportSummary: "Exportera (CSV)",
+    fedAdminSettings: "Förbundsadmins (E-postadresser, kommaseparerade)"
   },
   en: {
     appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile",
@@ -162,12 +164,15 @@ const translations = {
     yourGame: "Your Game", marketplace: "Marketplace", marketplaceDesc: "Find games that other umpires are giving away or games missing umpires.",
     tradeGame: "Give Away", cancelTrade: "Cancel Give Away", takeGame: "Take Game", expressInterest: "Express Interest",
     gamesForTrade: "Games Up For Trade", missingUmpires: "Games missing umpires", noMarketplaceGames: "No games are up for trade right now.",
-    tradeSuccess: "You have taken over the game!", tradeConfirm: "Are you sure you want to take over this game?",
-    evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved",
-    yourEval: "Evaluation", selectAdmin: "Select Admin...", enterTCName: "Enter TC name...", umpireShort: "UMP",
-    supShort: "SUP", tcShort: "TC", address: "Address", facilities: "Facilities", noFacilities: "No facilities listed",
-    addFacility: "Add facility...", editLocation: "Edit Location", matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
-    acceptTime: "Accept New Time", declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required",
+    tradeSuccess: "You have taken over the game! Your schedule is updated.",
+    tradeConfirm: "Are you sure you want to take over this game?",
+    downloadCalendar: "Download", formatICS: ".ICS File", subtextICS: "For Apple & Outlook", formatCSV: ".CSV File",
+    subtextCSV: "For Google Calendar", evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation",
+    evalSaved: "Evaluation Saved", yourEval: "Evaluation", selectAdmin: "Select Admin...", selectUmpire: "Select Umpire...",
+    enterTCName: "Enter TC name...", umpireShort: "UMP", supShort: "SUP", tcShort: "TC", address: "Address", facilities: "Facilities",
+    noFacilities: "No facilities listed", addFacility: "Add facility...", editLocation: "Edit Location",
+    matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.", acceptTime: "Accept New Time",
+    declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required",
     superAdminSettings: "System Architecture (Super Admin)", featureMarketplace: "Enable Marketplace (Trade Board)",
     featureEvaluations: "Enable Evaluation System", featureReminders: "Automated Email Reminders", reminderPreferences: "My Notifications",
     receiveReminders: "Receive email reminders for my upcoming games", runRemindersNow: "Run Reminders Cron", invoiceTitle: "Travel Invoice",
@@ -196,12 +201,14 @@ const translations = {
     availabilityWarningDesc1: "If you have not submitted your availability, you will not receive games.", availabilityWarningDesc2: "We assign games until June.",
     assigned: "ASSIGNED", takeOverFrom: "Take over from", spotsAvailable: "spot(s) available", noInterestsYet: "No interests marked yet.",
     currentCrew: "Current Crew", noUmpiresAssigned: "No umpires assigned.", manualAssign: "+ Manual Assignment...", assignBtn: "Assign",
-    removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown", sandboxWarning: "SANDBOX ENVIRONMENT",
+    removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown", sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED",
     deleteAvatarConfirm: "Are you sure you want to remove your profile picture?", deleteAvatar: "Remove picture", open: "Open",
     droveCar: "My Car", carpooling: "Carpool", invoiceCommentLabel: "Additional Comments",
     invoiceCommentPlaceholder: "E.g. private accommodation, carpooling with [Name], or route changes...",
     receiptsReminder: "NOTE! If you have additional expenses, email receipts to info@sbslf.se.",
-    nonUmpire: "Non-umpire"
+    nonUmpire: "Non-umpire", economy: "Economy", economyDesc: "Manage all submitted travel invoices",
+    statusNotPaid: "Not paid", statusPaid: "Paid", statusVoid: "Void", exportSummary: "Export (CSV)",
+    fedAdminSettings: "Federation Admins (Emails, comma separated)"
   }
 };
 
@@ -231,6 +238,178 @@ const generateCSV = (gamesToExport, selectedYear) => {
   link.click();
   document.body.removeChild(link);
 };
+
+// ==========================================
+// PRINTABLE INVOICE COMPONENT (Shared)
+// ==========================================
+function PrintableInvoice({ data, t, containerId }) {
+  if (!data) return null;
+  const { personalInfo, trips, expenses, overnightCount, advance, calculated, invoiceComment, createdAt } = data;
+  const dateStr = createdAt ? new Date(createdAt).toLocaleDateString('sv-SE') : new Date().toLocaleDateString('sv-SE');
+
+  return (
+    <div id={containerId} className="hidden print:block w-[190mm] mx-auto text-black p-8 bg-white text-[12px] leading-snug">
+      <table className="w-full mb-6">
+        <tbody>
+          <tr>
+            <td className="align-bottom">
+              <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
+              <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
+            </td>
+            <td className="align-bottom text-right text-[10px]">
+              <p>{t.date}: {dateStr}</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="w-full mb-6 text-[12px]">
+        <tbody>
+          <tr>
+            <td className="py-1.5 w-1/2"><span className="font-bold">{t.name}:</span> {personalInfo?.name}</td>
+            <td className="py-1.5 w-1/2"><span className="font-bold">{t.pnr}:</span> {personalInfo?.pnr}</td>
+          </tr>
+          <tr>
+            <td className="py-1.5"><span className="font-bold">{t.streetAddress}:</span> {personalInfo?.address}</td>
+            <td className="py-1.5"><span className="font-bold">{t.zipCity}:</span> {personalInfo?.zipCity}</td>
+          </tr>
+          <tr>
+            <td className="py-1.5" colSpan="2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo?.bank}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Uppdrag & Resor</h3>
+      <table className="w-full border-collapse border border-black mb-6 text-[11px]">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-black p-1.5 text-left">{t.date}</th>
+            <th className="border border-black p-1.5 text-left">Ändamål</th>
+            <th className="border border-black p-1.5 text-left">Rutt</th>
+            <th className="border border-black p-1.5 text-center">Fordon</th>
+            <th className="border border-black p-1.5 text-right">Mil</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(trips || []).map((trip, idx) => (
+            <tr key={idx}>
+              <td className="border border-black p-1.5">{trip.date}</td>
+              <td className="border border-black p-1.5">{trip.assignment}</td>
+              <td className="border border-black p-1.5">{trip.from} &rarr; {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
+              <td className="border border-black p-1.5 text-center">{trip.isDriver ? 'Egen bil' : 'Samåker'}</td>
+              <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {(expenses || []).some(e => e.description && e.amount) && (
+        <>
+          <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Utlägg</h3>
+          <table className="w-full border-collapse border border-black mb-6 text-[11px]">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-black p-1.5 text-left">Beskrivning</th>
+                <th className="border border-black p-1.5 text-right w-32">Belopp (kr)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.filter(e => e.description && e.amount).map((exp, idx) => (
+                <tr key={idx}>
+                  <td className="border border-black p-1.5">{exp.description}</td>
+                  <td className="border border-black p-1.5 text-right">{exp.amount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      <table className="w-full mb-8">
+        <tbody>
+          <tr>
+            <td className="w-1/2 align-top pr-6">
+              {invoiceComment && (
+                 <>
+                   <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Övriga kommentarer</h3>
+                   <div className="border border-black p-2 text-[10px] whitespace-pre-wrap min-h-[60px]">{invoiceComment}</div>
+                 </>
+              )}
+            </td>
+            <td className="w-1/2 align-top">
+              <table className="w-full border-collapse border border-black text-[11px]">
+                <tbody>
+                  <tr>
+                    <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.milageCost} kr</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1.5">Tilläggsarvode</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.travelBonus} kr</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 300kr)</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.overnightCost} kr</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1.5">Övriga Utlägg</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.totalExpenses} kr</td>
+                  </tr>
+                  {calculated?.advance > 0 && (
+                    <tr>
+                      <td className="border border-black p-1.5">Avgår förskott</td>
+                      <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
+                    </tr>
+                  )}
+                  <tr className="bg-gray-100 font-bold text-sm">
+                    <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.total} kr</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="w-full mt-8 page-break-inside-avoid">
+        <tbody>
+          <tr>
+            <td className="w-1/2 align-top pr-12">
+              <p className="font-bold mb-8">Underskrift resenär:</p>
+              <div className="border-b border-black w-full"></div>
+              <p className="text-[10px] mt-1 text-gray-500">Signatur & Namnförtydligande</p>
+            </td>
+            <td className="w-1/2 align-top">
+              <div className="border-2 border-black p-4">
+                <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
+                <table className="w-full text-xs h-16">
+                  <tbody>
+                    <tr>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Konto</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">K-ställe</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Projekt</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Fritt</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <table className="w-full text-xs mt-6 h-16">
+                  <tbody>
+                    <tr>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Belopp (kr)</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Attest (Sign)</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Beslut (Sign)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 // ==========================================
 // UMPIRE PROFILE MODAL COMPONENT
@@ -318,7 +497,6 @@ function UmpireProfileModal({
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
-        {/* Modal Header */}
         <div className="relative pt-12 pb-6 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
            <button onClick={() => setSelectedProfileId(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
            
@@ -357,7 +535,6 @@ function UmpireProfileModal({
            </div>
         </div>
 
-        {/* Modal Scrollable Body */}
         <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
@@ -465,12 +642,11 @@ function UmpireProfileModal({
 // ==========================================
 // TRAVEL INVOICE COMPONENT
 // ==========================================
-function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData }) {
+function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData, allInvoices }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sentTarget, setSentTarget] = useState('');
   const [calculatingIndex, setCalculatingIndex] = useState(null);
-  const [pastInvoices, setPastInvoices] = useState([]);
 
   const [personalInfo, setPersonalInfo] = useState({
     name: '', pnr: '', address: '', zipCity: '', bank: '', email: ''
@@ -487,6 +663,11 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
   const [advance, setAdvance] = useState('');
   const [overnightCount, setOvernightCount] = useState('');
   const [invoiceComment, setInvoiceComment] = useState('');
+
+  const pastInvoices = useMemo(() => {
+     if(!user || !user.uid) return [];
+     return allInvoices.filter(i => i.userId === user.uid);
+  }, [allInvoices, user]);
 
   useEffect(() => {
     if (user && user.uid) {
@@ -514,16 +695,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         } catch(e) {}
       };
       fetchProfile();
-
-      const fetchPastInvoices = async () => {
-         try {
-            const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), orderBy('createdAt', 'desc'));
-            onSnapshot(q, snap => {
-               setPastInvoices(snap.docs.map(d => ({id: d.id, ...d.data()})));
-            });
-         } catch(e) {}
-      };
-      fetchPastInvoices();
     } else if (userName) {
        setPersonalInfo(prev => ({ 
           ...prev, name: userName, email: user?.email || '', address: myUmpireData?.address || '', zipCity: myUmpireData?.city || '' 
@@ -649,10 +820,17 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     };
   }, [trips, expenses, overnightCount, advance]);
 
+  const invoiceDataObj = {
+    personalInfo, trips, expenses, overnightCount, advance, calculated, invoiceComment
+  };
+
   const handleDeleteInvoice = async (invoiceId) => {
     if (window.confirm("Vill du verkligen ta bort denna reseräkning från historiken?")) {
       try {
-        await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'invoices', invoiceId));
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'all_invoices', invoiceId));
+        if (user && user.uid) {
+           await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'invoices', invoiceId)).catch(()=>{});
+        }
       } catch (e) {
         console.error(e);
       }
@@ -702,16 +880,13 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
 
         if (user && user.uid) {
            try {
-              await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), {
+              await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'all_invoices'), {
+                 ...invoiceDataObj,
                  createdAt: Date.now(),
+                 userId: user.uid,
+                 userName: personalInfo.name,
                  total: calculated.total,
-                 status: "Nedladdad (PDF)",
-                 personalInfo,
-                 trips,
-                 expenses,
-                 advance,
-                 overnightCount,
-                 invoiceComment
+                 status: "Nedladdad (PDF)"
               });
            } catch(e) {}
         }
@@ -809,16 +984,13 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
       });
 
       if (user && user.uid && target === 'federation') {
-         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'invoices'), {
+         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'all_invoices'), {
+            ...invoiceDataObj,
             createdAt: Date.now(),
+            userId: user.uid,
+            userName: personalInfo.name,
             total: calculated.total,
-            status: "Inskickad",
-            personalInfo,
-            trips,
-            expenses,
-            advance,
-            overnightCount,
-            invoiceComment
+            status: "Ej betald"
          });
       }
 
@@ -1160,190 +1332,136 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         </form>
       </div>
 
-      {/* PRINT VIEW (TABLE OPTIMIZED FOR HTML2PDF) */}
-      <div id="print-invoice-view" className="hidden print:block w-[190mm] mx-auto text-black p-8 bg-white text-[12px] leading-snug">
+
+
+// ==========================================
+// INVOICE REVIEW MODAL (ADMIN)
+// ==========================================
+function InvoiceReviewModal({ invoice, setInvoice, t }) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPDF = () => {
+    setIsDownloading(true);
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => {
+      const element = document.getElementById('admin-print-invoice-view');
+      element.classList.remove('hidden');
+      element.classList.remove('print:block');
+      
+      const opt = {
+        margin:       10,
+        filename:     `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      window.html2pdf().set(opt).from(element).save().then(() => {
+        element.classList.add('hidden');
+        element.classList.add('print:block');
+        setIsDownloading(false);
+      });
+    };
+    document.body.appendChild(script);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+      <div className="bg-white rounded-[2rem] w-full max-w-4xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
-        <table className="w-full mb-6">
-          <tbody>
-            <tr>
-              <td className="align-bottom">
-                <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
-                <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
-              </td>
-              <td className="align-bottom text-right text-[10px]">
-                <p>{t.date}: {new Date().toLocaleDateString('sv-SE')}</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="relative pt-8 pb-4 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
+           <button onClick={() => setInvoice(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
+           <h2 className="text-2xl font-black text-slate-800">Reseräkning: {invoice.userName}</h2>
+           <p className="text-xs font-bold text-slate-500 mt-1">{new Date(invoice.createdAt).toLocaleDateString('sv-SE')}</p>
+        </div>
 
-        <table className="w-full mb-6 text-[12px]">
-          <tbody>
-            <tr>
-              <td className="py-1.5 w-1/2"><span className="font-bold">{t.name}:</span> {personalInfo.name}</td>
-              <td className="py-1.5 w-1/2"><span className="font-bold">{t.pnr}:</span> {personalInfo.pnr}</td>
-            </tr>
-            <tr>
-              <td className="py-1.5"><span className="font-bold">{t.streetAddress}:</span> {personalInfo.address}</td>
-              <td className="py-1.5"><span className="font-bold">{t.zipCity}:</span> {personalInfo.zipCity}</td>
-            </tr>
-            <tr>
-              <td className="py-1.5" colSpan="2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo.bank}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-slate-50">
+           {/* Render the printable view inside a container so the admin can see it */}
+           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+              <PrintableInvoice data={invoice} t={t} containerId="admin-print-invoice-view" />
+              
+              {/* Visible preview for the admin */}
+              <div className="p-6">
+                 <div className="flex justify-between items-center mb-6">
+                   <h3 className="font-bold text-lg">Sammanställning</h3>
+                   <span className="text-2xl font-black text-green-600">{invoice.total} kr</span>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div>
+                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Domare</h4>
+                     <p className="font-bold text-sm">{invoice.personalInfo?.name}</p>
+                     <p className="text-xs text-slate-600">{invoice.personalInfo?.pnr}</p>
+                     <p className="text-xs text-slate-600">{invoice.personalInfo?.email}</p>
+                   </div>
+                   <div>
+                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4>
+                     <p className="font-bold text-sm">{invoice.personalInfo?.bank}</p>
+                   </div>
+                 </div>
 
-        <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Uppdrag & Resor</h3>
-        <table className="w-full border-collapse border border-black mb-6 text-[11px]">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-black p-1.5 text-left">{t.date}</th>
-              <th className="border border-black p-1.5 text-left">Ändamål</th>
-              <th className="border border-black p-1.5 text-left">Rutt</th>
-              <th className="border border-black p-1.5 text-center">Fordon</th>
-              <th className="border border-black p-1.5 text-right">Mil</th>
-            </tr>
-          </thead>
-          <tbody>
-            {trips.map((trip, idx) => (
-              <tr key={idx}>
-                <td className="border border-black p-1.5">{trip.date}</td>
-                <td className="border border-black p-1.5">{trip.assignment}</td>
-                <td className="border border-black p-1.5">{trip.from} &rarr; {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
-                <td className="border border-black p-1.5 text-center">{trip.isDriver ? 'Egen bil' : 'Samåker'}</td>
-                <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {expenses.some(e => e.description && e.amount) && (
-          <>
-            <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Utlägg</h3>
-            <table className="w-full border-collapse border border-black mb-6 text-[11px]">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-black p-1.5 text-left">Beskrivning</th>
-                  <th className="border border-black p-1.5 text-right w-32">Belopp (kr)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.filter(e => e.description && e.amount).map((exp, idx) => (
-                  <tr key={idx}>
-                    <td className="border border-black p-1.5">{exp.description}</td>
-                    <td className="border border-black p-1.5 text-right">{exp.amount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
-
-        <table className="w-full mb-8">
-          <tbody>
-            <tr>
-              <td className="w-1/2 align-top pr-6">
-                {invoiceComment && (
-                   <>
-                     <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Övriga kommentarer</h3>
-                     <div className="border border-black p-2 text-[10px] whitespace-pre-wrap min-h-[60px]">{invoiceComment}</div>
-                   </>
-                )}
-              </td>
-              <td className="w-1/2 align-top">
-                <table className="w-full border-collapse border border-black text-[11px]">
-                  <tbody>
-                    <tr>
-                      <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
-                      <td className="border border-black p-1.5 text-right">{calculated.milageCost} kr</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-1.5">Tilläggsarvode</td>
-                      <td className="border border-black p-1.5 text-right">{calculated.travelBonus} kr</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 300kr)</td>
-                      <td className="border border-black p-1.5 text-right">{calculated.overnightCost} kr</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-1.5">Övriga Utlägg</td>
-                      <td className="border border-black p-1.5 text-right">{calculated.totalExpenses} kr</td>
-                    </tr>
-                    {calculated.advance > 0 && (
-                      <tr>
-                        <td className="border border-black p-1.5">Avgår förskott</td>
-                        <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
-                      </tr>
-                    )}
-                    <tr className="bg-gray-100 font-bold text-sm">
-                      <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
-                      <td className="border border-black p-1.5 text-right">{calculated.total} kr</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table className="w-full mt-8 page-break-inside-avoid">
-          <tbody>
-            <tr>
-              <td className="w-1/2 align-top pr-12">
-                <p className="font-bold mb-8">Underskrift resenär:</p>
-                <div className="border-b border-black w-full"></div>
-                <p className="text-[10px] mt-1 text-gray-500">Signatur & Namnförtydligande</p>
-              </td>
-              <td className="w-1/2 align-top">
-                <div className="border-2 border-black p-4">
-                  <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
-                  <table className="w-full text-xs h-16">
-                    <tbody>
-                      <tr>
-                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Konto</td>
-                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">K-ställe</td>
-                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Projekt</td>
-                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Fritt</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <table className="w-full text-xs mt-6 h-16">
-                    <tbody>
-                      <tr>
-                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Belopp (kr)</td>
-                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Attest (Sign)</td>
-                        <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Beslut (Sign)</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                 <div className="mt-6 border-t border-slate-100 pt-6">
+                   <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Resor</h4>
+                   {invoice.trips?.map((t, idx) => (
+                     <p key={idx} className="text-xs font-medium text-slate-700 mb-1">
+                       {t.date}: {t.from} till {t.to} ({t.distance} mil) - {t.assignment}
+                     </p>
+                   ))}
+                 </div>
+              </div>
+           </div>
+        </div>
+        
+        <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-3">
+           <button onClick={() => setInvoice(null)} className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-black uppercase text-xs hover:bg-slate-200">
+              Stäng
+           </button>
+           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs shadow-sm hover:bg-blue-700 flex items-center gap-2">
+              {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Ladda ner som PDF
+           </button>
+        </div>
       </div>
     </div>
   );
 }
 
+// ==========================================
+// ERROR BOUNDARY
+// ==========================================
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
   }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, errorInfo) { console.error("Critical React Crash:", error, errorInfo); this.setState({ errorInfo }); }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Critical React Crash:", error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
           <div className="bg-white p-8 rounded-3xl shadow-xl max-w-2xl w-full text-center border border-red-100">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-black text-slate-800 mb-2">{translations.sv.errorOccurred}</h2>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">{t.errorOccurred}</h2>
+            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade. Felet var:</p>
+            
             <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap bg-red-50 p-4 rounded-xl text-left overflow-auto max-h-60 border border-red-200">
-              {this.state.error?.toString()}{'\n'}{this.state.errorInfo?.componentStack}
+              {this.state.error?.toString()}
+              {'\n'}
+              {this.state.errorInfo?.componentStack}
             </pre>
-            <button onClick={() => window.location.reload()} className="mt-8 bg-slate-800 text-white px-8 py-4 rounded-xl font-black uppercase text-xs hover:bg-black transition-colors">Ladda om sidan</button>
+
+            <button onClick={() => window.location.reload()} className="mt-8 bg-slate-800 text-white px-8 py-4 rounded-xl font-black uppercase text-xs hover:bg-black transition-colors">
+              Ladda om sidan
+            </button>
           </div>
         </div>
       );
@@ -1352,14 +1470,20 @@ class ErrorBoundary extends Component {
   }
 }
 
+// ==========================================
+// MAIN APPLICATION COMPONENT
+// ==========================================
 function MainApp() {
+  // Auth & Roles
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminUmpireIds, setAdminUmpireIds] = useState([]);
+  const [fedAdminEmails, setFedAdminEmails] = useState([]);
   
+  // Navigation & View
   const [view, setView] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1371,6 +1495,7 @@ function MainApp() {
   const [myGamesViewMode, setMyGamesViewMode] = useState('list');
   const [selectedYear, setSelectedYear] = useState('2026');
   
+  // Federation Multi-Tenant Setup (Environment detection)
   const [isDemoEnv, setIsDemoEnv] = useState(true);
   const [federation, setFederation] = useState('swe');
   const federations = [
@@ -1378,23 +1503,33 @@ function MainApp() {
     { id: 'int', name: '🇬🇧 English', defaultLang: 'en' }
   ];
 
+  // Language & UI Context
   const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
   
   const getTranslation = (languageCode) => {
     const selected = translations[languageCode] || translations['en'];
     const fallback = translations['en'];
-    return new Proxy(selected, { get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop] });
+    return new Proxy(selected, {
+      get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop]
+    });
   };
   const t = getTranslation(lang);
 
+  // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
+  // System Feature Flags
+  const [features, setFeatures] = useState({
+    marketplace: true,
+    evaluations: true,
+    reminders: true
+  });
   
+  // Help View State
   const [helpTab, setHelpTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1405,12 +1540,23 @@ function MainApp() {
   const [readmeContent, setReadmeContent] = useState(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
   
+  // Contact Form State
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactSubject, setContactSubject] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [contactStatus, setContactStatus] = useState('idle');
 
+  // Email Module State
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [customEmailMessage, setCustomEmailMessage] = useState('');
+  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
+
+  // Calendar Dropdown States
+  const [showScheduleExport, setShowScheduleExport] = useState(false);
+  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
+
+  // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -1419,10 +1565,12 @@ function MainApp() {
   const [evaluations, setEvaluations] = useState([]);
   const [locationsData, setLocationsData] = useState([]);
   const [mailQueue, setMailQueue] = useState([]);
+  const [allInvoices, setAllInvoices] = useState([]); // Invoices for Economy tab
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
   
+  // Auth & Modals State
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -1433,33 +1581,45 @@ function MainApp() {
   const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [selectedGameDetails, setSelectedGameDetails] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
   
+  // Evaluation Forms State
+  const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
   const [evalGrade, setEvalGrade] = useState(0);
   const [evalComment, setEvalComment] = useState('');
 
+  // Location Editing State
   const [editingLocation, setEditingLocation] = useState(null);
   const [newFacility, setNewFacility] = useState('');
   
+  // Admin Editing Controls
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [tempEditName, setTempEditName] = useState('');
+  const [tempFedAdmins, setTempFedAdmins] = useState('');
   const [editNoteText, setEditNoteText] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
-  const [umpireSort, setUmpireSort] = useState('name');
+  const [umpireSort, setUmpireSort] = useState('level');
 
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
 
+  // Localized today
   const today = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
+  // Derived Admin Role
+  const isFederationAdmin = user?.email && fedAdminEmails.includes(user.email.toLowerCase());
+
+  // Environment Logic
   useEffect(() => {
      if (typeof window !== 'undefined') {
         const host = window.location.hostname;
@@ -1556,16 +1716,25 @@ function MainApp() {
       const matchesSearch = hName.includes(search) || aName.includes(search);
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
+      
       const isHistorical = (game.date || '') < today;
       
       let statusMatch = true;
+      if (filterStatus === 'needs_umpire') {
+          const gameAssignments = groupedAssignments[game.id] || [];
+          statusMatch = gameAssignments.length < (game.requiredUmpires || 2);
+      } else if (filterStatus === 'no_interests') {
+          const applicants = applications.filter(a => a.gameId === game.id);
+          statusMatch = applicants.length === 0;
+      }
+      
       if (showHistory) {
         return isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
       } else {
         return !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
       }
     });
-  }, [games, searchQuery, filterLeague, filterLocation, showHistory, today]);
+  }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
   
@@ -1624,22 +1793,72 @@ function MainApp() {
     );
   }, [games, applications, groupedAssignments, umpireId]);
 
+  const umpiresWithAssignmentsMap = useMemo(() => {
+    const map = {};
+    assignments.forEach(asg => {
+      if (!map[asg.userId]) {
+        map[asg.userId] = { umpire: masterUmpires.find(u => u.id === asg.userId), assignedGames: [] };
+      }
+      const game = games.find(g => g.id === asg.gameId);
+      if (game) map[asg.userId].assignedGames.push(game);
+    });
+    Object.values(map).forEach(obj => {
+      obj.assignedGames.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    });
+    return map;
+  }, [assignments, masterUmpires, games]);
+
+  const emailCandidates = useMemo(() => {
+    const list = Object.values(umpiresWithAssignmentsMap).filter(obj => obj.umpire !== undefined);
+    const ready = list.filter(obj => obj.umpire.linkedEmail);
+    const missing = list.filter(obj => !obj.umpire.linkedEmail);
+    return { ready, missing };
+  }, [umpiresWithAssignmentsMap]);
+
+  const unconnectedEmails = useMemo(() => {
+    const linked = masterUmpires.map(u => (u.linkedEmail || '').toLowerCase()).filter(Boolean);
+    return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
+  }, [registeredEmails, masterUmpires]);
+
   const uiDays = useMemo(() => {
     const arr = [...(t.days || [])];
     if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
     return arr;
   }, [t.days]);
 
+  // 5. YTTERLIGARE EFFECTS
   useEffect(() => {
     setEditNoteText(globalNote);
   }, [globalNote]);
 
   useEffect(() => {
+    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
+      setReadmeLoading(true);
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.content) {
+            const text = decodeURIComponent(escape(atob(data.content)));
+            setReadmeContent(text);
+          } else {
+            setReadmeContent(t.fetchError);
+          }
+        })
+        .catch(err => {
+          setReadmeContent(t.fetchError);
+        })
+        .finally(() => setReadmeLoading(false));
+    }
+  }, [view, helpTab, readmeContent, t.fetchError]);
+
+  useEffect(() => {
+    setEvaluatingUmpire(null);
     setEvalGrade(0);
     setEvalComment('');
     setEditingGameData(null);
   }, [selectedGameDetails]);
 
+  // Firebase Real-time listeners
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) {
@@ -1710,6 +1929,11 @@ function MainApp() {
       setMailQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, handleDbError);
 
+    const invoicesCol = collection(db, 'artifacts', appId, 'public', 'data', 'all_invoices');
+    const unsubscribeInvoices = onSnapshot(invoicesCol, (snapshot) => {
+      setAllInvoices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b) => b.createdAt - a.createdAt));
+    }, handleDbError);
+
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
       if (snapshot.exists()) {
@@ -1718,6 +1942,9 @@ function MainApp() {
         setGlobalNote(data.globalNote || '');
         if (data.features) {
            setFeatures(prev => ({ ...prev, ...data.features }));
+        }
+        if (data.fedAdminEmails) {
+           setFedAdminEmails(data.fedAdminEmails);
         }
       }
     }, handleDbError);
@@ -1731,6 +1958,7 @@ function MainApp() {
       unsubscribeEvals();
       unsubscribeLocations();
       unsubscribeQueue();
+      unsubscribeInvoices();
       unsubscribeSettings();
     };
   }, [user, appId]);
@@ -1826,6 +2054,7 @@ function MainApp() {
     return () => clearInterval(interval);
   }, [isAdmin, mailQueue, appId, t]);
 
+  // AUTO REMOVE PENDING CHANGES AFTER 7 DAYS
   useEffect(() => {
     if (!isAdmin || assignments.length === 0) return;
     const now = Date.now();
@@ -2058,6 +2287,13 @@ function MainApp() {
     setFeatures(newFeatures);
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { features: newFeatures }, { merge: true });
   };
+  
+  const saveFedAdmins = async () => {
+    if (!isSuperAdmin) return;
+    const emails = tempFedAdmins.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { fedAdminEmails: emails }, { merge: true });
+    if(typeof window !== 'undefined') alert(t.savedSuccess);
+  };
 
   const toggleUmpireReminderPref = async (uId, currentStatus) => {
      if (uId !== umpireId && !isAdmin) return;
@@ -2168,6 +2404,8 @@ function MainApp() {
 
   const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
+    
+    // KROCK-SKYDD
     const game = games.find(g => g.id === gameId);
     if (game) {
       const umpireAssignedGamesToday = assignments
@@ -2391,6 +2629,41 @@ function MainApp() {
     }
   };
 
+  const updateInvoiceStatus = async (id, newStatus) => {
+    try {
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'all_invoices', id), { status: newStatus });
+    } catch(e) { console.error(e); }
+  };
+
+  const exportEconomyCSV = (invoicesToExport) => {
+    if (invoicesToExport.length === 0 || typeof window === 'undefined') return;
+    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning\n";
+    invoicesToExport.forEach(inv => {
+      const date = new Date(inv.createdAt).toLocaleDateString('sv-SE');
+      const name = inv.personalInfo?.name || '';
+      const pnr = inv.personalInfo?.pnr || '';
+      const email = inv.personalInfo?.email || '';
+      const amount = inv.total || 0;
+      const status = inv.status || '';
+      const tripsStr = (inv.trips || []).map(t => `${t.from}-${t.to} (${t.distance} mil)`).join(' | ');
+      const expensesStr = (inv.expenses || []).map(e => `${e.description} (${e.amount}kr)`).join(' | ');
+      const milageStr = `${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)`;
+      const overnightStr = `${inv.overnightCount || 0} nätter`;
+      
+      // Wrap strings with commas in quotes
+      csv += `"${date}","${name}","${pnr}","${email}",${amount},"${status}","${tripsStr}","${expensesStr}","${milageStr}","${overnightStr}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `reserakningar-${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const confirmScheduleChange = async (asgId) => {
      if (!umpireId) return;
      try {
@@ -2444,7 +2717,61 @@ function MainApp() {
       setEditingLocation(null);
     } catch (e) { }
   };
-const myUmpireData = masterUmpires.find(u => u.id === umpireId);
+
+  const loadDemoData = async () => {
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      
+      const ump1Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump1Ref, { name: "Anna Andersson", level: "Elit", remindersEnabled: true });
+      const ump2Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump2Ref, { name: "Björn Borg", level: "Region", remindersEnabled: true });
+      const ump3Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
+      batch.set(ump3Ref, { name: "Cecilia Carlsson", level: "Förening", remindersEnabled: true });
+      
+      const loc1Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Örvallen');
+      batch.set(loc1Ref, { address: 'Örvallen 1, Sundbyberg', facilities: ['Omklädningsrum', 'Kiosk', 'Toalett'] });
+      const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
+      batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
+
+      const teams = ['Rättvik', 'Sundbyberg', 'Leksand', 'Stockholm', 'Sölvesborg', 'Karlskoga', 'Gefle', 'Tranås'];
+      const locs = ['Örvallen', 'Skarpnäck', 'Leksand IP', 'Shark Park'];
+      const leagues = ['Elitserien', 'Regionserien'];
+      
+      let currentDate = new Date();
+      for (let i = 0; i < 50; i++) {
+         const gameDate = new Date(currentDate);
+         gameDate.setDate(currentDate.getDate() + Math.floor(i / 2));
+         const dateStr = `${gameDate.getFullYear()}-${String(gameDate.getMonth() + 1).padStart(2, '0')}-${String(gameDate.getDate()).padStart(2, '0')}`;
+         
+         const t1 = teams[Math.floor(Math.random() * teams.length)];
+         let t2 = teams[Math.floor(Math.random() * teams.length)];
+         while(t1 === t2) t2 = teams[Math.floor(Math.random() * teams.length)];
+         
+         const loc = locs[Math.floor(Math.random() * locs.length)];
+         const l = leagues[Math.floor(Math.random() * leagues.length)];
+         const timeHour = 10 + Math.floor(Math.random() * 8);
+         const timeStr = `${timeHour}:00`;
+         
+         const gameId = `m-${dateStr.replace(/-/g,'')}-${timeStr.replace(':','')}-${t1}-${t2}`.replace(/\s+/g, '').toLowerCase();
+         
+         batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), {
+           date: dateStr, time: timeStr, league: l, away: t1, home: t2, location: loc, requiredUmpires: 2
+         });
+      }
+
+      await batch.commit();
+      if(typeof window !== 'undefined') alert(t.sandboxLoaded);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const myUmpireData = masterUmpires.find(u => u.id === umpireId);
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
   if (view === 'invoice') {
@@ -2469,6 +2796,7 @@ const myUmpireData = masterUmpires.find(u => u.id === umpireId);
           t={t} 
           myAssignedGames={invoiceEligibleGames} 
           myUmpireData={myUmpireData}
+          allInvoices={allInvoices}
         />
       </div>
     );
@@ -2483,6 +2811,7 @@ const myUmpireData = masterUmpires.find(u => u.id === umpireId);
       { id: 'my-apps', label: t.myGames, icon: CheckCircle }
     ] : []),
     ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
+    ...(isAdmin || isFederationAdmin ? [{ id: 'economy', label: t.economy, icon: CreditCard }] : []),
     { id: 'invoice', label: t.invoiceTitle, icon: FileText }
   ];
 
@@ -2852,6 +3181,62 @@ const myUmpireData = masterUmpires.find(u => u.id === umpireId);
                 )}
              </div>
           </div>
+        )}
+
+        {view === 'economy' && (isAdmin || isFederationAdmin) && (
+           <div className="space-y-6 animate-in fade-in">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <div className="text-center sm:text-left">
+                   <h2 className="text-xl font-black uppercase">{t.economy}</h2>
+                   <p className="text-sm text-slate-500">{t.economyDesc}</p>
+                </div>
+                <button onClick={() => exportEconomyCSV(allInvoices)} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase hover:bg-blue-700 transition-colors flex items-center gap-2">
+                   <Download className="w-4 h-4"/> {t.exportSummary}
+                </button>
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
+                 <table className="w-full text-left min-w-[800px]">
+                    <thead className="bg-slate-50 border-b">
+                       <tr>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase">{t.date}</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase">{t.umpire}</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase">Belopp</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase">Status</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase">Åtgärd</th>
+                       </tr>
+                    </thead>
+                    <tbody>
+                       {allInvoices.map(inv => (
+                          <tr key={inv.id} className="border-b border-slate-50 hover:bg-slate-50">
+                             <td className="px-6 py-4 text-xs font-bold text-slate-700">{new Date(inv.createdAt).toLocaleDateString('sv-SE')}</td>
+                             <td className="px-6 py-4 text-xs font-bold text-slate-800">{inv.userName}</td>
+                             <td className="px-6 py-4 text-xs font-black text-blue-600">{inv.total} kr</td>
+                             <td className="px-6 py-4">
+                                <select 
+                                  value={inv.status} 
+                                  onChange={(e) => updateInvoiceStatus(inv.id, e.target.value)}
+                                  className={`text-xs font-bold px-2 py-1 rounded-lg outline-none ${inv.status === 'Ej betald' ? 'bg-red-100 text-red-700' : inv.status === 'Utbetald' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-700'}`}
+                                >
+                                   <option value="Ej betald">{t.statusNotPaid}</option>
+                                   <option value="Utbetald">{t.statusPaid}</option>
+                                   <option value="Makulerad">{t.statusVoid}</option>
+                                   <option value="Nedladdad (PDF)">Nedladdad (PDF)</option>
+                                   <option value="Inskickad">Inskickad</option>
+                                </select>
+                             </td>
+                             <td className="px-6 py-4">
+                                <button onClick={() => setSelectedInvoice(inv)} className="text-[10px] font-black uppercase text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg">Granska</button>
+                             </td>
+                          </tr>
+                       ))}
+                    </tbody>
+                 </table>
+                 {allInvoices.length === 0 && (
+                   <div className="p-8 text-center text-slate-400 font-medium italic">Inga reseräkningar inskickade ännu.</div>
+                 )}
+              </div>
+           </div>
         )}
 
         {view === 'my-apps' && (
@@ -3522,6 +3907,20 @@ const myUmpireData = masterUmpires.find(u => u.id === umpireId);
                     </div>
                   </button>
 
+                  <div className="space-y-1 mt-2">
+                    <label className="text-[10px] font-black uppercase text-purple-600 pl-1">{t.fedAdminSettings}</label>
+                    <input 
+                      type="text" 
+                      defaultValue={fedAdminEmails.join(', ')} 
+                      onChange={(e) => setTempFedAdmins(e.target.value)}
+                      placeholder="info@sbslf.se, ekonomi@sbslf.se" 
+                      className="w-full p-3 bg-white border border-purple-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-purple-500/20" 
+                    />
+                    <button onClick={saveFedAdmins} className="w-full mt-1 py-2 bg-purple-100 text-purple-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-200 transition-colors">
+                      {t.saveChanges}
+                    </button>
+                  </div>
+
                   {features.reminders && (
                     <button onClick={forceRunRemindersNow} className="w-full mt-2 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2">
                       <RefreshCw className="w-3.5 h-3.5" /> {t.runRemindersNow}
@@ -3548,3 +3947,6 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+
+                                     
