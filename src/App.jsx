@@ -21,9 +21,37 @@ const db = getFirestore(firebaseApp);
 const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
 
 const translations = {
-  sv: {
-    appTitle: "Domarportalen", season: "Säsong", schedule: "Spelschema", myGames: "Mina Matcher", myProfile: "Min profil", umpireList: "Domarlista", staffing: "Bemanning", analytics: "Statistik", history: "Historik", upcoming: "Kommande", archived: "Arkiverade matcher", activeSchedule: "Aktivt schema", searchPlaceholder: "Sök matcher...", allSeries: "Alla serier", allLocations: "Alla platser", filterStatusAll: "Alla statusar", needsUmpire: "Saknar domare", noInterests: "Inga anmälningar", noGames: "Inga matcher hittades.", syncNow: "Synka förbundsdata nu", applied: "Anmälda", interested: "Intresserad", withdraw: "Dra tillbaka", assignedTo: "Tillsatta", staffed: "Bemannad", partiallyStaffed: "Delvis bemannad", bulkImport: "Massimport", pendingAssignments: "Bemanningsöversikt", staffingControl: "Bemanningskontroll", hideStaffed: "Dölj helt bemannade", showAll: "Visa alla matcher", removeAssignment: "Ta bort", deleteGame: "Ta bort match", deleteAllGames: "Rensa hela säsongen", deleteAllConfirm: "ÄR DU HELT SÄKER?", deleteAllSuccess: "Säsongen har rensats.", downloadBackup: "Ladda ner backup", umpire: "Domare", interests: "Intresseanmälningar", gamesAssigned: "Dömda matcher", assignmentRate: "Tillsättningsgrad", noStats: "Ingen data finns registrerad än.", mySchedule: "Mitt Schema", noAssignedMatches: "Du har inga bekräftade matchuppdrag än.", noPendingInterest: "Du har inte anmält intresse för några matcher.", confirmed: "Bekräftad", settings: "Inställningar", userSettings: "Användarinställningar", profileAccess: "Konfigurera profil & åtkomst", displayName: "Visningsnamn", namePlaceholder: "Sök eller skriv ditt namn...", logout: "Logga ut", close: "Stäng", status: "Status", setProfile: "Välj din profil", pasteSheet: "Klistra in från Google Sheets", addGames: "Lägg till matcher", importSuccess: "Import lyckades", cancel: "Avbryt", date: "Datum", crew: "Domarteam", addToCalendar: "Spara i kalender", downloadFullSchedule: "Ladda ner (.ICS)", confirmedGames: "Bekräftade uppdrag", interestedGames: "Anmält intresse", nameRequiredTitle: "Vem är du?", nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.", saveName: "Välj profil", addNewName: "Hittar du inte ditt namn?", createUmpire: "Skapa ny profil", masterList: "Domarlista", editName: "Ändra namn", save: "Spara", selectFromList: "Välj från listan", changeUser: "Byt användare", editMatch: "Ändra matchdata", home: "Hemma", away: "Borta", time: "Tid", location: "Plats", locations: "Platser", league: "Serie", saveChanges: "Spara ändringar", listView: "Lista", calendarView: "Kalender", days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"], months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"], requiredUmpires: "Antal domare", level: "Nivå", name: "Namn", sortBy: "Sortera", week: "V.", login: "Logga in", register: "Skapa konto", email: "E-postadress", phone: "Telefonnummer", password: "Lösenord", loginToContinue: "Logga in för att fortsätta", noAccount: "Inget konto? Registrera dig här", hasAccount: "Har du redan ett konto? Logga in", adminManagement: "Administratörer", masterAdminInfo: "Du är inloggad som Master Admin.", linkedAccount: "Konto:", notLinked: "Inget konto", umpireProfile: "Domarprofil", back: "Tillbaka", assignedMatches: "Tillsatta matcher", totalAssignments: "Tillsättningar", totalInterests: "Intresseanmälningar", deleteUmpireConfirm: "Är du säker på att du vill ta bort", globalAnnouncement: "Globalt Meddelande", saveAnnouncement: "Publicera", clearAnnouncement: "Ta bort", announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...", bookedIn: "Bokad i", coUmpires: "Dömer med:", noCoUmpires: "Inga meddomare", calendarColumn: "Kalender", gameDetails: "Matchinformation", mapDirections: "Öppna Karta", officials: "Domarteam", supervisor: "Supervisor", techComm: "Technical Commissioner", notAssigned: "Ej tillsatt", yourGame: "Din match", marketplace: "Marknad", marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.", tradeGame: "Byt bort", cancelTrade: "Ångra byte", takeGame: "Ta match", expressInterest: "Anmäl intresse", gamesForTrade: "Matcher som bytes bort", missingUmpires: "Matcher som saknar domare", noMarketplaceGames: "Inga matcher på marknaden just nu.", tradeSuccess: "Du har tagit över matchen!", tradeConfirm: "Är du säker på att du vill ta över denna match?", evaluate: "Utvärdera", grade: "Betyg", feedback: "Feedback", saveEval: "Spara utvärdering", evalSaved: "Utvärdering sparad", yourEval: "Utvärdering", selectAdmin: "Välj Admin...", enterTCName: "Ange namn på TC...", umpireShort: "DOMARE", supShort: "SUP", tcShort: "TC", address: "Adress", facilities: "Faciliteter", noFacilities: "Inga faciliteter", addFacility: "Lägg till facilitet...", editLocation: "Redigera plats", matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.", acceptTime: "Acceptera ny tid", declineTime: "Kan inte (Avboka)", timeChangedBadge: "Tid Ändrad", actionRequired: "Kräver åtgärd", superAdminSettings: "Systemarkitektur (Super Admin)", featureMarketplace: "Aktivera Marknadsplats", featureEvaluations: "Aktivera Utvärderingar", featureReminders: "E-postpåminnelser", reminderPreferences: "Mina Notiser", receiveReminders: "Få e-postpåminnelser", runRemindersNow: "Kör Påminnelser Nu", invoiceTitle: "Reseräkning", digitalSubmission: "Digital inlämning", personalInfo: "Personuppgifter", pnr: "Personnummer", streetAddress: "Gatuadress", zipCity: "Postnummer & Ort", bankAccount: "Bank & Kontonummer", tripsAllowance: "Resor (Milersättning & Restid)", assignmentDetails: "Ändamål (Vilka lag spelade?)", travelFrom: "Resa Från", travelTo: "Resa Till", roundTrip: "Tur & Retur", distanceMil: "Antal Mil", calcAuto: "Beräkna avstånd (Auto)", calculating: "Beräknar...", addTrip: "Lägg till ytterligare en resa", expensesAllowance: "Övriga Utlägg & Traktamente", description: "Beskrivning", amount: "Belopp (kr)", addExpense: "Lägg till utlägg", overnightNights: "Övernattningstraktamente (Antal nätter)", advanceDeduction: "Avgår förskott (kr)", summary: "Sammanställning", mileageComp: "Milersättning", travelTimeComp: "Tilläggsarvode (Lång resa)", overnightComp: "Övernattningstraktamente", otherExpenses: "Övriga Utlägg", totalToReceive: "Totalt att erhålla", downloadPDF: "Ladda ner PDF", sendToFed: "Skicka till Förbundet", sendToSelf: "Skicka test till mig", sentSuccess: "Insänt & Klart!", sentSuccessFed: "Din reseräkning har skickats in till Förbundet.", sentSuccessSelf: "En kopia har skickats till din e-post.", newInvoice: "Skapa ny reseräkning", selectGame: "-- Välj en av dina matcher --", homeLocation: "Hem", homeAddressLabel: "Hemadress", foundAssignments: "Hämta från schema:", pastInvoices: "Tidigare reseräkningar", historicalStats: "Historisk Statistik (Tidigare säsonger)", historicalGames: "Totalt dömda matcher", historicalNote: "Datan kan redigeras av administratörer.", streetAddressHidden: "Gatuadress (Dold för andra)", cityPublic: "Ort (Offentlig)", changePicture: "Byt bild", backToUmpireList: "Tillbaka till Domarlistan", contactInfo: "Kontaktuppgifter", notProvided: "Ej angivet", homeAddress1: "Hemadress 1", cityPlaceholder: "Stockholm", saveDetails: "Spara uppgifter", assignedMatchesCount: "tillsatta matcher", updateHistory: "Uppdatera historik", fillFromTo: "Fyll i både 'Från' och 'Till' för att kunna beräkna avståndet automatiskt.", addressMissing: "Gatuadress och postort saknas.", coordsMissing: "Kunde inte hitta exakta koordinater.", routeMissing: "Kunde inte hitta en giltig körrutt.", autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.", errorOccurred: "Ett fel uppstod. Vänligen försök igen.", testInvoiceSentTo: "I test-syfte har reseräkningen skickats till", savedSuccess: "Sparat!", conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.", interestRegistered: "Intresse anmält! Administratörerna ser nu din anmälan.", conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.", sandboxLoaded: "50 test-matcher har laddats in i Sandbox!", downloadICS: "Ladda ner (.ICS)", availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.", availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher.", availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.", assigned: "TILLSATTA", takeOverFrom: "Ta över från", spotsAvailable: "plats(er) lediga", noInterestsYet: "Inga intresseanmälningar ännu.", currentCrew: "Aktuellt Domarteam", noUmpiresAssigned: "Inga domare tillsatta.", manualAssign: "+ Manuell tilldelning...", assignBtn: "Tilldela", removeBtn: "Ta bort", pasteSchedulePlaceholder: "Klistra in spelschema...", unknown: "Okänd", sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION", deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?", deleteAvatar: "Ta bort bild", open: "Öppna", droveCar: "Egen bil", carpooling: "Samåker", invoiceCommentLabel: "Övriga kommentarer", invoiceCommentPlaceholder: "T.ex. privat övernattning, samåker med [Namn], eller avvikande rutt...", receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se.", nonUmpire: "Ej domare", economy: "Ekonomi", economyDesc: "Hantera alla inskickade reseräkningar", statusNotPaid: "Ej betald", statusPaid: "Utbetald", statusVoid: "Makulerad", exportSummary: "Exportera (CSV)", fedAdminSettings: "Förbundsadmins (E-postadresser, kommaseparerade)" },
-  en: { appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile", umpireList: "Umpire List", staffing: "Staffing", analytics: "Analytics", history: "History", upcoming: "Upcoming", archived: "Archived Games", activeSchedule: "Active Schedule", searchPlaceholder: "Search...", allSeries: "All Series", allLocations: "All Locations", filterStatusAll: "All Statuses", needsUmpire: "Needs Umpire", noInterests: "No Interests", noGames: "No games found.", syncNow: "Sync Federation Data Now", applied: "Interested", interested: "Interested", withdraw: "Withdraw", assignedTo: "Crew", staffed: "Fully Staffed", partiallyStaffed: "Partially Staffed", bulkImport: "Bulk Import", pendingAssignments: "Staffing Desk", staffingControl: "Staffing Control", hideStaffed: "Hide Fully Staffed", showAll: "Show All Games", removeAssignment: "Remove", deleteGame: "Delete Game", deleteConfirm: "Are you sure you want delete this game?", deleteAllGames: "Clear Entire Season", deleteAllConfirm: "ARE YOU ABSOLUTELY SURE?", deleteAllSuccess: "Season cleared successfully.", downloadBackup: "Download Backup (JSON)", umpire: "Umpire", interests: "Interests", gamesAssigned: "Games Assigned", assignmentRate: "Assignment Rate", noStats: "No engagement data recorded yet.", mySchedule: "My Schedule", noAssignedMatches: "You have no confirmed assignments yet.", noPendingInterest: "You haven't marked interest in any matches.", confirmed: "Confirmed", settings: "Settings", userSettings: "User Settings", profileAccess: "Configure profile & access", displayName: "Display Name", namePlaceholder: "Search or type name...", logout: "Logout", close: "Close", status: "Status", setProfile: "Select Your Profile", pasteSheet: "Paste from Google Sheets", addGames: "Add Games", importSuccess: "Import Successful", cancel: "Cancel", date: "Date", crew: "Umpire Crew", addToCalendar: "Add to Calendar", downloadFullSchedule: "Download (.ics)", confirmedGames: "Confirmed Assignments", interestedGames: "Interested Matches", nameRequiredTitle: "Who are you?", nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.", saveName: "Select Profile", addNewName: "Can't find your name?", createUmpire: "Create new profile", masterList: "Umpire Master List", editName: "Edit Name", save: "Save", selectFromList: "Select from list", changeUser: "Change User", editMatch: "Edit Match Details", home: "Home", away: "Away", time: "Time", location: "Location", locations: "Locations", league: "League", saveChanges: "Save Changes", listView: "List", calendarView: "Calendar", days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], requiredUmpires: "Crew Size", level: "Level", name: "Name", sortBy: "Sort by", week: "W.", login: "Login", register: "Register", email: "Email Address", phone: "Phone Number", password: "Password", forgotPassword: "Forgot Password?", loginToContinue: "Login to continue", createAnAccount: "Create a new account", noAccount: "No account? Register here", hasAccount: "Already have an account? Login", loginRequiredMsg: "You must be logged in to view this.", adminManagement: "Admin Roles", masterAdminInfo: "You are logged in as Master Admin.", linkedAccount: "Account:", notLinked: "No account", umpireProfile: "Umpire Profile", back: "Back", assignedMatches: "Assigned Matches", totalAssignments: "Assignments", totalInterests: "Interests", deleteUmpireConfirm: "Are you sure you want to remove", globalAnnouncement: "Global Announcement", saveAnnouncement: "Publish", clearAnnouncement: "Clear", announcementPlaceholder: "Type an important message to display to everyone...", bookedIn: "Booked in", coUmpires: "Co-umpires:", noCoUmpires: "No co-umpires", calendarColumn: "Calendar", gameDetails: "Game Details", mapDirections: "Open Map", officials: "Officials", supervisor: "Supervisor", techComm: "Technical Commissioner", notAssigned: "Not Assigned", yourGame: "Your Game", marketplace: "Marketplace", marketplaceDesc: "Find games that other umpires are giving away or games missing umpires.", tradeGame: "Give Away", cancelTrade: "Cancel Give Away", takeGame: "Take Game", expressInterest: "Express Interest", gamesForTrade: "Games Up For Trade", missingUmpires: "Games missing umpires", noMarketplaceGames: "No games are up for trade right now.", tradeSuccess: "You have taken over the game! Your schedule is updated.", tradeConfirm: "Are you sure you want to take over this game?", downloadCalendar: "Download", formatICS: ".ICS File", subtextICS: "For Apple & Outlook", formatCSV: ".CSV File", subtextCSV: "For Google Calendar", evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved", yourEval: "Evaluation", selectAdmin: "Select Admin...", selectUmpire: "Select Umpire...", enterTCName: "Enter TC name...", umpireShort: "UMP", supShort: "SUP", tcShort: "TC", locations: "Locations", address: "Address", facilities: "Facilities", noFacilities: "No facilities listed", addFacility: "Add facility...", editLocation: "Edit Location", matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.", acceptTime: "Accept New Time", declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required", superAdminSettings: "System Architecture (Super Admin)", featureMarketplace: "Enable Marketplace", featureEvaluations: "Enable Evaluation System", featureReminders: "Automated Email Reminders", reminderPreferences: "My Notifications", receiveReminders: "Receive email reminders for my upcoming games", runRemindersNow: "Run Reminders Cron", invoiceTitle: "Travel Invoice", digitalSubmission: "Digital Submission", personalInfo: "Personal Information", pnr: "Personal ID (PNR)", streetAddress: "Street Address", zipCity: "Zip Code & City", bankAccount: "Bank Account", tripsAllowance: "Trips (Mileage & Travel Time)", assignmentDetails: "Assignment", travelFrom: "Travel From", travelTo: "Travel To", roundTrip: "Round Trip", distanceMil: "Distance (Mil)", calcAuto: "Calculate Distance", calculating: "Calculating...", addTrip: "Add another trip", expensesAllowance: "Other Expenses & Allowance", description: "Description", amount: "Amount", addExpense: "Add Expense", overnightNights: "Overnight Allowance (Nights)", advanceDeduction: "Advance Deduction", summary: "Summary", mileageComp: "Mileage Compensation", travelTimeComp: "Travel Time Compensation", overnightComp: "Overnight Allowance", otherExpenses: "Other Expenses", totalToReceive: "Total to Receive", downloadPDF: "Download PDF", sendToFed: "Send to Federation", sendToSelf: "Send Test to Me", sentSuccess: "Submitted Successfully!", sentSuccessFed: "Your invoice has been submitted.", sentSuccessSelf: "A copy has been sent to your email.", newInvoice: "Create new invoice", selectGame: "-- Select an assigned game --", homeLocation: "Home", homeAddressLabel: "Home Address", foundAssignments: "Load from schedule:", pastInvoices: "Past Invoices", historicalStats: "Historical Stats", historicalGames: "Total officiated games", historicalNote: "Data can be edited by an admin.", streetAddressHidden: "Street Address (Hidden)", cityPublic: "City (Public)", changePicture: "Change Picture", backToUmpireList: "Back to Umpire List", contactInfo: "Contact Information", notProvided: "Not provided", homeAddress1: "Home Address 1", cityPlaceholder: "Stockholm", saveDetails: "Save Details", assignedMatchesCount: "assigned games", updateHistory: "Update History", fillFromTo: "Fill in both 'From' and 'To'.", addressMissing: "Street address and city are missing.", coordsMissing: "Could not find exact coordinates.", routeMissing: "Could not find a valid driving route.", autoCalcFailed: "Automatic calculation failed. Enter distance manually.", errorOccurred: "An error occurred.", testInvoiceSentTo: "For testing purposes, the invoice was sent to", savedSuccess: "Saved!", conflictApply: "Cannot apply! You are already booked in {location}.", interestRegistered: "Interest registered!", conflictAssign: "Cannot assign! {name} is already booked in {location}.", sandboxLoaded: "50 test games loaded into Sandbox!", downloadICS: "Download (.ICS)", availabilityWarningTitle: "Deadline for availability is today.", availabilityWarningDesc1: "If you have not submitted your availability, you will not receive games.", availabilityWarningDesc2: "We assign games until June.", assigned: "ASSIGNED", takeOverFrom: "Take over from", spotsAvailable: "spot(s) available", noInterestsYet: "No interests marked yet.", currentCrew: "Current Crew", noUmpiresAssigned: "No umpires assigned.", manualAssign: "+ Manual Assignment...", assignBtn: "Assign", removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown", sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED", deleteAvatarConfirm: "Are you sure you want to remove your profile picture?", deleteAvatar: "Remove picture", open: "Open", droveCar: "My Car", carpooling: "Carpool", invoiceCommentLabel: "Additional Comments", invoiceCommentPlaceholder: "E.g. private accommodation...", receiptsReminder: "NOTE! If you have additional expenses, email receipts to info@sbslf.se.", nonUmpire: "Non-umpire", economy: "Economy", economyDesc: "Manage all submitted travel invoices", statusNotPaid: "Not paid", statusPaid: "Paid", statusVoid: "Void", exportSummary: "Export (CSV)", fedAdminSettings: "Federation Admins (Emails, comma separated)" }
+  sv: { appTitle: "Domarportalen", season: "Säsong", schedule: "Spelschema", myGames: "Mina Matcher", myProfile: "Min profil", umpireList: "Domarlista", staffing: "Bemanning", analytics: "Statistik", history: "Historik", upcoming: "Kommande", archived: "Arkiverade matcher", activeSchedule: "Aktivt schema", searchPlaceholder: "Sök matcher...", allSeries: "Alla serier", allLocations: "Alla platser", filterStatusAll: "Alla statusar", needsUmpire: "Saknar domare", noInterests: "Inga anmälningar", noGames: "Inga matcher hittades.", syncNow: "Synka förbundsdata nu", applied: "Anmälda", interested: "Intresserad", withdraw: "Dra tillbaka", assignedTo: "Tillsatta", staffed: "Bemannad", partiallyStaffed: "Delvis bemannad", bulkImport: "Massimport", pendingAssignments: "Bemanningsöversikt", staffingControl: "Bemanningskontroll", hideStaffed: "Dölj helt bemannade", showAll: "Visa alla matcher", removeAssignment: "Ta bort", deleteGame: "Ta bort match", deleteAllGames: "Rensa hela säsongen", deleteAllConfirm: "ÄR DU HELT SÄKER?", deleteAllSuccess: "Säsongen har rensats.", downloadBackup: "Ladda ner backup", umpire: "Domare", interests: "Intresseanmälningar", gamesAssigned: "Dömda matcher", assignmentRate: "Tillsättningsgrad", noStats: "Ingen data finns registrerad än.", mySchedule: "Mitt Schema", noAssignedMatches: "Du har inga bekräftade matchuppdrag än.", noPendingInterest: "Du har inte anmält intresse för några matcher.", confirmed: "Bekräftad", settings: "Inställningar", userSettings: "Användarinställningar", profileAccess: "Konfigurera profil & åtkomst", displayName: "Visningsnamn", namePlaceholder: "Sök eller skriv ditt namn...", logout: "Logga ut", close: "Stäng", status: "Status", setProfile: "Välj din profil", pasteSheet: "Klistra in från Google Sheets", addGames: "Lägg till matcher", importSuccess: "Import lyckades", cancel: "Avbryt", date: "Datum", crew: "Domarteam", addToCalendar: "Spara i kalender", downloadFullSchedule: "Ladda ner (.ICS)", confirmedGames: "Bekräftade uppdrag", interestedGames: "Anmält intresse", nameRequiredTitle: "Vem är du?", nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.", saveName: "Välj profil", addNewName: "Hittar du inte ditt namn?", createUmpire: "Skapa ny profil", masterList: "Domarlista", editName: "Ändra namn", save: "Spara", selectFromList: "Välj från listan", changeUser: "Byt användare", editMatch: "Ändra matchdata", home: "Hemma", away: "Borta", time: "Tid", location: "Plats", locations: "Platser", league: "Serie", saveChanges: "Spara ändringar", listView: "Lista", calendarView: "Kalender", days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"], months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"], requiredUmpires: "Antal domare", level: "Nivå", name: "Namn", sortBy: "Sortera", week: "V.", login: "Logga in", register: "Skapa konto", email: "E-postadress", phone: "Telefonnummer", password: "Lösenord", loginToContinue: "Logga in för att fortsätta", noAccount: "Inget konto? Registrera dig här", hasAccount: "Har du redan ett konto? Logga in", adminManagement: "Administratörer", masterAdminInfo: "Du är inloggad som Master Admin.", linkedAccount: "Konto:", notLinked: "Inget konto", umpireProfile: "Domarprofil", back: "Tillbaka", assignedMatches: "Tillsatta matcher", totalAssignments: "Tillsättningar", totalInterests: "Intresseanmälningar", deleteUmpireConfirm: "Är du säker på att du vill ta bort", globalAnnouncement: "Globalt Meddelande", saveAnnouncement: "Publicera", clearAnnouncement: "Ta bort", announcementPlaceholder: "Skriv ett viktigt meddelande som visas för alla...", bookedIn: "Bokad i", coUmpires: "Dömer med:", noCoUmpires: "Inga meddomare", calendarColumn: "Kalender", gameDetails: "Matchinformation", mapDirections: "Öppna Karta", officials: "Domarteam", supervisor: "Supervisor", techComm: "Technical Commissioner", notAssigned: "Ej tillsatt", yourGame: "Din match", marketplace: "Marknad", marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.", tradeGame: "Byt bort", cancelTrade: "Ångra byte", takeGame: "Ta match", expressInterest: "Anmäl intresse", gamesForTrade: "Matcher som bytes bort", missingUmpires: "Matcher som saknar domare", noMarketplaceGames: "Inga matcher på marknaden just nu.", tradeSuccess: "Du har tagit över matchen!", tradeConfirm: "Är du säker på att du vill ta över denna match?", evaluate: "Utvärdera", grade: "Betyg", feedback: "Feedback", saveEval: "Spara utvärdering", evalSaved: "Utvärdering sparad", yourEval: "Utvärdering", selectAdmin: "Välj Admin...", enterTCName: "Ange namn på TC...", umpireShort: "DOMARE", supShort: "SUP", tcShort: "TC", address: "Adress", facilities: "Faciliteter", noFacilities: "Inga faciliteter", addFacility: "Lägg till facilitet...", editLocation: "Redigera plats", matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.", acceptTime: "Acceptera ny tid", declineTime: "Kan inte (Avboka)", timeChangedBadge: "Tid Ändrad", actionRequired: "Kräver åtgärd", superAdminSettings: "Systemarkitektur (Super Admin)", featureMarketplace: "Aktivera Marknadsplats", featureEvaluations: "Aktivera Utvärderingar", featureReminders: "E-postpåminnelser", reminderPreferences: "Mina Notiser", receiveReminders: "Få e-postpåminnelser", runRemindersNow: "Kör Påminnelser Nu", invoiceTitle: "Reseräkning", digitalSubmission: "Digital inlämning", personalInfo: "Personuppgifter", pnr: "Personnummer", streetAddress: "Gatuadress", zipCity: "Postnummer & Ort", bankAccount: "Bank & Kontonummer", tripsAllowance: "Resor (Milersättning & Restid)", assignmentDetails: "Ändamål (Vilka lag spelade?)", travelFrom: "Resa Från", travelTo: "Resa Till", roundTrip: "Tur & Retur", distanceMil: "Antal Mil", calcAuto: "Beräkna avstånd (Auto)", calculating: "Beräknar...", addTrip: "Lägg till ytterligare en resa", expensesAllowance: "Övriga Utlägg & Traktamente", description: "Beskrivning", amount: "Belopp (kr)", addExpense: "Lägg till utlägg", overnightNights: "Övernattningstraktamente (Antal nätter)", advanceDeduction: "Avgår förskott (kr)", summary: "Sammanställning", mileageComp: "Milersättning", travelTimeComp: "Tilläggsarvode (Lång resa)", overnightComp: "Övernattningstraktamente", otherExpenses: "Övriga Utlägg", totalToReceive: "Totalt att erhålla", downloadPDF: "Ladda ner PDF", sendToFed: "Skicka till Förbundet", sendToSelf: "Skicka test till mig", sentSuccess: "Insänt & Klart!", sentSuccessFed: "Din reseräkning har skickats in till Förbundet.", sentSuccessSelf: "En kopia har skickats till din e-post.", newInvoice: "Skapa ny reseräkning", selectGame: "-- Välj en av dina matcher --", homeLocation: "Hem", homeAddressLabel: "Hemadress", foundAssignments: "Hämta från schema:", pastInvoices: "Tidigare reseräkningar", historicalStats: "Historisk Statistik (Tidigare säsonger)", historicalGames: "Totalt dömda matcher", historicalNote: "Datan kan redigeras av administratörer.", streetAddressHidden: "Gatuadress (Dold för andra)", cityPublic: "Ort (Offentlig)", changePicture: "Byt bild", backToUmpireList: "Tillbaka till Domarlistan", contactInfo: "Kontaktuppgifter", notProvided: "Ej angivet", homeAddress1: "Hemadress 1", cityPlaceholder: "Stockholm", saveDetails: "Spara uppgifter", assignedMatchesCount: "tillsatta matcher", updateHistory: "Uppdatera historik", fillFromTo: "Fyll i både 'Från' och 'Till' för att kunna beräkna avståndet automatiskt.", addressMissing: "Gatuadress och postort saknas.", coordsMissing: "Kunde inte hitta exakta koordinater.", routeMissing: "Kunde inte hitta en giltig körrutt.", autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.", errorOccurred: "Ett fel uppstod. Vänligen försök igen.", testInvoiceSentTo: "I test-syfte har reseräkningen skickats till", savedSuccess: "Sparat!", conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.", interestRegistered: "Intresse anmält! Administratörerna ser nu din anmälan.", conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.", sandboxLoaded: "50 test-matcher har laddats in i Sandbox!", downloadICS: "Ladda ner (.ICS)", availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.", availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.", availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.", assigned: "TILLSATTA", takeOverFrom: "Ta över från", spotsAvailable: "plats(er) lediga", noInterestsYet: "Inga intresseanmälningar ännu.", currentCrew: "Aktuellt Domarteam", noUmpiresAssigned: "Inga domare tillsatta.", manualAssign: "+ Manuell tilldelning...", assignBtn: "Tilldela", removeBtn: "Ta bort", pasteSchedulePlaceholder: "Klistra in spelschema...", unknown: "Okänd", sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION", deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?", deleteAvatar: "Ta bort bild", open: "Öppna", droveCar: "Egen bil", carpooling: "Samåker", invoiceCommentLabel: "Övriga kommentarer", invoiceCommentPlaceholder: "T.ex. privat övernattning, samåker med [Namn], eller avvikande rutt...", receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se.", nonUmpire: "Ej domare", economy: "Ekonomi", economyDesc: "Hantera alla inskickade reseräkningar", statusNotPaid: "Ej betald", statusPaid: "Utbetald", statusVoid: "Makulerad", exportSummary: "Exportera (CSV)", fedAdminSettings: "Förbundsadmins (E-postadresser, kommaseparerade)" },
+  en: { appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile", umpireList: "Umpire List", staffing: "Staffing", analytics: "Analytics", history: "History", upcoming: "Upcoming", archived: "Archived Games", activeSchedule: "Active Schedule", searchPlaceholder: "Search...", allSeries: "All Series", allLocations: "All Locations", filterStatusAll: "All Statuses", needsUmpire: "Needs Umpire", noInterests: "No Interests", noGames: "No games found.", syncNow: "Sync Federation Data Now", applied: "Interested", interested: "Interested", withdraw: "Withdraw", assignedTo: "Crew", staffed: "Fully Staffed", partiallyStaffed: "Partially Staffed", bulkImport: "Bulk Import", pendingAssignments: "Staffing Desk", staffingControl: "Staffing Control", hideStaffed: "Hide Fully Staffed", showAll: "Show All Games", removeAssignment: "Remove", deleteGame: "Delete Game", deleteConfirm: "Are you sure you want delete this game?", deleteAllGames: "Clear Entire Season", deleteAllConfirm: "ARE YOU ABSOLUTELY SURE?", deleteAllSuccess: "Season cleared successfully.", downloadBackup: "Download Backup (JSON)", umpire: "Umpire", interests: "Interests", gamesAssigned: "Games Assigned", assignmentRate: "Assignment Rate", noStats: "No engagement data recorded yet.", mySchedule: "My Schedule", noAssignedMatches: "You have no confirmed assignments yet.", noPendingInterest: "You haven't marked interest in any matches.", confirmed: "Confirmed", settings: "Settings", userSettings: "User Settings", profileAccess: "Configure profile & access", displayName: "Display Name", namePlaceholder: "Search or type name...", logout: "Logout", close: "Close", status: "Status", setProfile: "Select Your Profile", pasteSheet: "Paste from Google Sheets", addGames: "Add Games", importSuccess: "Import Successful", cancel: "Cancel", date: "Date", crew: "Umpire Crew", addToCalendar: "Add to Calendar", downloadFullSchedule: "Download (.ics)", confirmedGames: "Confirmed Assignments", interestedGames: "Interested Matches", nameRequiredTitle: "Who are you?", nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.", saveName: "Select Profile", addNewName: "Can't find your name?", createUmpire: "Create new profile", masterList: "Umpire Master List", editName: "Edit Name", save: "Save", selectFromList: "Select from list", changeUser: "Change User", editMatch: "Edit Match Details", home: "Home", away: "Away", time: "Time", location: "Location", locations: "Locations", league: "League", saveChanges: "Save Changes", listView: "List", calendarView: "Calendar", days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], requiredUmpires: "Crew Size", level: "Level", name: "Name", sortBy: "Sort by", week: "W.", login: "Login", register: "Register", email: "Email Address", phone: "Phone Number", password: "Password", forgotPassword: "Forgot Password?", loginToContinue: "Login to continue", createAnAccount: "Create a new account", noAccount: "No account? Register here", hasAccount: "Already have an account? Login", loginRequiredMsg: "You must be logged in to view this.", adminManagement: "Admin Roles", masterAdminInfo: "You are logged in as Master Admin.", linkedAccount: "Account:", notLinked: "No account", umpireProfile: "Umpire Profile", back: "Back", assignedMatches: "Assigned Matches", totalAssignments: "Assignments", totalInterests: "Interests", deleteUmpireConfirm: "Are you sure you want to remove", globalAnnouncement: "Global Announcement", saveAnnouncement: "Publish", clearAnnouncement: "Clear", announcementPlaceholder: "Type an important message...", bookedIn: "Booked in", coUmpires: "Co-umpires:", noCoUmpires: "No co-umpires", calendarColumn: "Calendar", gameDetails: "Game Details", mapDirections: "Open Map", officials: "Officials", supervisor: "Supervisor", techComm: "Technical Commissioner", notAssigned: "Not Assigned", yourGame: "Your Game", marketplace: "Marketplace", marketplaceDesc: "Find games that other umpires are giving away or games missing umpires.", tradeGame: "Give Away", cancelTrade: "Cancel Give Away", takeGame: "Take Game", expressInterest: "Express Interest", gamesForTrade: "Games Up For Trade", missingUmpires: "Games missing umpires", noMarketplaceGames: "No games are up for trade right now.", tradeSuccess: "You have taken over the game!", tradeConfirm: "Are you sure you want to take over this game?", evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved", yourEval: "Evaluation", selectAdmin: "Select Admin...", enterTCName: "Enter TC name...", umpireShort: "UMP", supShort: "SUP", tcShort: "TC", address: "Address", facilities: "Facilities", noFacilities: "No facilities listed", addFacility: "Add facility...", editLocation: "Edit Location", matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.", acceptTime: "Accept New Time", declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required", superAdminSettings: "System Architecture (Super Admin)", featureMarketplace: "Enable Marketplace", featureEvaluations: "Enable Evaluation System", featureReminders: "Automated Email Reminders", reminderPreferences: "My Notifications", receiveReminders: "Receive email reminders for my upcoming games", runRemindersNow: "Run Reminders Cron", invoiceTitle: "Travel Invoice", digitalSubmission: "Digital Submission", personalInfo: "Personal Information", pnr: "Personal ID (PNR)", streetAddress: "Street Address", zipCity: "Zip Code & City", bankAccount: "Bank Account", tripsAllowance: "Trips (Mileage & Travel Time)", assignmentDetails: "Assignment", travelFrom: "Travel From", travelTo: "Travel To", roundTrip: "Round Trip", distanceMil: "Distance (Mil)", calcAuto: "Calculate Distance", calculating: "Calculating...", addTrip: "Add another trip", expensesAllowance: "Other Expenses & Allowance", description: "Description", amount: "Amount", addExpense: "Add Expense", overnightNights: "Overnight Allowance (Nights)", advanceDeduction: "Advance Deduction", summary: "Summary", mileageComp: "Mileage Compensation", travelTimeComp: "Travel Time Compensation", overnightComp: "Overnight Allowance", otherExpenses: "Other Expenses", totalToReceive: "Total to Receive", downloadPDF: "Download PDF", sendToFed: "Send to Federation", sendToSelf: "Send Test to Me", sentSuccess: "Submitted Successfully!", sentSuccessFed: "Your invoice has been submitted.", sentSuccessSelf: "A copy has been sent to your email.", newInvoice: "Create new invoice", selectGame: "-- Select an assigned game --", homeLocation: "Home", homeAddressLabel: "Home Address", foundAssignments: "Load from schedule:", pastInvoices: "Past Invoices", historicalStats: "Historical Stats", historicalGames: "Total officiated games", historicalNote: "Data can be edited by an admin.", streetAddressHidden: "Street Address (Hidden)", cityPublic: "City (Public)", changePicture: "Change Picture", backToUmpireList: "Back to Umpire List", contactInfo: "Contact Information", notProvided: "Not provided", homeAddress1: "Home Address 1", cityPlaceholder: "Stockholm", saveDetails: "Save Details", assignedMatchesCount: "assigned games", updateHistory: "Update History", fillFromTo: "Fill in both 'From' and 'To'.", addressMissing: "Street address and city are missing.", coordsMissing: "Could not find exact coordinates.", routeMissing: "Could not find a valid driving route.", autoCalcFailed: "Automatic calculation failed. Enter distance manually.", errorOccurred: "An error occurred.", testInvoiceSentTo: "For testing purposes, the invoice was sent to", savedSuccess: "Saved!", conflictApply: "Cannot apply! You are already booked in {location}.", interestRegistered: "Interest registered!", conflictAssign: "Cannot assign! {name} is already booked in {location}.", sandboxLoaded: "50 test games loaded into Sandbox!", downloadICS: "Download (.ICS)", availabilityWarningTitle: "Deadline for availability is today.", availabilityWarningDesc1: "If you have not submitted your availability, you will not receive games.", availabilityWarningDesc2: "We assign games until June.", assigned: "ASSIGNED", takeOverFrom: "Take over from", spotsAvailable: "spot(s) available", noInterestsYet: "No interests marked yet.", currentCrew: "Current Crew", noUmpiresAssigned: "No umpires assigned.", manualAssign: "+ Manual Assignment...", assignBtn: "Assign", removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown", sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED", deleteAvatarConfirm: "Are you sure you want to remove your profile picture?", deleteAvatar: "Remove picture", open: "Open", droveCar: "My Car", carpooling: "Carpool", invoiceCommentLabel: "Additional Comments", invoiceCommentPlaceholder: "E.g. private accommodation...", receiptsReminder: "NOTE! If you have additional expenses, email receipts to info@sbslf.se.", nonUmpire: "Non-umpire", economy: "Economy", economyDesc: "Manage all submitted travel invoices", statusNotPaid: "Not paid", statusPaid: "Paid", statusVoid: "Void", exportSummary: "Export (CSV)", fedAdminSettings: "Federation Admins (Emails, comma separated)" }
+};
+
+const getISOWeekNumber = (date) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+};
+
+const generateCSV = (gamesToExport, selectedYear) => {
+  if (gamesToExport.length === 0 || typeof window === 'undefined') return;
+  const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location
+";
+  const rows = gamesToExport.map(game => {
+    const [hours, mins] = (game.time || '00:00').split(':');
+    const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
+    const endTime = `${endHours}:${mins || '00'}`;
+    return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${endTime},"${game.league}","${game.location}"`;
+  }).join('
+');
+  const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `schedule-${selectedYear}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 function PrintableInvoice({ data, t, containerId }) {
@@ -189,10 +217,7 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
               <PrintableInvoice data={invoice} t={t} containerId="admin-print-invoice-view" />
               <div className="p-6">
-                 <div className="flex justify-between items-center mb-6">
-                   <h3 className="font-bold text-lg">Sammanställning</h3>
-                   <span className="text-2xl font-black text-green-600">{invoice.total} kr</span>
-                 </div>
+                 <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Sammanställning</h3><span className="text-2xl font-black text-green-600">{invoice.total} kr</span></div>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Domare</h4>
@@ -200,10 +225,7 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
                      <p className="text-xs text-slate-600">{invoice.personalInfo?.pnr}</p>
                      <p className="text-xs text-slate-600">{invoice.personalInfo?.email}</p>
                    </div>
-                   <div>
-                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4>
-                     <p className="font-bold text-sm">{invoice.personalInfo?.bank}</p>
-                   </div>
+                   <div><h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4><p className="font-bold text-sm">{invoice.personalInfo?.bank}</p></div>
                  </div>
                  <div className="mt-6 border-t border-slate-100 pt-6">
                    <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Resor</h4>
@@ -216,9 +238,7 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
         </div>
         <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-3">
            <button onClick={() => setInvoice(null)} className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-black uppercase text-xs hover:bg-slate-200">Stäng</button>
-           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs shadow-sm hover:bg-blue-700 flex items-center gap-2">
-              {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Ladda ner som PDF
-           </button>
+           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs flex items-center gap-2">{isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} PDF</button>
         </div>
       </div>
     </div>
@@ -331,7 +351,7 @@ function UmpireProfileModal({ selectedProfileId, setSelectedProfileId, masterUmp
                    <>
                      <div><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.streetAddressHidden}</label><input type="text" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none mt-1 focus:border-blue-400" /></div>
                      <div><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.cityPublic}</label><input type="text" value={editData.city} onChange={e => setEditData({...editData, city: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none mt-1 focus:border-blue-400" /></div>
-                     <button onClick={handleSave} disabled={isSaving} className="w-full py-3 mt-2 bg-blue-600 text-white font-black rounded-xl textxs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50">{isSaving ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />} {t.saveDetails}</button>
+                     <button onClick={handleSave} disabled={isSaving} className="w-full py-3 mt-2 bg-blue-600 text-white font-black rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50">{isSaving ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />} {t.saveDetails}</button>
                    </>
                  )}
                </div>
@@ -364,383 +384,6 @@ function UmpireProfileModal({ selectedProfileId, setSelectedProfileId, masterUmp
                </div>
              </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData, allInvoices }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [sentTarget, setSentTarget] = useState('');
-  const [calculatingIndex, setCalculatingIndex] = useState(null);
-
-  const [personalInfo, setPersonalInfo] = useState({ name: '', pnr: '', address: '', zipCity: '', bank: '', email: '' });
-  const [trips, setTrips] = useState([{ id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true, isDriver: true }]);
-  const [expenses, setExpenses] = useState([{ id: Date.now(), description: '', amount: '' }]);
-  const [advance, setAdvance] = useState('');
-  const [overnightCount, setOvernightCount] = useState('');
-  const [invoiceComment, setInvoiceComment] = useState('');
-
-  const pastInvoices = useMemo(() => {
-     if(!user || !user.uid) return [];
-     return allInvoices.filter(i => i.userId === user.uid);
-  }, [allInvoices, user]);
-
-  useEffect(() => {
-    if (user && user.uid) {
-      const fetchProfile = async () => {
-        try {
-          const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData');
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setPersonalInfo(prev => ({ ...prev, ...docSnap.data(), address: docSnap.data().address || myUmpireData?.address || '', zipCity: docSnap.data().zipCity || myUmpireData?.city || '', email: user?.email || docSnap.data().email || prev.email || '' }));
-          } else {
-            setPersonalInfo(prev => ({ ...prev, name: userName || myUmpireData?.name || '', email: user?.email || '', address: myUmpireData?.address || '', zipCity: myUmpireData?.city || '' }));
-          }
-        } catch(e) {}
-      };
-      fetchProfile();
-    } else if (userName) {
-       setPersonalInfo(prev => ({ ...prev, name: userName, email: user?.email || '', address: myUmpireData?.address || '', zipCity: myUmpireData?.city || '' }));
-    }
-  }, [user, appId, userName, db, myUmpireData]);
-
-  const handlePersonalInfoChange = (e) => { setPersonalInfo({ ...personalInfo, [e.target.name]: e.target.value }); };
-  const handleTripChange = (id, field, value) => setTrips(trips.map(trip => trip.id === id ? { ...trip, [field]: value } : trip));
-  const addTrip = () => setTrips([...trips, { id: Date.now(), date: '', assignment: '', from: '', to: '', distance: '', roundTrip: true, isDriver: true }]);
-  const removeTrip = (id) => { if (trips.length > 1) setTrips(trips.filter(trip => trip.id !== id)); };
-  
-  const handleExpenseChange = (id, field, value) => setExpenses(expenses.map(exp => exp.id === id ? { ...exp, [field]: value } : exp));
-  const addExpense = () => setExpenses([...expenses, { id: Date.now(), description: '', amount: '' }]);
-  const removeExpense = (id) => setExpenses(expenses.filter(exp => exp.id !== id));
-
-  const calculateDistance = async (tripId, overrideFrom, overrideTo, overrideRoundTrip) => {
-    const currentTrip = trips.find(t => t.id === tripId) || {};
-    const fromVal = overrideFrom !== undefined ? overrideFrom : currentTrip.from;
-    const toVal = overrideTo !== undefined ? overrideTo : currentTrip.to;
-    const isRoundTrip = overrideRoundTrip !== undefined ? overrideRoundTrip : currentTrip.roundTrip;
-
-    if (!fromVal || !toVal) { alert(t.fillFromTo); return; }
-    setCalculatingIndex(tripId);
-    try {
-      const resolveAddress = (input) => {
-        if (['hem', 'home', t.homeLocation.toLowerCase()].includes(input.toLowerCase())) return `${personalInfo.address}, ${personalInfo.zipCity}`;
-        const found = locationsData.find(l => l.id.toLowerCase() === input.toLowerCase());
-        return found && found.address ? found.address : input;
-      };
-
-      const fromAddress = resolveAddress(fromVal);
-      const toAddress = resolveAddress(toVal);
-      if(!fromAddress || !toAddress || fromAddress === ', ' || toAddress === ', ') throw new Error(t.addressMissing);
-
-      const fromRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fromAddress + ', Sweden')}`);
-      const fromData = await fromRes.json();
-      const toRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(toAddress + ', Sweden')}`);
-      const toData = await toRes.json();
-
-      if (fromData.length === 0 || toData.length === 0) throw new Error(t.coordsMissing);
-      
-      const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${fromData[0].lon},${fromData[0].lat};${toData[0].lon},${toData[0].lat}?overview=false`);
-      const routeData = await routeRes.json();
-
-      if (routeData.routes && routeData.routes.length > 0) {
-        let mil = routeData.routes[0].distance / 10000; 
-        if (isRoundTrip) mil *= 2;
-        setTrips(prev => prev.map(tr => tr.id === tripId ? { ...tr, distance: mil.toFixed(1) } : tr));
-      } else { throw new Error(t.routeMissing); }
-    } catch (err) { alert(t.autoCalcFailed); } finally { setCalculatingIndex(null); }
-  };
-
-  const calculated = useMemo(() => {
-    let totalMilage = 0, travelBonus = 0, totalExpenses = 0;
-    trips.forEach(trip => {
-      const dist = parseFloat(trip.distance) || 0;
-      if (trip.isDriver) totalMilage += dist;
-      if (dist >= 20) travelBonus += 200; else if (dist >= 10) travelBonus += 100;
-    });
-    const milageCost = totalMilage * 25; 
-    const overnightCost = (parseInt(overnightCount) || 0) * 300;
-    expenses.forEach(exp => { totalExpenses += (parseFloat(exp.amount) || 0); });
-    const advanceNum = parseFloat(advance) || 0;
-    const total = (milageCost + travelBonus + overnightCost + totalExpenses) - advanceNum;
-
-    return { totalMilage: Number(totalMilage.toFixed(1)), milageCost: Number(milageCost.toFixed(2)), travelBonus, overnightCost, totalExpenses: Number(totalExpenses.toFixed(2)), advance: advanceNum, total: Number(total.toFixed(2)) };
-  }, [trips, expenses, overnightCount, advance]);
-
-  const invoiceDataObj = { personalInfo, trips, expenses, overnightCount, advance, calculated, invoiceComment };
-
-  const handleDeleteInvoice = async (invoiceId) => {
-    if (window.confirm("Vill du verkligen ta bort denna reseräkning från historiken?")) {
-      try {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'all_invoices', invoiceId));
-        if (user && user.uid) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'invoices', invoiceId)).catch(()=>{});
-      } catch (e) {}
-    }
-  };
-
-  const handleReopenInvoice = (inv) => {
-    if (inv.personalInfo) setPersonalInfo(inv.personalInfo);
-    if (inv.trips && inv.trips.length > 0) setTrips(inv.trips);
-    if (inv.expenses && inv.expenses.length > 0) setExpenses(inv.expenses);
-    setAdvance(inv.advance || ''); setOvernightCount(inv.overnightCount || ''); setInvoiceComment(inv.invoiceComment || '');
-    if (typeof window !== 'undefined') window.scrollTo({ top: 300, behavior: 'smooth'); };
-  };
-
-  const handleDownloadPDF = () => {
-    const form = document.getElementById('invoice-form');
-    if (!form.checkValidity()) return form.reportValidity();
-    setIsSubmitting(true);
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = () => {
-      const element = document.getElementById('print-invoice-view');
-      element.classList.remove('hidden'); element.classList.remove('print:block');
-      const opt = { margin: 10, filename: `Reserakning_${personalInfo.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('sv-SE')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      window.html2pdf().set(opt).from(element).save().then(async () => {
-        element.classList.add('hidden'); element.classList.add('print:block'); setIsSubmitting(false);
-        if (user && user.uid) {
-           try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'all_invoices'), { ...invoiceDataObj, createdAt: Date.now(), userId: user.uid, userName: personalInfo.name, total: calculated.total, status: "Nedladdad (PDF)" }); } catch(e) {}
-        }
-      });
-    };
-    document.body.appendChild(script);
-  };
-
-  const handleSubmit = async (e, target) => {
-    e.preventDefault(); setIsSubmitting(true); setSentTarget(target);
-    try {
-      if (user && user.uid) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData'), personalInfo, { merge: true }).catch(()=>{});
-
-      const tripsText = trips.map(t => `- ${t.date}: ${t.from} till ${t.to} (${t.roundTrip ? 'T&R' : 'Enkel'}), ${t.distance} mil. Ändamål: ${t.assignment}`).join('
-');
-      const expensesText = expenses.filter(e => e.description && e.amount).map(e => `- ${e.description}: ${e.amount} kr`).join('
-') || 'Inga övriga utlägg';
-      const emailHtml = `
-        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
-          <h2 style="color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px;">Reseräkning - ${personalInfo.name}</h2>
-          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;"><strong>Namn</strong></td><td>${personalInfo.name}</td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;"><strong>Bankkonto</strong></td><td>${personalInfo.bank}</td></tr>
-          </table>
-          <h3 style="color: #475569;">Resor</h3>
-          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            ${trips.map(tr => `<tr><td>${tr.date}<br>${tr.assignment}</td><td>${tr.from} &rarr; ${tr.to}</td><td>${tr.distance} mil</td></tr>`).join('')}
-          </table>
-          <h3 style="color: #475569;">Sammanställning</h3>
-          <p>Total att utbetala: <strong>${calculated.total} kr</strong></p>
-        </div>`;
-
-      const toEmail = target === 'federation' ? 'info@sbslf.se' : personalInfo.email;
-      const emailSubject = target === 'federation' ? `Reseräkning: ${personalInfo.name} (${calculated.total} kr)` : `TEST: Reseräkning ${personalInfo.name}`;
-
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: toEmail, replyTo: personalInfo.email, message: { subject: emailSubject, text: "Ny reseräkning inskickad.", html: emailHtml }, createdAt: Date.now() });
-
-      if (user && user.uid && target === 'federation') {
-         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'all_invoices'), { ...invoiceDataObj, createdAt: Date.now(), userId: user.uid, userName: personalInfo.name, total: calculated.total, status: "Ej betald" });
-      }
-      setSuccess(true);
-    } catch (err) { alert(t.errorOccurred); }
-    setIsSubmitting(false);
-  };
-
-  if (success) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center p-4">
-        <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center">
-          <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
-          <h2 className="text-2xl font-black text-slate-800 mb-2">{t.sentSuccess}</h2>
-          <p className="text-slate-600 mb-8 font-medium">{sentTarget === 'federation' ? t.sentSuccessFed : t.sentSuccessSelf}</p>
-          <button onClick={() => setSuccess(false)} className="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-black uppercase text-xs hover:bg-slate-200">Skapa ny</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full font-sans print:bg-white print:p-0">
-      <div className="max-w-4xl mx-auto space-y-6 p-4 sm:p-8 print:hidden pt-20 sm:pt-8">
-        <div className="text-center space-y-2 mb-8">
-          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><FileText className="w-8 h-8 text-white" /></div>
-          <h1 className="text-3xl font-black text-slate-800">{t.invoiceTitle}</h1>
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t.digitalSubmission}</p>
-        </div>
-
-        {pastInvoices.length > 0 && (
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-8">
-             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><HistoryIcon className="w-4 h-4" /> {t.pastInvoices}</h3>
-             <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-               {pastInvoices.map(inv => (
-                 <div key={inv.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                   <div className="flex-1">
-                     <span className="text-xs font-bold text-slate-700">{new Date(inv.createdAt).toLocaleDateString('sv-SE')}</span>
-                     <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[200px]">{inv.trips?.map(tr => tr.assignment).join(', ')}</p>
-                   </div>
-                   <div className="text-right mr-3">
-                     <span className="text-sm font-black text-blue-600">{inv.total} kr</span>
-                     <p className="text-[9px] font-black uppercase text-slate-500 mt-0.5">{inv.status}</p>
-                   </div>
-                   <div className="flex items-center gap-1">
-                     <button onClick={() => handleReopenInvoice(inv)} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black uppercase hover:bg-blue-200">{t.open}</button>
-                     <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                   </div>
-                 </div>
-               ))}
-             </div>
-          </div>
-        )}
-
-        <datalist id="location-list">
-          <option value={t.homeLocation}>{t.homeAddressLabel}</option>
-          {locationsData.map((loc, i) => <option key={i} value={loc.id}>{loc.address || loc.id}</option>)}
-        </datalist>
-
-        <form id="invoice-form" className="space-y-6">
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><User className="w-4 h-4" /> {t.personalInfo}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.name}</label><input required type="text" name="name" value={personalInfo.name} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-postadress</label><input required type="email" name="email" value={personalInfo.email} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.pnr}</label><input required type="text" name="pnr" value={personalInfo.pnr} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.streetAddressHidden}</label><input required type="text" name="address" value={personalInfo.address} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.zipCity}</label><input required type="text" name="zipCity" value={personalInfo.zipCity} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.bankAccount}</label><input required type="text" name="bank" value={personalInfo.bank} onChange={handlePersonalInfoChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><Car className="w-4 h-4" /> {t.tripsAllowance}</h2>
-            <div className="space-y-6">
-              {trips.map((trip, index) => {
-                return (
-                  <div key={trip.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative">
-                    {trips.length > 1 && <button type="button" onClick={() => removeTrip(trip.id)} className="absolute -top-3 -right-3 bg-red-100 text-red-600 p-2 rounded-full"><Trash2 className="w-4 h-4" /></button>}
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                      {myAssignedGames.length > 0 && (
-                        <div className="sm:col-span-12 bg-blue-100 p-2 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
-                          <span className="text-[10px] font-black text-blue-800 uppercase shrink-0">{t.foundAssignments}</span>
-                          <select className="w-full sm:flex-1 text-xs p-1.5 rounded-md border border-blue-200 bg-white outline-none" onChange={(e) => { const g = myAssignedGames.find(x => x.id === e.target.value); if(g) { const fromVal = t.homeLocation; const toVal = g.location; setTrips(currentTrips => currentTrips.map(tr => tr.id === trip.id ? { ...tr, date: g.date, assignment: `${g.away} @ ${g.home}`, to: toVal, from: fromVal } : tr)); calculateDistance(trip.id, fromVal, toVal, trip.roundTrip); } }}>
-                             <option value="">{t.selectGame}</option>
-                             {myAssignedGames.map(g => <option key={g.id} value={g.id}>{g.date} | {g.away} @ {g.home}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      <div className="sm:col-span-3 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.date}</label><input required type="date" value={trip.date} onChange={(e) => handleTripChange(trip.id, 'date', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
-                      <div className="sm:col-span-9 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.assignmentDetails}</label><input required type="text" value={trip.assignment} onChange={(e) => handleTripChange(trip.id, 'assignment', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
-                      <div className="sm:col-span-4 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelFrom}</label><input required type="text" list="location-list" value={trip.from} onChange={(e) => handleTripChange(trip.id, 'from', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
-                      <div className="sm:col-span-4 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.travelTo}</label><input required type="text" list="location-list" value={trip.to} onChange={(e) => handleTripChange(trip.id, 'to', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm" /></div>
-                      <div className="sm:col-span-4 space-y-1 flex flex-col justify-end"><label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]"><input type="checkbox" checked={trip.roundTrip} onChange={(e) => handleTripChange(trip.id, 'roundTrip', e.target.checked)} className="w-4 h-4 text-blue-600" /><span className="text-[10px] font-black uppercase text-slate-600">{t.roundTrip}</span></label></div>
-                      <div className="sm:col-span-8 space-y-1 flex flex-col justify-end"><label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 border border-slate-200 rounded-lg h-[42px]"><input type="checkbox" checked={trip.isDriver} onChange={(e) => handleTripChange(trip.id, 'isDriver', e.target.checked)} className="w-4 h-4 text-blue-600" /><span className="text-[10px] font-black uppercase text-slate-600 truncate">{trip.isDriver ? t.droveCar : t.carpooling}</span></label></div>
-                      <div className="sm:col-span-4 space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.distanceMil}</label><input required type="number" step="0.1" value={trip.distance} onChange={(e) => handleTripChange(trip.id, 'distance', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-blue-600" /></div>
-                    </div>
-                    <div className="mt-3 flex justify-end"><button type="button" onClick={() => calculateDistance(trip.id)} disabled={calculatingIndex === trip.id} className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-1">{calculatingIndex === trip.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}{calculatingIndex === trip.id ? t.calculating : t.calcAuto}</button></div>
-                  </div>
-                );
-              })}
-              <button type="button" onClick={addTrip} className="w-full py-3 border-2 border-dashed border-slate-200 text-slate-500 rounded-xl font-black uppercase text-xs hover:text-blue-600 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> {t.addTrip}</button>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><CreditCard className="w-4 h-4" /> {t.expensesAllowance}</h2>
-            <div className="bg-amber-50 text-amber-800 p-3 rounded-xl text-xs font-medium mb-4 flex items-start gap-2"><Info className="w-4 h-4 shrink-0 mt-0.5" /><p>{t.receiptsReminder}</p></div>
-            <div className="space-y-4 mb-6">
-              {expenses.map((exp) => (
-                <div key={exp.id} className="flex items-center gap-4">
-                  <input type="text" placeholder={t.description} value={exp.description} onChange={(e) => handleExpenseChange(exp.id, 'description', e.target.value)} className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                  <input type="number" placeholder={t.amount} value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-32 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                  {expenses.length > 1 && <button type="button" onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-red-500"><X className="w-5 h-5"/></button>}
-                </div>
-              ))}
-              <button type="button" onClick={addExpense} className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1 hover:underline"><Plus className="w-3 h-3" /> {t.addExpense}</button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.overnightNights}</label><div className="relative"><input type="number" min="0" value={overnightCount} onChange={(e) => setOvernightCount(e.target.value)} placeholder="0" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /><span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">á 300 kr</span></div></div>
-              <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.advanceDeduction}</label><input type="number" value={advance} onChange={(e) => setAdvance(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-             <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2"><MessageCircle className="w-4 h-4" /> {t.invoiceCommentLabel}</h2>
-             <textarea value={invoiceComment} onChange={(e) => setInvoiceComment(e.target.value)} placeholder={t.invoiceCommentPlaceholder} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm min-h-[100px]" />
-          </div>
-
-          <div className="bg-slate-800 text-white p-6 sm:p-8 rounded-3xl shadow-xl">
-            <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Calculator className="w-4 h-4" /> {t.summary}</h2>
-            <div className="space-y-3 text-sm font-medium">
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.mileageComp} ({calculated.totalMilage} mil á 25 kr)</span><span>{calculated.milageCost} kr</span></div>
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.travelTimeComp}</span><span>{calculated.travelBonus} kr</span></div>
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.overnightComp} ({overnightCount || 0} st á 300kr)</span><span>{calculated.overnightCost} kr</span></div>
-              <div className="flex justify-between items-center border-b border-slate-700 pb-2"><span className="text-slate-300">{t.otherExpenses}</span><span>{calculated.totalExpenses} kr</span></div>
-              {calculated.advance > 0 && <div className="flex justify-between items-center border-b border-slate-700 pb-2 text-red-400"><span>{t.advanceDeduction}</span><span>-{calculated.advance} kr</span></div>}
-            </div>
-            <div className="mt-6 pt-4 flex justify-between items-end"><span className="text-xs font-black uppercase tracking-widest text-slate-400">{t.totalToReceive}</span><span className="text-4xl font-black text-green-400">{calculated.total} <span className="text-xl">kr</span></span></div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 print:hidden">
-            <button type="button" onClick={handleDownloadPDF} disabled={isSubmitting} className="flex-1 py-4 bg-white border-2 border-slate-200 text-slate-700 font-black rounded-2xl uppercase text-[10px] flex items-center justify-center gap-2">{isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {t.downloadPDF}</button>
-            <button type="button" onClick={(e) => { const form = document.getElementById('invoice-form'); if (form.checkValidity()) handleSubmit(e, 'self'); else form.reportValidity(); }} disabled={isSubmitting} className="flex-1 py-4 bg-blue-100 text-blue-700 font-black rounded-2xl uppercase text-[10px] flex items-center justify-center gap-2"><Mail className="w-4 h-4" /> {t.sendToSelf}</button>
-            <button type="button" onClick={(e) => { const form = document.getElementById('invoice-form'); if (form.checkValidity()) handleSubmit(e, 'federation'); else form.reportValidity(); }} disabled={isSubmitting} className="flex-1 py-4 bg-yellow-500 text-white font-black rounded-2xl uppercase text-[10px] flex items-center justify-center gap-2">{isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t.sendToFed}</button>
-          </div>
-        </form>
-        <PrintableInvoice data={invoiceDataObj} t={t} containerId="print-invoice-view" />
-      </div>
-    </div>
-  );
-}
-
-function InvoiceReviewModal({ invoice, setInvoice, t }) {
-  const [isDownloading, setIsDownloading] = useState(false);
-  const handleDownloadPDF = () => {
-    setIsDownloading(true);
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = () => {
-      const element = document.getElementById('admin-print-invoice-view');
-      element.classList.remove('hidden'); element.classList.remove('print:block');
-      const opt = { margin: 10, filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      window.html2pdf().set(opt).from(element).save().then(() => {
-        element.classList.add('hidden'); element.classList.add('print:block'); setIsDownloading(false);
-      });
-    };
-    document.body.appendChild(script);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-      <div className="bg-white rounded-[2rem] w-full max-w-4xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="relative pt-8 pb-4 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
-           <button onClick={() => setInvoice(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 z-10"><X className="w-5 h-5"/></button>
-           <h2 className="text-2xl font-black text-slate-800">Reseräkning: {invoice.userName}</h2>
-           <p className="text-xs font-bold text-slate-500 mt-1">{new Date(invoice.createdAt).toLocaleDateString('sv-SE')}</p>
-        </div>
-        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-slate-50">
-           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <PrintableInvoice data={invoice} t={t} containerId="admin-print-invoice-view" />
-              <div className="p-6">
-                 <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Sammanställning</h3><span className="text-2xl font-black text-green-600">{invoice.total} kr</span></div>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   <div>
-                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Domare</h4>
-                     <p className="font-bold text-sm">{invoice.personalInfo?.name}</p>
-                     <p className="text-xs text-slate-600">{invoice.personalInfo?.pnr}</p>
-                     <p className="text-xs text-slate-600">{invoice.personalInfo?.email}</p>
-                   </div>
-                   <div><h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4><p className="font-bold text-sm">{invoice.personalInfo?.bank}</p></div>
-                 </div>
-                 <div className="mt-6 border-t border-slate-100 pt-6">
-                   <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Resor</h4>
-                   {invoice.trips?.map((t, idx) => (
-                     <p key={idx} className="text-xs font-medium text-slate-700 mb-1">{t.date}: {t.from} till {t.to} ({t.distance} mil) - {t.assignment}</p>
-                   ))}
-                 </div>
-              </div>
-           </div>
-        </div>
-        <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-3">
-           <button onClick={() => setInvoice(null)} className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-black uppercase text-xs hover:bg-slate-200">Stäng</button>
-           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs flex items-center gap-2">{isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} PDF</button>
         </div>
       </div>
     </div>
@@ -1061,7 +704,7 @@ function MainApp() {
         </div>
 
         <div className="md:hidden sticky top-[68px] z-20">
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="w-full bg-blue-900 text-white p-3.5 rounded-2xl shadow-md border border-blue-800 flex justify-between items-center font-black uppercase text-xs tracking-widest"><div className="flex items-center gap-2"><List className="w-5 h-5" /><span>{tabs.find(t => t.id === view)?.label || 'Meny'}</span></div>{isMobileMenuOpen ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5"|}</button>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="w-full bg-blue-900 text-white p-3.5 rounded-2xl shadow-md border border-blue-800 flex justify-between items-center font-black uppercase text-xs tracking-widest"><div className="flex items-center gap-2"><List className="w-5 h-5" /><span>{tabs.find(t => t.id === view)?.label || 'Meny'}</span></div>{isMobileMenuOpen ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5"/>}</button>
           {isMobileMenuOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 flex flex-col gap-1 z-30 max-h-[60vh] overflow-y-auto">
               {tabs.map(tab => (
@@ -1151,7 +794,7 @@ function MainApp() {
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><RefreshCw className="w-4 h-4" /> {t.gamesForTrade}</h3>
                 {games.filter(g => (g.date || '') >= today && assignments.some(a => a.gameId === g.id && a.forTrade)).length === 0 ? <p className="text-slate-400 text-sm italic">{t.noMarketplaceGames}</p> : (
                   <div className="grid gap-4">{games.filter(g => (g.date || '') >= today && assignments.some(a => a.gameId === g.id && a.forTrade)).map(game => (
-                    <div key={game.id} className="bg-white p-5 rounded-2xl shadow-sm border border-yellow-200 flex flex-col sm:flex-row justify-between gap-4"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500">{game.date} kl {game.time} &bull; {game.location}</p></div><div className="flex flex-col justify-center gap-2">{assignments.filter(a => a.gameId === game.id && a.forTrade).map(asg => <button key={asg.id} onClick={() => takeTrade(asg, game)} className="bg-yellow-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2">{t.takeOverFrom} {asg.userName}</button>)}</div></div>
+                    <div key={game.id} className="bg-white p-5 rounded-2xl shadow-sm border border-yellow-200 flex flex-col sm:flex-row justify-between gap-4"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500">{game.date} kl {game.time} • {game.location}</p></div><div className="flex flex-col justify-center gap-2">{assignments.filter(a => a.gameId === game.id && a.forTrade).map(asg => <button key={asg.id} onClick={() => takeTrade(asg, game)} className="bg-yellow-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2">{t.takeOverFrom} {asg.userName}</button>)}</div></div>
                   ))}</div>
                 )}
              </div>
@@ -1159,7 +802,7 @@ function MainApp() {
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> {t.missingUmpires}</h3>
                 {games.filter(g => (g.date || '') >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).length === 0 ? <p className="text-slate-400 text-sm italic">{t.noMarketplaceGames}</p> : (
                   <div className="grid gap-4">{games.filter(g => (g.date || '') >= today && (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => (
-                    <div key={game.id} className="bg-white p-5 rounded-2xl shadow-sm border border-blue-200 flex flex-col sm:flex-row justify-between gap-4"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500">{game.date} kl {game.time} &bull; {game.location}</p><p className="text-xs font-black text-red-500 mt-2 uppercase">{Math.max(0, (game.requiredUmpires || 2) - (groupedAssignments[game.id]?.length || 0))} {t.spotsAvailable}</p></div><div className="flex flex-col justify-center"><button onClick={() => applications.some(a => a.id === `${game.id}_${umpireId}`) ? toggleApplication(game.id) : expressInterestMarketplace(game)} className={`px-6 py-3 rounded-xl text-xs font-black uppercase text-white ${applications.some(a => a.id === `${game.id}_${umpireId}`) ? 'bg-red-600' : 'bg-blue-600'}`}>{applications.some(a => a.id === `${game.id}_${umpireId}`) ? t.withdraw : t.expressInterest}</button></div></div>
+                    <div key={game.id} className="bg-white p-5 rounded-2xl shadow-sm border border-blue-200 flex flex-col sm:flex-row justify-between gap-4"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500">{game.date} kl {game.time} • {game.location}</p><p className="text-xs font-black text-red-500 mt-2 uppercase">{Math.max(0, (game.requiredUmpires || 2) - (groupedAssignments[game.id]?.length || 0))} {t.spotsAvailable}</p></div><div className="flex flex-col justify-center"><button onClick={() => applications.some(a => a.id === `${game.id}_${umpireId}`) ? toggleApplication(game.id) : expressInterestMarketplace(game)} className={`px-6 py-3 rounded-xl text-xs font-black uppercase text-white ${applications.some(a => a.id === `${game.id}_${umpireId}`) ? 'bg-red-600' : 'bg-blue-600'}`}>{applications.some(a => a.id === `${game.id}_${umpireId}`) ? t.withdraw : t.expressInterest}</button></div></div>
                   ))}</div>
                 )}
              </div>
@@ -1203,11 +846,11 @@ function MainApp() {
               <div className="border-b border-slate-200 pb-2"><h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.confirmedGames}</h2></div>
               {myAssignedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200">{t.noAssignedMatches}</div>}
               {myGamesViewMode === 'calendar' ? renderCalendar(myAssignedGames) : myAssignedGames.filter(g => !groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).map(game => (
-                    <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border border-green-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 flex items-center gap-2 mt-1"><Clock className="w-3 h-3"/> {game.date} @ {game.time} &bull; {game.location}</p><div className="mt-3 flex gap-2 items-center flex-wrap"><span className="text-[10px] font-black text-slate-400 uppercase">{t.coUmpires}</span>{groupedAssignments[game.id].filter(a => a.userId !== umpireId).length > 0 ? groupedAssignments[game.id].filter(a => a.userId !== umpireId).map(a => <span key={a.userId} className="text-[10px] bg-slate-50 border border-slate-200 text-slate-700 px-2 py-1 rounded-lg font-bold">{a.userName}</span>) : <span className="text-[10px] text-slate-400 italic">{t.noCoUmpires}</span>}</div></div><div className="flex flex-col sm:items-end gap-2 pt-3 sm:pt-0"><span className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase text-center text-white">{t.confirmed}</span>{game.date >= today && features.marketplace && <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(groupedAssignments[game.id].find(a => a.userId === umpireId).id, !groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade); }} className="text-[10px] font-black uppercase px-4 py-2 rounded-xl bg-slate-100 text-slate-600">{groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade ? t.cancelTrade : t.tradeGame}</button>}</div></div>
+                    <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border border-green-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 flex items-center gap-2 mt-1"><Clock className="w-3 h-3"/> {game.date} @ {game.time} • {game.location}</p><div className="mt-3 flex gap-2 items-center flex-wrap"><span className="text-[10px] font-black text-slate-400 uppercase">{t.coUmpires}</span>{groupedAssignments[game.id].filter(a => a.userId !== umpireId).length > 0 ? groupedAssignments[game.id].filter(a => a.userId !== umpireId).map(a => <span key={a.userId} className="text-[10px] bg-slate-50 border border-slate-200 text-slate-700 px-2 py-1 rounded-lg font-bold">{a.userName}</span>) : <span className="text-[10px] text-slate-400 italic">{t.noCoUmpires}</span>}</div></div><div className="flex flex-col sm:items-end gap-2 pt-3 sm:pt-0"><span className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase text-center text-white">{t.confirmed}</span>{game.date >= today && features.marketplace && <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(groupedAssignments[game.id].find(a => a.userId === umpireId).id, !groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade); }} className="text-[10px] font-black uppercase px-4 py-2 rounded-xl bg-slate-100 text-slate-600">{groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade ? t.cancelTrade : t.tradeGame}</button>}</div></div>
               ))}
             </div>
             {!showHistory && (
-              <div className="space-y-4 pt-4"><div className="border-b border-slate-200 pb-2"><h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.interestedGames}</h2></div>{myInterestedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200">{t.noPendingInterest}</div>}{myInterestedGames.map(game => <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 mt-1">{game.date} @ {game.time} &bull; {game.location}</p></div><button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase border border-red-100">Dra tillbaka</button></div>)}</div>
+              <div className="space-y-4 pt-4"><div className="border-b border-slate-200 pb-2"><h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.interestedGames}</h2></div>{myInterestedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200">{t.noPendingInterest}</div>}{myInterestedGames.map(game => <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 mt-1">{game.date} @ {game.time} • {game.location}</p></div><button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase border border-red-100">Dra tillbaka</button></div>)}</div>
             )}
           </div>
         )}
@@ -1228,7 +871,7 @@ function MainApp() {
 
         {view === 'admin' && isAdmin && (
           <div className="space-y-6 animate-in fade-in">
-             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4"><div><h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2><p className="text-xs text-slate-500">{selectedYear} Season</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2"><Download className="w-4 h-4" /> Backup</button><button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2"><Plus className="w-4 h-4" /> {t.bulkImport}</button></div></div>
+             <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4"><div><h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2><p className="text-xs text-slate-500">{selectedYear} Season</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2"><Download className="w-4 h-4" /> Backup</button><button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2"><Plus className="w-4 h-4" /> {t.bulkImport}</button></div></div>
              {showImportTool && (
                <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200"><h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3><textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder={t.pasteSchedulePlaceholder} className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" /><div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs text-white">Lägg till matcher</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">Avbryt</button></div></div>
              )}
@@ -1323,7 +966,7 @@ function MainApp() {
                     {isAdmin && (
                       <><div className="pt-2">
                           <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2">{t.interests} ({gameApplications.length})</h4>
-                          {gameApplications.length > 0 ? <div className="flex flex-wrap gap-2">{gameApplications.map(app => <div key={app.userId} className="px-3 py-2 bg-blue-50 border rounded-xl flex items-center gap-3"><span className="text-xs font-bold text-blue-800">{app.userName}</span><button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-white bg-blue-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Tillsätt</button></div>)}</div> : <p className="text-xs italic text-slate-400 font-medium">{t.noInterests}</p>}
+                          {gameApplications.length > 0 ? <div className="flex flex-wrap gap-2">{gameApplications.map(app => <div key={app.userId} className="px-3 py-2 bg-blue-50 border rounded-xl flex items-center gap-3"><span className="text-xs font-bold text-blue-800">{app.userName}</span>{masterUmpires.find(mu => mu.id === app.userId)?.level && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase ${getLevelStyles(masterUmpires.find(mu => mu.id === app.userId)?.level)}`}>{masterUmpires.find(mu => mu.id === app.userId)?.level}</span>}<button onClick={() => assignUmpire(game.id, app.userId, app.userName)} className="text-white bg-blue-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Tillsätt</button></div>)}</div> : <p className="text-xs italic text-slate-400 font-medium">{t.noInterests}</p>}
                         </div>
                         <div className="pt-4 border-t space-y-3 bg-slate-50 p-4 rounded-2xl border mt-4">
                           <h4 className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> Officials (Admin)</h4>
