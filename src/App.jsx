@@ -3,7 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, doc, setDoc, getDoc, onSnapshot, 
   deleteDoc, writeBatch, addDoc, updateDoc, query, orderBy
-} from 'firebase/firestore'; 
+} from 'firebase/firestore';
 import { 
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, sendPasswordResetEmail,
@@ -18,9 +18,8 @@ import {
   BarChart3, History as HistoryIcon, Info, User, UserPlus, Download, 
   UserCheck, Edit2, LogOut, ChevronRight, List, ChevronLeft, 
   ArrowUp, Users2, X, AlertTriangle, ArrowLeft, Megaphone, 
-  MessageCircle, Code, Send, Share2, Map, Mail,
-  ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders,
-  Calculator, Printer, Car, CreditCard, Save, Camera
+  MessageCircle, Code, Send, Map, Mail, ArrowRightLeft, Star, Navigation, 
+  Bell, BellOff, Sliders, Calculator, Printer, Car, CreditCard, Save, Camera
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -121,7 +120,8 @@ const translations = {
     deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?", deleteAvatar: "Ta bort bild", open: "Öppna",
     droveCar: "Egen bil", carpooling: "Samåker", invoiceCommentLabel: "Övriga kommentarer",
     invoiceCommentPlaceholder: "T.ex. privat övernattning, samåker med [Namn], eller avvikande rutt...",
-    receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se."
+    receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se.",
+    nonUmpire: "Ej domare"
   },
   en: {
     appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile",
@@ -200,7 +200,8 @@ const translations = {
     deleteAvatarConfirm: "Are you sure you want to remove your profile picture?", deleteAvatar: "Remove picture", open: "Open",
     droveCar: "My Car", carpooling: "Carpool", invoiceCommentLabel: "Additional Comments",
     invoiceCommentPlaceholder: "E.g. private accommodation, carpooling with [Name], or route changes...",
-    receiptsReminder: "NOTE! If you have additional expenses, email receipts to info@sbslf.se."
+    receiptsReminder: "NOTE! If you have additional expenses, email receipts to info@sbslf.se.",
+    nonUmpire: "Non-umpire"
   }
 };
 
@@ -231,6 +232,9 @@ const generateCSV = (gamesToExport, selectedYear) => {
   document.body.removeChild(link);
 };
 
+// ==========================================
+// UMPIRE PROFILE MODAL COMPONENT
+// ==========================================
 function UmpireProfileModal({ 
   selectedProfileId, setSelectedProfileId, masterUmpires, assignments, 
   umpireId, isAdmin, selectedYear, t, getLevelStyles, db, appId 
@@ -240,7 +244,7 @@ function UmpireProfileModal({
   const canEdit = isAdmin || isMe;
   
   const [editData, setEditData] = useState({
-     linkedEmail: '', phone: '', address: '', city: '', historicGames: 0
+     linkedEmail: '', phone: '', address: '', city: '', historicGames: 0, level: ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -251,7 +255,8 @@ function UmpireProfileModal({
            phone: umpireData.phone || '',
            address: umpireData.address || '',
            city: umpireData.city || '',
-           historicGames: parseInt(umpireData.historicGames || 0)
+           historicGames: parseInt(umpireData.historicGames || 0),
+           level: umpireData.level || ''
         });
      }
   }, [umpireData]);
@@ -268,7 +273,8 @@ function UmpireProfileModal({
            phone: editData.phone.trim(),
            address: editData.address.trim(),
            city: editData.city.trim(),
-           historicGames: parseInt(editData.historicGames) || 0
+           historicGames: parseInt(editData.historicGames) || 0,
+           level: editData.level.trim()
         }, { merge: true });
         if (typeof window !== 'undefined') alert(t.savedSuccess);
      } catch(e) {
@@ -312,6 +318,7 @@ function UmpireProfileModal({
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
       <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in zoom-in-95 relative max-h-[90vh] flex flex-col overflow-hidden">
         
+        {/* Modal Header */}
         <div className="relative pt-12 pb-6 px-8 text-center bg-slate-50 border-b border-slate-100 shrink-0">
            <button onClick={() => setSelectedProfileId(null)} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm hover:bg-slate-100 transition-colors z-10"><X className="w-5 h-5"/></button>
            
@@ -350,6 +357,7 @@ function UmpireProfileModal({
            </div>
         </div>
 
+        {/* Modal Scrollable Body */}
         <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
@@ -410,6 +418,24 @@ function UmpireProfileModal({
                    <HistoryIcon className="w-4 h-4" /> {t.historicalStats}
                  </h3>
                  <div className="space-y-4">
+                   {isAdmin && (
+                     <div>
+                       <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.level}</label>
+                       <select 
+                         value={editData.level} 
+                         onChange={e => setEditData({...editData, level: e.target.value})} 
+                         className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-blue-600 outline-none mt-1 focus:border-blue-400"
+                       >
+                         <option value="">-- {t.level} --</option>
+                         <option value="Internationell">Internationell</option>
+                         <option value="Elit">Elit</option>
+                         <option value="Nationell">Nationell</option>
+                         <option value="Region">Region</option>
+                         <option value="Förening">Förening</option>
+                         <option value={t.nonUmpire}>{t.nonUmpire}</option>
+                       </select>
+                     </div>
+                   )}
                    <div>
                      <label className="text-[10px] font-black uppercase text-slate-400 pl-1">{t.historicalGames}</label>
                      {isAdmin ? (
@@ -423,7 +449,7 @@ function UmpireProfileModal({
                    </p>
                    {isAdmin && (
                      <button onClick={handleSave} disabled={isSaving} className="w-full py-2 bg-slate-200 text-slate-700 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-300 disabled:opacity-50">
-                       {t.updateHistory}
+                       {t.saveChanges}
                      </button>
                    )}
                  </div>
@@ -436,6 +462,9 @@ function UmpireProfileModal({
   );
 }
 
+// ==========================================
+// TRAVEL INVOICE COMPONENT
+// ==========================================
 function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssignedGames, myUmpireData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -576,7 +605,6 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
         const distanceMeters = routeData.routes[0].distance;
         let mil = distanceMeters / 10000; 
         if (isRoundTrip) mil *= 2;
-        
         setTrips(prev => prev.map(tr => tr.id === tripId ? { ...tr, distance: mil.toFixed(1) } : tr));
       } else {
          throw new Error(t.routeMissing);
@@ -932,13 +960,11 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                                   const fromVal = t.homeLocation;
                                   const toVal = g.location;
                                   
-                                  // Uppdatera alla fält i listan direkt (Förhindrar krockar)
                                   setTrips(currentTrips => currentTrips.map(tr => 
                                     tr.id === trip.id 
                                       ? { ...tr, date: g.date, assignment: `${g.away} @ ${g.home}`, to: toVal, from: fromVal }
                                       : tr
                                   ));
-                                  // Beräkna avstånd direkt baserat på nya datan
                                   calculateDistance(trip.id, fromVal, toVal, trip.roundTrip);
                                }
                             }}
@@ -1173,9 +1199,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
             <tr className="bg-gray-100">
               <th className="border border-black p-1.5 text-left">{t.date}</th>
               <th className="border border-black p-1.5 text-left">Ändamål</th>
-              <th className="border border-black p-1.5 text-left">Från</th>
-              <th className="border border-black p-1.5 text-left">Till</th>
-              <th className="border border-black p-1.5 text-center">T&R</th>
+              <th className="border border-black p-1.5 text-left">Rutt</th>
+              <th className="border border-black p-1.5 text-center">Fordon</th>
               <th className="border border-black p-1.5 text-right">Mil</th>
             </tr>
           </thead>
@@ -1301,42 +1326,24 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
   );
 }
 
-// ==========================================
-// ERROR BOUNDARY
-// ==========================================
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
   }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("Critical React Crash:", error, errorInfo);
-    this.setState({ errorInfo });
-  }
-
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, errorInfo) { console.error("Critical React Crash:", error, errorInfo); this.setState({ errorInfo }); }
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
           <div className="bg-white p-8 rounded-3xl shadow-xl max-w-2xl w-full text-center border border-red-100">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-black text-slate-800 mb-2">{t.errorOccurred}</h2>
-            <p className="text-slate-600 mb-6 font-medium">Applikationen kraschade. Felet var:</p>
-            
+            <h2 className="text-2xl font-black text-slate-800 mb-2">{translations.sv.errorOccurred}</h2>
             <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap bg-red-50 p-4 rounded-xl text-left overflow-auto max-h-60 border border-red-200">
-              {this.state.error?.toString()}
-              {'\n'}
-              {this.state.errorInfo?.componentStack}
+              {this.state.error?.toString()}{'\n'}{this.state.errorInfo?.componentStack}
             </pre>
-
-            <button onClick={() => window.location.reload()} className="mt-8 bg-slate-800 text-white px-8 py-4 rounded-xl font-black uppercase text-xs hover:bg-black transition-colors">
-              Ladda om sidan
-            </button>
+            <button onClick={() => window.location.reload()} className="mt-8 bg-slate-800 text-white px-8 py-4 rounded-xl font-black uppercase text-xs hover:bg-black transition-colors">Ladda om sidan</button>
           </div>
         </div>
       );
@@ -1345,11 +1352,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-// ==========================================
-// MAIN APPLICATION COMPONENT
-// ==========================================
 function MainApp() {
-  // Auth & Roles
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [umpireId, setUmpireId] = useState('');
@@ -1357,7 +1360,6 @@ function MainApp() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminUmpireIds, setAdminUmpireIds] = useState([]);
   
-  // Navigation & View
   const [view, setView] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1369,7 +1371,6 @@ function MainApp() {
   const [myGamesViewMode, setMyGamesViewMode] = useState('list');
   const [selectedYear, setSelectedYear] = useState('2026');
   
-  // Federation Multi-Tenant Setup (Environment detection)
   const [isDemoEnv, setIsDemoEnv] = useState(true);
   const [federation, setFederation] = useState('swe');
   const federations = [
@@ -1377,33 +1378,23 @@ function MainApp() {
     { id: 'int', name: '🇬🇧 English', defaultLang: 'en' }
   ];
 
-  // Language & UI Context
   const defaultLang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('sv') ? 'sv' : 'en';
   const [lang, setLang] = useState(defaultLang);
   
   const getTranslation = (languageCode) => {
     const selected = translations[languageCode] || translations['en'];
     const fallback = translations['en'];
-    return new Proxy(selected, {
-      get: (target, prop) => target[prop] !== undefined ? target[prop] : (fallback[prop] || '')
-    });
+    return new Proxy(selected, { get: (target, prop) => target[prop] !== undefined ? target[prop] : fallback[prop] });
   };
   const t = getTranslation(lang);
 
-  // Shared UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [globalNote, setGlobalNote] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // System Feature Flags
-  const [features, setFeatures] = useState({
-    marketplace: true,
-    evaluations: true,
-    reminders: true
-  });
+  const [features, setFeatures] = useState({ marketplace: true, evaluations: true, reminders: true });
   
-  // Help View State
   const [helpTab, setHelpTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1414,23 +1405,12 @@ function MainApp() {
   const [readmeContent, setReadmeContent] = useState(null);
   const [readmeLoading, setReadmeLoading] = useState(false);
   
-  // Contact Form State
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactSubject, setContactSubject] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [contactStatus, setContactStatus] = useState('idle');
 
-  // Email Module State
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [customEmailMessage, setCustomEmailMessage] = useState('');
-  const [sendingBulkEmails, setSendingBulkEmails] = useState(false);
-
-  // Calendar Dropdown States
-  const [showScheduleExport, setShowScheduleExport] = useState(false);
-  const [showMyGamesExport, setShowMyGamesExport] = useState(false);
-
-  // Data State
   const [games, setGames] = useState([]);
   const [applications, setApplications] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -1443,7 +1423,6 @@ function MainApp() {
   const [syncing, setSyncing] = useState(false);
   const [firebaseError, setFirebaseError] = useState(null); 
   
-  // Auth & Modals State
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -1455,51 +1434,32 @@ function MainApp() {
   const [selectedGameDetails, setSelectedGameDetails] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   
-  // Evaluation Forms State
-  const [evaluatingUmpire, setEvaluatingUmpire] = useState(null);
   const [evalGrade, setEvalGrade] = useState(0);
   const [evalComment, setEvalComment] = useState('');
 
-  // Location Editing State
   const [editingLocation, setEditingLocation] = useState(null);
   const [newFacility, setNewFacility] = useState('');
   
-  // Changelog
-  const [showChangelogModal, setShowChangelogModal] = useState(false);
-  const [changelog, setChangelog] = useState([]);
-  const [loadingChangelog, setLoadingChangelog] = useState(false);
-  
-  // Admin Editing Controls
   const [bulkInput, setBulkInput] = useState('');
   const [showImportTool, setShowImportTool] = useState(false);
   const [showStaffed, setShowStaffed] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [editingUmpireId, setEditingUmpireId] = useState(null);
   const [tempEditName, setTempEditName] = useState('');
-  const [tempEditLevel, setTempEditLevel] = useState('');
-  const [tempEditEmail, setTempEditEmail] = useState('');
   const [editNoteText, setEditNoteText] = useState('');
-  const [showManualEmailInput, setShowManualEmailInput] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingGameData, setEditingGameData] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'games', direction: 'desc' });
   const [umpireSort, setUmpireSort] = useState('name');
 
-  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeague, setFilterLeague] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [tempEditPhone, setTempEditPhone] = useState('');
-  const [tempHistoricalGames, setTempHistoricalGames] = useState('');
 
-  // Localized today
   const today = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
-  // Environment Logic
   useEffect(() => {
      if (typeof window !== 'undefined') {
         const host = window.location.hostname;
@@ -1520,7 +1480,6 @@ function MainApp() {
     return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
   }, [selectedYear, isDemoEnv]);
 
-  // Derived state that needs to be declared BEFORE it's used
   const calendarWeeks = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -1597,25 +1556,16 @@ function MainApp() {
       const matchesSearch = hName.includes(search) || aName.includes(search);
       const matchesLeague = !filterLeague || game.league === filterLeague;
       const matchesLocation = !filterLocation || game.location === filterLocation;
-      
       const isHistorical = (game.date || '') < today;
       
       let statusMatch = true;
-      if (filterStatus === 'needs_umpire') {
-          const gameAssignments = groupedAssignments[game.id] || [];
-          statusMatch = gameAssignments.length < (game.requiredUmpires || 2);
-      } else if (filterStatus === 'no_interests') {
-          const applicants = applications.filter(a => a.gameId === game.id);
-          statusMatch = applicants.length === 0;
-      }
-      
       if (showHistory) {
         return isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
       } else {
         return !isHistorical && matchesSearch && matchesLeague && matchesLocation && statusMatch;
       }
     });
-  }, [games, searchQuery, filterLeague, filterLocation, filterStatus, showHistory, today, groupedAssignments, applications]);
+  }, [games, searchQuery, filterLeague, filterLocation, showHistory, today]);
 
   const leagues = useMemo(() => [...new Set(games.map(g => g.league || 'Unknown'))].sort((a, b) => a.localeCompare(b, lang)), [games, lang]);
   
@@ -1674,72 +1624,22 @@ function MainApp() {
     );
   }, [games, applications, groupedAssignments, umpireId]);
 
-  const umpiresWithAssignmentsMap = useMemo(() => {
-    const map = {};
-    assignments.forEach(asg => {
-      if (!map[asg.userId]) {
-        map[asg.userId] = { umpire: masterUmpires.find(u => u.id === asg.userId), assignedGames: [] };
-      }
-      const game = games.find(g => g.id === asg.gameId);
-      if (game) map[asg.userId].assignedGames.push(game);
-    });
-    Object.values(map).forEach(obj => {
-      obj.assignedGames.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    });
-    return map;
-  }, [assignments, masterUmpires, games]);
-
-  const emailCandidates = useMemo(() => {
-    const list = Object.values(umpiresWithAssignmentsMap).filter(obj => obj.umpire !== undefined);
-    const ready = list.filter(obj => obj.umpire.linkedEmail);
-    const missing = list.filter(obj => !obj.umpire.linkedEmail);
-    return { ready, missing };
-  }, [umpiresWithAssignmentsMap]);
-
-  const unconnectedEmails = useMemo(() => {
-    const linked = masterUmpires.map(u => (u.linkedEmail || '').toLowerCase()).filter(Boolean);
-    return registeredEmails.filter(email => !linked.includes(email.toLowerCase()));
-  }, [registeredEmails, masterUmpires]);
-
   const uiDays = useMemo(() => {
     const arr = [...(t.days || [])];
     if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
     return arr;
   }, [t.days]);
 
-  // 5. YTTERLIGARE EFFECTS
   useEffect(() => {
     setEditNoteText(globalNote);
   }, [globalNote]);
 
   useEffect(() => {
-    if (view === 'help' && helpTab === 'about' && readmeContent === null) {
-      setReadmeLoading(true);
-      fetch(`https://api.github.com/repos/${GITHUB_REPO}/readme`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.content) {
-            const text = decodeURIComponent(escape(atob(data.content)));
-            setReadmeContent(text);
-          } else {
-            setReadmeContent(t.fetchError);
-          }
-        })
-        .catch(err => {
-          setReadmeContent(t.fetchError);
-        })
-        .finally(() => setReadmeLoading(false));
-    }
-  }, [view, helpTab, readmeContent, t.fetchError]);
-
-  useEffect(() => {
-    setEvaluatingUmpire(null);
     setEvalGrade(0);
     setEvalComment('');
     setEditingGameData(null);
   }, [selectedGameDetails]);
 
-  // Firebase Real-time listeners
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) {
@@ -1926,7 +1826,6 @@ function MainApp() {
     return () => clearInterval(interval);
   }, [isAdmin, mailQueue, appId, t]);
 
-  // AUTO REMOVE PENDING CHANGES AFTER 7 DAYS
   useEffect(() => {
     if (!isAdmin || assignments.length === 0) return;
     const now = Date.now();
@@ -1992,6 +1891,7 @@ function MainApp() {
     if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]';
     if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]';
     if (l.includes('region')) return 'bg-[#cfe2f3] text-[#3d85c6] border-[#a2c4c9]';
+    if (l.includes('förening')) return 'bg-[#efefef] text-[#666666] border-[#cccccc]';
     return 'bg-slate-200 text-slate-500 border-slate-300';
   };
 
@@ -2268,8 +2168,6 @@ function MainApp() {
 
   const assignUmpire = async (gameId, uId, name) => {
     if (!isAdmin) return;
-    
-    // KROCK-SKYDD
     const game = games.find(g => g.id === gameId);
     if (game) {
       const umpireAssignedGamesToday = assignments
@@ -2547,89 +2445,6 @@ function MainApp() {
     } catch (e) { }
   };
 
-  const handleDownloadBackup = () => {
-    if (!isAdmin || typeof window === 'undefined') return;
-    const backupData = {
-      timestamp: new Date().toISOString(),
-      year: selectedYear,
-      appId: appId,
-      collections: {
-        games,
-        applications,
-        assignments,
-        umpires: masterUmpires,
-        adminUmpireIds,
-        evaluations,
-        locations: locationsData
-      }
-    };
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `umpire-backup-${selectedYear}-${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    if (analytics) logEvent(analytics, 'download_backup', { year: selectedYear });
-  };
-
-  const loadDemoData = async () => {
-    setSyncing(true);
-    try {
-      const batch = writeBatch(db);
-      
-      const ump1Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
-      batch.set(ump1Ref, { name: "Anna Andersson", level: "Elit", remindersEnabled: true });
-      const ump2Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
-      batch.set(ump2Ref, { name: "Björn Borg", level: "Region", remindersEnabled: true });
-      const ump3Ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'umpires'));
-      batch.set(ump3Ref, { name: "Cecilia Carlsson", level: "Förening", remindersEnabled: true });
-      
-      const loc1Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Örvallen');
-      batch.set(loc1Ref, { address: 'Örvallen 1, Sundbyberg', facilities: ['Omklädningsrum', 'Kiosk', 'Toalett'] });
-      const loc2Ref = doc(db, 'artifacts', appId, 'public', 'data', 'locations', 'Skarpnäck');
-      batch.set(loc2Ref, { address: 'Skarpnäcksfältet, Stockholm', facilities: ['Toalett'] });
-
-      const teams = ['Rättvik', 'Sundbyberg', 'Leksand', 'Stockholm', 'Sölvesborg', 'Karlskoga', 'Gefle', 'Tranås'];
-      const locs = ['Örvallen', 'Skarpnäck', 'Leksand IP', 'Shark Park'];
-      const leagues = ['Elitserien', 'Regionserien'];
-      
-      let currentDate = new Date();
-      for (let i = 0; i < 50; i++) {
-         const gameDate = new Date(currentDate);
-         gameDate.setDate(currentDate.getDate() + Math.floor(i / 2));
-         const dateStr = `${gameDate.getFullYear()}-${String(gameDate.getMonth() + 1).padStart(2, '0')}-${String(gameDate.getDate()).padStart(2, '0')}`;
-         
-         const t1 = teams[Math.floor(Math.random() * teams.length)];
-         let t2 = teams[Math.floor(Math.random() * teams.length)];
-         while(t1 === t2) t2 = teams[Math.floor(Math.random() * teams.length)];
-         
-         const loc = locs[Math.floor(Math.random() * locs.length)];
-         const l = leagues[Math.floor(Math.random() * leagues.length)];
-         const timeHour = 10 + Math.floor(Math.random() * 8);
-         const timeStr = `${timeHour}:00`;
-         
-         const gameId = `m-${dateStr.replace(/-/g,'')}-${timeStr.replace(':','')}-${t1}-${t2}`.replace(/\s+/g, '').toLowerCase();
-         
-         batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), {
-           date: dateStr, time: timeStr, league: l, away: t1, home: t2, location: loc, requiredUmpires: 2
-         });
-      }
-
-      await batch.commit();
-      if(typeof window !== 'undefined') alert(t.sandboxLoaded);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  // Helper för inloggad domare
-  const myUmpireData = masterUmpires.find(u => u.id === umpireId);
-
-  // 8. HUVUD-RENDERING
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
   if (view === 'invoice') {
@@ -2659,7 +2474,6 @@ function MainApp() {
     );
   }
 
-  // --- TOP NAVIGATION TABS DEFINITION ---
   const tabs = [
     { id: 'schedule', label: t.schedule, icon: CalendarIcon },
     { id: 'locations', label: t.locations, icon: MapPin },
@@ -2682,7 +2496,6 @@ function MainApp() {
       
       <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-40">
         <div className="max-w-5xl mx-auto flex justify-between items-center gap-3">
-          {/* Vänster: Logga och titel (Klickbar för scroll till toppen) */}
           <div className="flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <Trophy className="w-6 h-6 shrink-0" />
             <div className="truncate">
@@ -2691,7 +2504,6 @@ function MainApp() {
             </div>
           </div>
 
-          {/* Höger: Kontroller, Inställningar och Profil/Login */}
           <div className="flex items-center gap-3 shrink-0">
             {isDemoEnv && (
               <select value={federation} onChange={(e) => { setFederation(e.target.value); const newFed = federations.find(f => f.id === e.target.value); if (newFed) setLang(newFed.defaultLang); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 outline-none hidden sm:block">
@@ -2742,7 +2554,6 @@ function MainApp() {
       <main className="max-w-5xl mx-auto p-4 space-y-6">
         {view !== 'help' && (
           <>
-            {/* Desktop Tabs */}
             <div className="hidden md:flex flex-wrap bg-white p-1 rounded-2xl shadow-sm border border-slate-200 sticky top-[68px] z-20 gap-1">
               {tabs.map(tab => {
                 const isActive = view === tab.id;
@@ -2761,7 +2572,6 @@ function MainApp() {
               })}
             </div>
 
-            {/* Mobile Dropdown Menu */}
             <div className="md:hidden sticky top-[68px] z-20">
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
@@ -2884,7 +2694,6 @@ function MainApp() {
                         {!showHistory && (
                           <>
                             <div className="flex flex-col items-end">
-                              {/* ADMINS SER NAMNEN, ANDRA SER BARA ANTALET */}
                               {isAdmin ? (
                                 gameApplications.length > 0 ? (
                                    <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">
@@ -3283,7 +3092,7 @@ function MainApp() {
 
                                   if (conflictGame) {
                                     return (
-                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`${t.bookedIn} ${conflictGame.location}`}>
+                                      <div key={app.userId} className="flex justify-between items-center bg-red-50 p-2.5 rounded-xl border border-red-100 opacity-70" title={`Bokad i ${conflictGame.location}`}>
                                          <span className="text-xs font-bold text-red-900 line-through decoration-red-500 truncate">{app.userName}</span>
                                          <span className="text-[9px] font-black uppercase text-red-600 px-2 text-right truncate max-w-[100px]">{conflictGame.location}</span>
                                       </div>
@@ -3625,7 +3434,7 @@ function MainApp() {
                   <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
                     <input type="text" autoFocus value={tempEditName} onChange={(e) => setTempEditName(e.target.value)} placeholder="För- och efternamn" className="w-full p-3 bg-white border border-blue-200 rounded-xl font-bold text-sm outline-none" />
                     <button 
-                      onClick={async () => { if (tempEditName.trim()) { const newId = await addMasterUmpire(tempEditName); setUserName(tempEditName); setUmpireId(newId); await updateProfile(tempEditName, newId); setTempEditName(''); setIsAddingNew(false); setShowNamePrompt(false); } }} 
+                      onClick={async () => { if (tempEditName.trim()) { const newId = await addMasterUmpire(tempEditName, t.nonUmpire); setUserName(tempEditName); setUmpireId(newId); await updateProfile(tempEditName, newId); setTempEditName(''); setIsAddingNew(false); setShowNamePrompt(false); } }} 
                       className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-blue-200"
                     >
                       {t.createUmpire}
