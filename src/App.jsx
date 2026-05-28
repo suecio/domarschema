@@ -35,15 +35,13 @@ const getISOWeekNumber = (date) => {
 
 const generateCSV = (gamesToExport, selectedYear) => {
   if (gamesToExport.length === 0 || typeof window === 'undefined') return;
-  const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location
-";
+  const header = "Subject,Start Date,Start Time,End Date,End Time,Description,Location\n";
   const rows = gamesToExport.map(game => {
     const [hours, mins] = (game.time || '00:00').split(':');
     const endHours = (parseInt(hours || '0') + 3).toString().padStart(2, '0');
     const endTime = `${endHours}:${mins || '00'}`;
     return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${endTime},"${game.league}","${game.location}"`;
-  }).join('
-');
+  }).join('\n');
   const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -501,7 +499,7 @@ function MainApp() {
   }, []);
 
   const appId = useMemo(() => {
-    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\/]/g, '-') : 'baseball-umpire-scheduler';
+    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\\/]/g, '-') : 'baseball-umpire-scheduler';
     return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
   }, [selectedYear, isDemoEnv]);
 
@@ -616,25 +614,186 @@ function MainApp() {
     return () => unsubscribeProfile();
   }, [user, appId, adminUmpireIds, masterUmpires]);
 
-  const confirmScheduleChange = async (asgId) => { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { pendingChange: false }); } catch(e){} };
-  const assignOfficial = async (gameId, role, value) => {
-    if (!isAdmin) return; const updateObj = {};
-    if (role === 'supervisor') { updateObj.supervisorId = value; updateObj.supervisorName = value ? masterUmpires.find(u => u.id === value)?.name : ''; }
-    else { updateObj.tcName = value; }
-    try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), updateObj); if (selectedGameDetails?.id === gameId) setSelectedGameDetails(prev => ({ ...prev, ...updateObj })); } catch(e){}
+  useEffect(() => {
+    if (user && user.email && umpireId && masterUmpires.length > 0) {
+      const myUmpire = masterUmpires.find(u => u.id === umpireId);
+      if (myUmpire && myUmpire.linkedEmail !== user.email) {
+        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', umpireId), {
+          linkedUserId: user.uid,
+          linkedEmail: user.email
+        }).catch(e => { });
+      }
+    }
+  }, [user, umpireId, masterUmpires, appId]);
+
+  useEffect(() => {
+    if (!isAdmin || mailQueue.length === 0) return;
+    
+    const interval = setInterval(() => {
+       const now = Date.now();
+       const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
+       
+       if (readyToProcess.length > 0) {
+           readyToProcess.forEach(async (queueItem) => {
+              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
+              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
+              
+              const emailBody = t.emailMatchMovedBody
+                 .replace(/\{name\}/g, queueItem.userName)
+                 .replace(/\{changesListSv\}/g, changesTextSv)
+                 .replace(/\{changesListEn\}/g, changesTextEn);
+                 
+              try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
+                   to: queueItem.email,
+                   message: {
+                     subject: t.emailMatchMovedSubject.replace('{count}', queueItem.changes.length),
+                     text: emailBody
+                   },
+                   createdAt: Date.now()
+                });
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', queueItem.id));
+              } catch(e) { }
+           });
+       }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [isAdmin, mailQueue, appId, t]);
+
+  useEffect(() => {
+    if (!isAdmin || assignments.length === 0) return;
+    const now = Date.now();
+    const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+    const expiredAssignments = assignments.filter(asg => asg.pendingChange && asg.pendingChangeTimestamp && (now - asg.pendingChangeTimestamp > ONE_WEEK));
+    expiredAssignments.forEach(asg => { deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id)).catch(() => {}); });
+  }, [isAdmin, assignments, appId, db]);
+
+  useEffect(() => {
+    if (analytics) logEvent(analytics, 'screen_view', { firebase_screen: view, year: selectedYear, lang: lang });
+    const handleScroll = () => { if(typeof window !== 'undefined') setShowBackToTop(window.scrollY > 300); };
+    if (typeof window !== 'undefined') { window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }
+  }, [view, selectedYear, lang]);
+
+  const safeDateMonth = (dateString) => {
+    if (!dateString) return ''; const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString; return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
   };
 
-  const submitEvaluation = async (gameId, targetUmpireId, grade, comment) => {
-    if (!isAdmin && selectedGameDetails?.supervisorId !== umpireId) return;
-    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'evaluations', `${gameId}_${targetUmpireId}`), { gameId, umpireId: targetUmpireId, evaluatorId: umpireId, grade, comment, timestamp: Date.now() }); alert(t.evalSaved); } catch(e){}
+  const safeDateDay = (dateString) => {
+    if (!dateString) return '-'; const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-'; return (t.days && t.days[d.getDay()]) ? t.days[d.getDay()] : '-';
   };
 
+  const safeDateNum = (dateString) => {
+    if (!dateString) return '-'; const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-'; return d.getDate();
+  };
+
+  const getLeagueStyles = (league) => {
+    const l = (league || '').toLowerCase();
+    if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
+    if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  const getLevelStyles = (level) => {
+    const l = (level || '').toLowerCase();
+    if (l.includes('internationell')) return 'bg-[#204d99] text-white border-[#1a3d7a]';
+    if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]';
+    if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]';
+    if (l.includes('region')) return 'bg-[#cfe2f3] text-[#3d85c6] border-[#a2c4c9]';
+    if (l.includes('förening')) return 'bg-[#efefef] text-[#666666] border-[#cccccc]';
+    return 'bg-slate-200 text-slate-500 border-slate-300';
+  };
+
+  const getAssignmentStatusStyles = (count, required) => {
+    const req = required || 2;
+    if (count === 0) return 'bg-red-100 text-red-700 border-red-200';
+    if (count < req) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-green-100 text-green-700 border-green-200';
+  };
+
+  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
+    const hasOfficials = gameAssignments.length > 0 || game.supervisorName || game.tcName;
+    if (!hasOfficials) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-3 items-center">
+        {gameAssignments.map(asg => {
+            const m = masterUmpires.find(mu => mu.id === asg.userId);
+            return (
+              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
+                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} {t.umpireShort}: {asg.userName} {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+              </div>
+            );
+        })}
+        {game.supervisorName && <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1"><Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}</div>}
+        {game.tcName && <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1"><FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}</div>}
+      </div>
+    );
+  };
+
+  const renderCalendar = (gamesToRender) => (
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 overflow-hidden animate-in fade-in">
+      <div className="flex justify-between items-center mb-4 px-2">
+         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
+         <h3 className="font-black text-lg text-slate-800 uppercase">{t.months && t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight className="w-5 h-5"/></button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center mb-2">
+         {uiDays.map(d => <div key={d} className="text-[10px] font-black uppercase text-slate-400">{d}</div>)}
+      </div>
+      <div className="flex flex-col gap-1 bg-slate-100 border border-slate-100 rounded-xl overflow-hidden p-1">
+        {calendarWeeks.map((week, i) => (
+           <div key={i} className="grid grid-cols-7 gap-1">
+              {week.days.map((day, j) => {
+                 if (!day) return <div key={j} className="p-2" />;
+                 const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+                 const gamesOnDay = gamesToRender.filter(g => g.date === dateStr);
+                 const isToday = dateStr === today;
+                 return (
+                    <div key={j} className={`bg-white rounded-lg p-1.5 min-h-[80px] flex flex-col ${isToday ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
+                       <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>{day.getDate()}</span>
+                       <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">{gamesOnDay.map(g => <div key={g.id} onClick={() => setSelectedGameDetails(g)} className="text-[8px] sm:text-[9px] font-bold bg-blue-50 text-blue-800 rounded px-1.5 py-1 truncate cursor-pointer hover:bg-blue-100 transition-colors">{g.away}</div>)}</div>
+                    </div>
+                 )
+              })}
+           </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault(); setAuthError('');
+    try {
+      if (isLoginMode) await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      else await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      setShowAuthModal(false);
+    } catch (err) { setAuthError(err.message); }
+  };
+
+  const handleResetPassword = async () => {
+    if (!authEmail) return setAuthError(lang === 'sv' ? 'Fyll i e-postadressen ovan först.' : 'Please enter your email address first.');
+    try { await sendPasswordResetEmail(auth, authEmail); if (typeof window !== 'undefined') alert(lang === 'sv' ? 'Lösenordsåterställning skickad!' : 'Password reset email sent!'); } catch (err) { setAuthError(err.message); }
+  };
+
+  const handleSort = (key) => { setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' })); };
+
+  const updateProfile = async (name, id) => {
+    if (!user || !user.email) return;
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
+  };
+
+  const logoutUmpire = async () => { await signOut(auth); try { await signInAnonymously(auth); } catch (e) { } setShowAdminModal(false); setView('schedule'); };
   const saveGlobalNote = async () => { if (isAdmin) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: editNoteText }, { merge: true }); };
   const clearGlobalNote = async () => { if (isAdmin) { setEditNoteText(''); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { globalNote: '' }, { merge: true }); } };
   const toggleSystemFeature = async (featureKey) => { if (isSuperAdmin) { const nf = { ...features, [featureKey]: !features[featureKey] }; setFeatures(nf); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { features: nf }, { merge: true }); } };
-  const saveFedAdmins = async () => { if (isSuperAdmin) { const emails = tempFedAdmins.split(',').map(s => s.trim().toLowerCase()).filter(Boolean); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { fedAdminEmails: emails }, { merge: true }); alert(t.savedSuccess); } };
+  const saveFedAdmins = async () => { if (isSuperAdmin) { const emails = tempFedAdmins.split(',').map(s => s.trim().toLowerCase()).filter(Boolean); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { fedAdminEmails: emails }, { merge: true }); if(typeof window !== 'undefined') alert(t.savedSuccess); } };
   const toggleUmpireReminderPref = async (uId, currentStatus) => { if (uId === umpireId || isAdmin) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', uId), { remindersEnabled: !currentStatus }, { merge: true }); };
-  const forceRunRemindersNow = async () => { if (isSuperAdmin) { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'cron'), { lastReminderSentDate: 'FORCED' }, { merge: true }); alert("Reminders Queued!"); } };
+  const forceRunRemindersNow = async () => { if (isSuperAdmin) { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'cron'), { lastReminderSentDate: 'FORCED' }, { merge: true }); if(typeof window !== 'undefined') alert("Reminders Queued!"); } };
 
   const addMasterUmpire = async (name, level = "") => {
     if (!name.trim()) return ""; const exists = masterUmpires.find(u => (u.name || '').toLowerCase() === name.toLowerCase()); if (exists) return exists.id;
@@ -666,30 +825,136 @@ function MainApp() {
   const handleDeleteGame = async (gameId) => { if (isAdmin && window.confirm(t.deleteConfirm)) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId)); };
   const toggleTradeStatus = async (asgId, status) => { if (umpireId || isAdmin) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asgId), { forTrade: status }); };
 
-  const handleDownloadBackup = () => {
-    if (!isAdmin) return;
-    const blob = new Blob([JSON.stringify({ timestamp: new Date().toISOString(), year: selectedYear, appId, collections: { games, applications, assignments, umpires: masterUmpires, adminUmpireIds, evaluations, locations: locationsData } }, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `backup-${selectedYear}.json`); link.click();
+  const takeTrade = async (oldAsg, game) => {
+    if (!user || !user.email) { setShowAuthModal(true); return; }
+    if (!umpireId) { setShowNamePrompt(true); return; }
+    if (oldAsg.userId === umpireId) return; 
+    const umpireAssignedGamesToday = assignments.filter(asg => asg.userId === umpireId).map(asg => games.find(g => g.id === asg.gameId)).filter(g => g && g.date === game.date && g.id !== game.id);
+    const conflictGame = umpireAssignedGamesToday.find(g => (g.location || '').toLowerCase().trim() !== (game.location || '').toLowerCase().trim());
+    if (conflictGame) return alert(`${t.bookedIn} ${conflictGame.location}.`);
+    if (typeof window !== 'undefined' && !window.confirm(t.tradeConfirm)) return;
+    
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', oldAsg.id));
+      batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', `${game.id}_${umpireId}`), { gameId: game.id, userId: umpireId, userName: userName, assignedAt: Date.now(), forTrade: false });
+      await batch.commit(); alert(t.tradeSuccess);
+    } catch (e) { } finally { setSyncing(false); }
   };
 
-  const myUmpireData = masterUmpires.find(u => u.id === umpireId);
+  const expressInterestMarketplace = async (game) => {
+    if (!user || !user.email) { setShowAuthModal(true); return; }
+    if (!umpireId) { setShowNamePrompt(true); return; }
+    const gameCheck = games.find(g => g.id === game.id);
+    if (gameCheck) {
+      const umpireAssignedGamesToday = assignments.filter(asg => asg.userId === umpireId).map(asg => games.find(g => g.id === asg.gameId)).filter(g => g && g.date === gameCheck.date && g.id !== gameCheck.id);
+      const conflictGame = umpireAssignedGamesToday.find(g => (g.location || '').toLowerCase().trim() !== (gameCheck.location || '').toLowerCase().trim());
+      if (conflictGame) return alert(t.conflictApply.replace('{location}', conflictGame.location));
+    }
+    await toggleApplication(game.id); alert(t.interestRegistered);
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), { to: 'suecio@tryempire.com', message: { subject: `Ny intresseanmälan från Marknaden: ${userName}`, text: `${userName} har anmält intresse för matchen ${game.away} @ ${game.home} den ${game.date}.` }, createdAt: Date.now() });
+  };
+
+  const handleBulkImport = async () => {
+    if (!isAdmin || !bulkInput.trim()) return;
+    setSyncing(true);
+    try {
+      const batch = writeBatch(db); const rows = bulkInput.trim().split('\n');
+      rows.forEach((row) => {
+        const columns = row.split(/\t|,/);
+        if (columns.length >= 5) {
+          const gameData = { date: columns[0].trim(), time: columns[1].trim(), league: columns[2].trim(), away: columns[3].trim(), home: columns[4].trim(), location: (columns[5] || 'Unknown').trim(), requiredUmpires: 2 };
+          const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
+          batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), gameData);
+        }
+      });
+      await batch.commit(); setBulkInput(''); setShowImportTool(false); alert(t.importSuccess);
+    } catch (e) { } finally { setSyncing(false); }
+  };
+
+  const saveEditedGame = async () => {
+    if (!isAdmin || !editingGameData) return;
+    setSyncing(true);
+    try {
+      const originalGame = games.find(g => g.id === editingGameData.id);
+      const isTimeChanged = originalGame && (originalGame.date !== editingGameData.date || originalGame.time !== editingGameData.time);
+
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'games', editingGameData.id), { date: editingGameData.date, time: editingGameData.time, league: editingGameData.league, home: editingGameData.home, away: editingGameData.away, location: editingGameData.location, requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 });
+
+      if (isTimeChanged) {
+        assignments.filter(a => a.gameId === editingGameData.id).forEach((asg) => batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', asg.id), { pendingChange: true, pendingChangeTimestamp: Date.now() }));
+        applications.filter(a => a.gameId === editingGameData.id).forEach((app) => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'applications', app.id)));
+      }
+      await batch.commit();
+
+      if (isTimeChanged) {
+        for (const asg of assignments.filter(a => a.gameId === editingGameData.id)) {
+          const ump = masterUmpires.find(u => u.id === asg.userId);
+          if (ump && ump.linkedEmail) {
+             const existingQueue = mailQueue.find(q => q.id === asg.userId);
+             const gameChangeInfo = { gameId: editingGameData.id, away: editingGameData.away, home: editingGameData.home, oldDate: originalGame.date, oldTime: originalGame.time, newDate: editingGameData.date, newTime: editingGameData.time };
+             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'mail_queue', asg.userId), { userId: asg.userId, email: ump.linkedEmail, userName: asg.userName, changes: [...(existingQueue ? existingQueue.changes : []).filter(c => c.gameId !== editingGameData.id), gameChangeInfo], processAfter: Date.now() + 15 * 60 * 1000 });
+          }
+        }
+      }
+      if (selectedGameDetails && selectedGameDetails.id === editingGameData.id) setSelectedGameDetails({ ...selectedGameDetails, ...editingGameData, requiredUmpires: parseInt(editingGameData.requiredUmpires) || 2 });
+      setEditingGameData(null);
+    } catch (e) { } finally { setSyncing(false); }
+  };
+
+  const updateInvoiceStatus = async (id, newStatus) => { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'all_invoices', id), { status: newStatus }); } catch(e) {} };
+
+  const exportEconomyCSV = (invoicesToExport) => {
+    if (invoicesToExport.length === 0 || typeof window === 'undefined') return;
+    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning\n";
+    invoicesToExport.forEach(inv => {
+      const date = new Date(inv.createdAt).toLocaleDateString('sv-SE');
+      const tripsStr = (inv.trips || []).map(t => `${t.from}-${t.to} (${t.distance} mil)`).join(' | ');
+      const expensesStr = (inv.expenses || []).map(e => `${e.description} (${e.amount}kr)`).join(' | ');
+      csv += `"${date}","${inv.personalInfo?.name || ''}","${inv.personalInfo?.pnr || ''}","${inv.personalInfo?.email || ''}",${inv.total || 0},"${inv.status || ''}","${tripsStr}","${expensesStr}","${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)","${inv.overnightCount || 0} nätter"\n`;
+    });
+    const link = document.createElement('a'); link.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.setAttribute('download', `reserakningar-${selectedYear}.csv`); link.click();
+  };
+
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
+
+  if (view === 'invoice') {
+    return (
+      <div className="relative bg-slate-100 min-h-screen">
+        {isDemoEnv && <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest print:hidden"><Code className="w-4 h-4 inline" /> {t.sandboxWarning}</div>}
+        <div className="absolute top-4 sm:top-8 left-4 sm:left-8 z-10 print:hidden"><button onClick={() => setView('schedule')} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200 text-xs font-black text-slate-600 uppercase hover:text-blue-600 hover:border-blue-200"><ArrowLeft className="w-4 h-4" /> {t.back}</button></div>
+        <TravelInvoiceView db={db} appId={appId} locationsData={locationsData} user={user} userName={userName} t={t} myAssignedGames={invoiceEligibleGames} myUmpireData={myUmpireData} allInvoices={allInvoices} />
+      </div>
+    );
+  }
+
+  const tabs = [
+    { id: 'schedule', label: t.schedule, icon: CalendarIcon },
+    { id: 'locations', label: t.locations, icon: MapPin },
+    { id: 'umpire-list', label: t.umpireList, icon: Users2 },
+    ...(user?.email ? [...(features.marketplace ? [{ id: 'marketplace', label: t.marketplace, icon: ArrowRightLeft }] : []), { id: 'my-apps', label: t.myGames, icon: CheckCircle }] : []),
+    ...(isAdmin ? [{ id: 'admin', label: t.staffing, icon: Shield }, { id: 'stats', label: t.analytics, icon: BarChart3 }] : []),
+    ...(isAdmin || isFederationAdmin ? [{ id: 'economy', label: t.economy, icon: CreditCard }] : []),
+    { id: 'invoice', label: t.invoiceTitle, icon: FileText }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24 relative">
-      {isDemoEnv && <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest"><Code className="w-4 h-4 inline" /> {t.sandboxWarning}</div>}
+      {isDemoEnv && <div className="bg-purple-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest print:hidden"><Code className="w-4 h-4 inline" /> {t.sandboxWarning}</div>}
       <header className="bg-blue-900 text-white p-3 sm:p-4 shadow-lg sticky top-0 z-40">
         <div className="max-w-5xl mx-auto flex justify-between items-center gap-3">
           <div className="flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <Trophy className="w-6 h-6 shrink-0" /><div className="truncate"><h1 className="text-sm sm:text-xl font-bold truncate">{t.appTitle}</h1><p className="text-[8px] sm:text-[10px] uppercase text-blue-300">{t.season} {selectedYear}</p></div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            {isDemoEnv && <select value={federation} onChange={(e) => { setFederation(e.target.value); setLang(e.target.value === 'swe' ? 'sv' : 'en'); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 text-white"><option value="swe">🇸🇪 SV</option><option value="int">🇬🇧 EN</option></select>}
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 text-white"><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option></select>
+            {isDemoEnv && <select value={federation} onChange={(e) => { setFederation(e.target.value); setLang(e.target.value === 'swe' ? 'sv' : 'en'); }} className="bg-blue-800 text-[10px] rounded px-2 py-1 text-white hidden sm:block"><option value="swe">🇸🇪 SV</option><option value="int">🇬🇧 EN</option></select>}
+            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-blue-800 text-[10px] rounded px-2 py-1 text-white hidden sm:block"><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option></select>
+            <div className="flex bg-blue-800 rounded p-0.5 hidden sm:flex"><button onClick={() => setLang('sv')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'sv' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇸🇪</button><button onClick={() => setLang('en')} className={`px-1.5 py-0.5 text-[10px] rounded ${lang === 'en' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}>🇬🇧</button></div>
             {user?.email ? (
-              <><button onClick={() => setSelectedProfileId(umpireId)} className="w-8 h-8 rounded-full bg-white text-blue-900 border-2 border-blue-400 flex items-center justify-center overflow-hidden font-black text-xs">{myUmpireData?.avatarUrl ? <img src={myUmpireData.avatarUrl} className="w-full h-full object-cover" /> : (userName || '?').charAt(0)}</button><button onClick={() => setShowAdminModal(true)} className="p-1.5 hover:bg-blue-800 rounded-full text-white"><Settings className="w-5 h-5" /></button></>
-            ) : (
-              <button onClick={() => setShowAuthModal(true)} className="text-[10px] font-black uppercase bg-blue-600 px-4 py-2 rounded-xl text-white hover:bg-blue-700">{t.login}</button>
-            )}
+              <><button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileId(umpireId); }} className="w-8 h-8 rounded-full bg-white text-blue-900 border-2 border-blue-400 flex items-center justify-center overflow-hidden font-black text-xs hover:scale-105">{myUmpireData?.avatarUrl ? <img src={myUmpireData.avatarUrl} className="w-full h-full object-cover" /> : (userName || '?').charAt(0)}</button><button onClick={() => setShowAdminModal(true)} className="p-1.5 hover:bg-blue-800 rounded-full text-white"><Settings className="w-5 h-5" /></button></>
+            ) : <button onClick={() => setShowAuthModal(true)} className="text-[10px] font-black uppercase bg-blue-600 px-4 py-2 rounded-xl text-white hover:bg-blue-700">{t.login}</button>}
           </div>
         </div>
       </header>
@@ -697,18 +962,18 @@ function MainApp() {
       {globalNote && view !== 'help' && <div className="bg-blue-50 border-b border-blue-100 p-3 sm:p-4"><div className="max-w-5xl mx-auto flex items-start gap-3"><Megaphone className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" /><p className="text-sm font-medium text-blue-900">{globalNote}</p></div></div>}
 
       <main className="max-w-5xl mx-auto p-4 space-y-6">
-        <div className="hidden md:flex flex-wrap bg-white p-1 rounded-2xl shadow-sm border border-slate-200 gap-1">
+        <div className="hidden md:flex flex-wrap bg-white p-1 rounded-2xl shadow-sm border border-slate-200 gap-1 sticky top-[68px] z-20">
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); }} className={`flex-1 min-w-[120px] max-w-[200px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${view === tab.id ? 'bg-blue-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}><tab.icon className="w-4 h-4" /><span>{tab.label}</span></button>
           ))}
         </div>
 
         <div className="md:hidden sticky top-[68px] z-20">
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="w-full bg-blue-900 text-white p-3.5 rounded-2xl shadow-md border border-blue-800 flex justify-between items-center font-black uppercase text-xs tracking-widest"><div className="flex items-center gap-2"><List className="w-5 h-5" /><span>{tabs.find(t => t.id === view)?.label || 'Meny'}</span></div>{isMobileMenuOpen ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5"/>}</button>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="w-full bg-blue-900 text-white p-3.5 rounded-2xl shadow-md flex justify-between items-center font-black uppercase text-xs"><div className="flex items-center gap-2"><List className="w-5 h-5" /><span>{tabs.find(t => t.id === view)?.label || 'Meny'}</span></div>{isMobileMenuOpen ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5"/>}</button>
           {isMobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 flex flex-col gap-1 z-30 max-h-[60vh] overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border p-2 flex flex-col gap-1 z-30 max-h-[60vh] overflow-y-auto">
               {tabs.map(tab => (
-                <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase text-left ${view === tab.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}><tab.icon className="w-5 h-5" />{tab.label}</button>
+                <button key={tab.id} onClick={() => { setView(tab.id); setSelectedProfileId(null); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase ${view === tab.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600'}`}><tab.icon className="w-5 h-5" />{tab.label}</button>
               ))}
             </div>
           )}
@@ -716,10 +981,10 @@ function MainApp() {
 
         {view === 'schedule' && (
           <div className="space-y-4 animate-in fade-in">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-4 rounded-2xl border shadow-sm">
               <h2 className="text-lg font-black uppercase text-slate-800">{showHistory ? t.archived : t.activeSchedule}</h2>
               <div className="flex items-center gap-2 flex-wrap">
-                <button onClick={() => generateCSV(filteredGames, selectedYear)} className="text-[10px] font-black uppercase px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2 text-white shadow-sm"><Download className="w-3.5 h-3.5" /> {t.downloadICS}</button>
+                <button onClick={() => generateCSV(filteredGames, selectedYear)} className="text-[10px] font-black uppercase px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2 shadow-sm"><Download className="w-3.5 h-3.5" /> {t.downloadICS}</button>
                 <div className="flex bg-slate-100 rounded-xl p-1">
                   <button onClick={() => setScheduleViewMode('list')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 ${scheduleViewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><List className="w-3.5 h-3.5"/> {t.listView}</button>
                   <button onClick={() => setScheduleViewMode('calendar')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 ${scheduleViewMode === 'calendar' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><CalendarIcon className="w-3.5 h-3.5"/> {t.calendarView}</button>
@@ -727,17 +992,19 @@ function MainApp() {
                 <button onClick={() => setShowHistory(!showHistory)} className={`text-[10px] font-black uppercase px-3 py-2 rounded-xl flex items-center gap-2 ${showHistory ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}><HistoryIcon className="w-3.5 h-3.5" /> {showHistory ? t.upcoming : t.history}</button>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" /></div>
-              <select value={filterLeague} onChange={(e) => setFilterLeague(e.target.value)} className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none"><option value="">{t.allSeries}</option>{leagues.map(l => <option key={l} value={l}>{l}</option>)}</select>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-2 bg-slate-50 border rounded-xl text-sm outline-none" /></div>
+              <select value={filterLeague} onChange={(e) => setFilterLeague(e.target.value)} className="p-2 bg-slate-50 border rounded-xl text-sm font-bold text-slate-700 outline-none"><option value="">{t.allSeries}</option>{leagues.map(l => <option key={l} value={l}>{l}</option>)}</select>
+              <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="p-2 bg-slate-50 border rounded-xl text-sm font-bold text-slate-700 outline-none"><option value="">{t.allLocations}</option>{locations.map(l => <option key={l} value={l}>{l}</option>)}</select>
             </div>
             {filteredGames.length === 0 ? (
               <div className="bg-white p-16 rounded-3xl text-center border-2 border-dashed border-slate-200"><Info className="w-12 h-12 text-slate-200 mx-auto mb-4" /><p className="text-slate-500 font-medium">{t.noGames}</p></div>
             ) : scheduleViewMode === 'calendar' ? renderCalendar(filteredGames) : (
               filteredGames.map(game => {
                 const gameAssignments = groupedAssignments[game.id] || []; const gameApplications = applications.filter(a => a.gameId === game.id);
+                const required = game.requiredUmpires || 2;
                 return (
-                  <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:border-blue-300 group transition-all">
+                  <div key={game.id} onClick={() => setSelectedGameDetails(game)} className={`bg-white rounded-2xl shadow-sm border overflow-hidden cursor-pointer hover:border-blue-300 group transition-all ${showHistory ? 'opacity-75 grayscale-[0.5]' : ''}`}>
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex gap-4">
                         <div className="bg-slate-50 p-3 rounded-xl text-center min-w-[75px] border group-hover:bg-blue-50">
@@ -751,7 +1018,7 @@ function MainApp() {
                       </div>
                       <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-3 sm:pt-0">
                         {!showHistory && (
-                          <><div className="flex flex-col items-end">{isAdmin ? (gameApplications.length > 0 ? <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">{gameApplications.map(app => <span key={app.userId} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded font-bold uppercase">{(app.userName || '').split(' ')[0]}</span>)}</div> : <span className="text-[10px] font-black text-slate-400 uppercase">0 {t.applied}</span>) : <span className="text-[10px] font-black text-slate-400 uppercase">{gameApplications.length} {t.applied}</span>}{gameAssignments.length > 0 && (<span className="text-[10px] font-black text-green-600 uppercase mt-1">{gameAssignments.length}/{game.requiredUmpires || 2} {t.staffed}</span>)}</div>{gameAssignments.some(asg => asg.userId === umpireId) ? <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> {t.yourGame}</div> : <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className={`px-6 py-2 rounded-xl text-xs font-black uppercase text-white ${applications.some(a => a.id === `${game.id}_${umpireId}`) ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}>{applications.some(a => a.id === `${game.id}_${umpireId}`) ? t.withdraw : t.interested}</button>}</>
+                          <><div className="flex flex-col items-end">{isAdmin ? (gameApplications.length > 0 ? <div className="flex gap-1 flex-wrap justify-end max-w-[200px]">{gameApplications.map(app => <span key={app.userId} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded font-bold uppercase">{(app.userName || '').split(' ')[0]}</span>)}</div> : <span className="text-[10px] font-black text-slate-400 uppercase">0 {t.applied}</span>) : <span className="text-[10px] font-black text-slate-400 uppercase">{gameApplications.length} {t.applied}</span>}{gameAssignments.length > 0 && (<span className="text-[10px] font-black text-green-600 uppercase mt-1">{gameAssignments.length}/{required} {t.staffed}</span>)}</div>{gameAssignments.some(asg => asg.userId === umpireId) ? <div className="px-6 py-2 rounded-xl text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> {t.yourGame}</div> : <button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className={`px-6 py-2 rounded-xl text-xs font-black uppercase text-white ${applications.some(a => a.id === `${game.id}_${umpireId}`) ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}>{applications.some(a => a.id === `${game.id}_${umpireId}`) ? t.withdraw : t.interested}</button>}</>
                         )}
                       </div>
                     </div>
@@ -764,12 +1031,12 @@ function MainApp() {
 
         {view === 'locations' && (
           <div className="space-y-4 animate-in fade-in">
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative"><Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border relative"><Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-2 bg-slate-50 border rounded-xl text-sm outline-none" /></div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                {allLocationNames.filter(name => name.toLowerCase().includes(searchQuery.toLowerCase())).map(locName => {
                   const locData = locationsData.find(l => l.id === locName) || { id: locName, address: '', facilities: [] };
                   return (
-                    <div key={locName} onClick={() => setSelectedLocation(locName)} className="bg-white p-6 rounded-2xl border border-slate-200 cursor-pointer hover:shadow-md hover:border-blue-300 group"><h3 className="font-black text-lg text-slate-800 group-hover:text-blue-600">{locName}</h3>{locData.address && <p className="text-xs font-medium text-slate-500 mt-2 flex items-center gap-1"><MapPin className="w-3 h-3"/>{locData.address}</p>}<div className="mt-4"><span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">{(locData.facilities || []).length} {t.facilities}</span></div></div>
+                    <div key={locName} onClick={() => setSelectedLocation(locName)} className="bg-white p-6 rounded-2xl border cursor-pointer hover:shadow-md hover:border-blue-300 group"><h3 className="font-black text-lg text-slate-800 group-hover:text-blue-600">{locName}</h3>{locData.address && <p className="text-xs font-medium text-slate-500 mt-2 flex items-center gap-1"><MapPin className="w-3 h-3"/>{locData.address}</p>}<div className="mt-4"><span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 border px-3 py-1.5 rounded-lg">{(locData.facilities || []).length} {t.facilities}</span></div></div>
                   );
                })}
             </div>
@@ -778,10 +1045,10 @@ function MainApp() {
 
         {view === 'umpire-list' && (
           <div className="space-y-4 animate-in fade-in">
-            <div className="flex gap-4 mb-4"><div className="flex-1 relative bg-white rounded-2xl shadow-sm border border-slate-200"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-3 text-sm outline-none bg-transparent" /></div><select value={umpireSort} onChange={(e) => setUmpireSort(e.target.value)} className="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase outline-none shadow-sm"><option value="name">{t.name}</option><option value="level">{t.level}</option></select></div>
+            <div className="flex gap-4 mb-4"><div className="flex-1 relative bg-white rounded-2xl shadow-sm border"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full pl-9 pr-3 py-3 text-sm outline-none bg-transparent" /></div><select value={umpireSort} onChange={(e) => setUmpireSort(e.target.value)} className="px-4 py-3 bg-white border rounded-2xl text-xs font-black uppercase outline-none shadow-sm"><option value="name">{t.name}</option><option value="level">{t.level}</option></select></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {sortedUmpireList.map(u => (
-                <div key={u.id} onClick={() => setSelectedProfileId(u.id)} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 group"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 overflow-hidden">{u.avatarUrl ? <img src={u.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-sm font-black text-slate-500 group-hover:text-blue-600">{(u.name || '?').charAt(0)}</span>}</div><div><span className="font-bold text-slate-800 text-sm block group-hover:text-blue-700">{u.name}</span>{u.level && <span className={`text-[8px] font-black mt-1 inline-block uppercase px-1.5 py-0.5 rounded border ${getLevelStyles(u.level)}`}>{u.level}</span>}</div></div><ChevronRight className="w-4 h-4 text-slate-300" /></div>
+                <div key={u.id} onClick={() => setSelectedProfileId(u.id)} className="bg-white p-5 rounded-2xl border shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 group"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border overflow-hidden">{u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : <span className="text-sm font-black text-slate-500 group-hover:text-blue-600">{(u.name || '?').charAt(0)}</span>}</div><div><span className="font-bold text-slate-800 text-sm block group-hover:text-blue-700">{u.name}</span>{u.level && <span className={`text-[8px] font-black mt-1 inline-block uppercase px-1.5 py-0.5 rounded border ${getLevelStyles(u.level)}`}>{u.level}</span>}</div></div><ChevronRight className="w-4 h-4 text-slate-300" /></div>
               ))}
             </div>
           </div>
@@ -789,7 +1056,7 @@ function MainApp() {
 
         {view === 'marketplace' && (
           <div className="space-y-8 animate-in fade-in">
-             <div className="text-center bg-white p-8 rounded-3xl border border-slate-200 shadow-sm"><ArrowRightLeft className="w-12 h-12 text-blue-600 mx-auto mb-4" /><h2 className="text-2xl font-black text-slate-800 uppercase">{t.marketplace}</h2><p className="text-slate-500 font-medium mt-2">{t.marketplaceDesc}</p></div>
+             <div className="text-center bg-white p-8 rounded-3xl border shadow-sm"><ArrowRightLeft className="w-12 h-12 text-blue-600 mx-auto mb-4" /><h2 className="text-2xl font-black text-slate-800 uppercase">{t.marketplace}</h2><p className="text-slate-500 font-medium mt-2">{t.marketplaceDesc}</p></div>
              <div>
                 <h3 className="text-sm font-black uppercase text-slate-500 mb-4 flex items-center gap-2"><RefreshCw className="w-4 h-4" /> {t.gamesForTrade}</h3>
                 {games.filter(g => (g.date || '') >= today && assignments.some(a => a.gameId === g.id && a.forTrade)).length === 0 ? <p className="text-slate-400 text-sm italic">{t.noMarketplaceGames}</p> : (
@@ -811,12 +1078,12 @@ function MainApp() {
 
         {view === 'economy' && (isAdmin || isFederationAdmin) && (
            <div className="space-y-6 animate-in fade-in">
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm"><div className="text-center sm:text-left"><h2 className="text-xl font-black uppercase">{t.economy}</h2><p className="text-sm text-slate-500">{t.economyDesc}</p></div><button onClick={() => exportEconomyCSV(allInvoices)} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center gap-2 text-white"><Download className="w-4 h-4"/> {t.exportSummary}</button></div>
-              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-6 rounded-3xl border shadow-sm"><div className="text-center sm:text-left"><h2 className="text-xl font-black uppercase">{t.economy}</h2><p className="text-sm text-slate-500">{t.economyDesc}</p></div><button onClick={() => exportEconomyCSV(allInvoices)} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center gap-2"><Download className="w-4 h-4"/> {t.exportSummary}</button></div>
+              <div className="bg-white rounded-3xl border overflow-hidden shadow-sm overflow-x-auto">
                  <table className="w-full text-left min-w-[800px]">
                     <thead className="bg-slate-50 border-b"><tr><th className="px-6 py-4 text-[10px] font-black uppercase">{t.date}</th><th className="px-6 py-4 text-[10px] font-black uppercase">{t.umpire}</th><th className="px-6 py-4 text-[10px] font-black uppercase">Belopp</th><th className="px-6 py-4 text-[10px] font-black uppercase">Status</th><th className="px-6 py-4 text-[10px] font-black uppercase">Åtgärd</th></tr></thead>
                     <tbody>{allInvoices.map(inv => (
-                          <tr key={inv.id} className="border-b border-slate-50 hover:bg-slate-50"><td className="px-6 py-4 text-xs font-bold text-slate-700">{new Date(inv.createdAt).toLocaleDateString('sv-SE')}</td><td className="px-6 py-4 text-xs font-bold text-slate-800">{inv.userName}</td><td className="px-6 py-4 text-xs font-black text-blue-600">{inv.total} kr</td><td className="px-6 py-4"><select value={inv.status} onChange={(e) => updateInvoiceStatus(inv.id, e.target.value)} className={`text-xs font-bold px-2 py-1 rounded-lg outline-none ${inv.status === 'Ej betald' ? 'bg-red-100 text-red-700' : inv.status === 'Utbetald' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-700'}`}><option value="Ej betald">{t.statusNotPaid}</option><option value="Utbetald">{t.statusPaid}</option><option value="Makulerad">{t.statusVoid}</option><option value="Nedladdad (PDF)">Nedladdad (PDF)</option><option value="Inskickad">Inskickad</option></select></td><td className="px-6 py-4"><button onClick={() => setSelectedInvoice(inv)} className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg">Granska</button></td></tr>
+                          <tr key={inv.id} className="border-b hover:bg-slate-50"><td className="px-6 py-4 text-xs font-bold text-slate-700">{new Date(inv.createdAt).toLocaleDateString('sv-SE')}</td><td className="px-6 py-4 text-xs font-bold text-slate-800">{inv.userName}</td><td className="px-6 py-4 text-xs font-black text-blue-600">{inv.total} kr</td><td className="px-6 py-4"><select value={inv.status} onChange={(e) => updateInvoiceStatus(inv.id, e.target.value)} className={`text-xs font-bold px-2 py-1 rounded-lg outline-none ${inv.status === 'Ej betald' ? 'bg-red-100 text-red-700' : inv.status === 'Utbetald' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-700'}`}><option value="Ej betald">{t.statusNotPaid}</option><option value="Utbetald">{t.statusPaid}</option><option value="Makulerad">{t.statusVoid}</option><option value="Nedladdad (PDF)">Nedladdad (PDF)</option><option value="Inskickad">Inskickad</option></select></td><td className="px-6 py-4"><button onClick={() => setSelectedInvoice(inv)} className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg">Granska</button></td></tr>
                        ))}</tbody>
                  </table>
                  {allInvoices.length === 0 && <div className="p-8 text-center text-slate-400 font-medium italic">Inga reseräkningar inskickade ännu.</div>}
@@ -828,29 +1095,26 @@ function MainApp() {
           <div className="space-y-6 animate-in fade-in">
             <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl shadow-sm flex items-start gap-4"><Megaphone className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" /><div className="text-sm text-amber-800 font-medium leading-relaxed"><p className="font-bold mb-2 text-amber-900">{t.availabilityWarningTitle}</p><p>{t.availabilityWarningDesc1}</p><p className="mt-2 text-amber-900 font-bold">{t.availabilityWarningDesc2}</p></div></div>
             <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl shadow-sm flex items-start gap-4"><Info className="w-6 h-6 text-blue-600 shrink-0" /><p className="text-sm text-blue-800 font-medium leading-relaxed">{t.myGamesReminder}</p></div>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-4 rounded-2xl border shadow-sm">
               <h2 className="text-xl font-black uppercase text-slate-800">{t.mySchedule}</h2>
               <div className="flex items-center gap-2 flex-wrap">
-                <button onClick={() => generateCSV(myAssignedGames, selectedYear)} className="text-[10px] font-black uppercase px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2 text-white shadow-sm"><Download className="w-3.5 h-3.5" /> {t.downloadICS}</button>
-                <div className="flex bg-slate-100 rounded-xl p-1">
-                  <button onClick={() => setMyGamesViewMode('list')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase ${myGamesViewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><List className="w-3.5 h-3.5"/> {t.listView}</button>
-                  <button onClick={() => setMyGamesViewMode('calendar')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase ${myGamesViewMode === 'calendar' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><CalendarIcon className="w-3.5 h-3.5"/> {t.calendarView}</button>
-                </div>
+                <button onClick={() => generateCSV(myAssignedGames, selectedYear)} className="text-[10px] font-black uppercase px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2 shadow-sm"><Download className="w-3.5 h-3.5" /> {t.downloadICS}</button>
+                <div className="flex bg-slate-100 rounded-xl p-1"><button onClick={() => setMyGamesViewMode('list')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase ${myGamesViewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><List className="w-3.5 h-3.5"/> {t.listView}</button><button onClick={() => setMyGamesViewMode('calendar')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase ${myGamesViewMode === 'calendar' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><CalendarIcon className="w-3.5 h-3.5"/> {t.calendarView}</button></div>
                 <button onClick={() => setShowHistory(!showHistory)} className={`text-[10px] font-black uppercase px-3 py-2 rounded-xl flex items-center gap-2 ${showHistory ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}><HistoryIcon className="w-3.5 h-3.5" /> {showHistory ? t.upcoming : t.history}</button>
               </div>
             </div>
             {myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).length > 0 && (
-              <div className="bg-yellow-50 p-4 rounded-3xl border border-yellow-200"><h3 className="text-xs font-black text-yellow-700 uppercase mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> {t.actionRequired}</h3>{myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).map(game => (<div key={game.id} className="bg-white p-4 rounded-2xl border border-yellow-400 mb-3 shadow-sm"><p className="font-bold">{game.away} @ {game.home}</p><p className="text-xs text-slate-500 mb-3">{game.date} @ {game.time}</p><div className="flex gap-2"><button onClick={() => confirmScheduleChange(groupedAssignments[game.id].find(a => a.userId === umpireId).id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase text-white">Acceptera</button><button onClick={() => removeAssignment(game.id, umpireId)} className="bg-slate-100 text-red-600 px-4 py-2 rounded-lg text-[10px] font-black uppercase">Neka</button></div></div>))}</div>
+              <div className="bg-yellow-50 p-4 rounded-3xl border border-yellow-200"><h3 className="text-xs font-black text-yellow-700 uppercase mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> {t.actionRequired}</h3>{myAssignedGames.filter(g => groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).map(game => (<div key={game.id} className="bg-white p-4 rounded-2xl border border-yellow-400 mb-3 shadow-sm"><p className="font-bold">{game.away} @ {game.home}</p><p className="text-xs text-slate-500 mb-3">{game.date} @ {game.time}</p><div className="flex gap-2"><button onClick={() => confirmScheduleChange(groupedAssignments[game.id].find(a => a.userId === umpireId).id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase">Acceptera</button><button onClick={() => removeAssignment(game.id, umpireId)} className="bg-slate-100 text-red-600 px-4 py-2 rounded-lg text-[10px] font-black uppercase">Neka</button></div></div>))}</div>
             )}
             <div className="space-y-4">
-              <div className="border-b border-slate-200 pb-2"><h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.confirmedGames}</h2></div>
-              {myAssignedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200">{t.noAssignedMatches}</div>}
+              <div className="border-b pb-2"><h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.confirmedGames}</h2></div>
+              {myAssignedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border">{t.noAssignedMatches}</div>}
               {myGamesViewMode === 'calendar' ? renderCalendar(myAssignedGames) : myAssignedGames.filter(g => !groupedAssignments[g.id]?.find(a => a.userId === umpireId)?.pendingChange).map(game => (
-                    <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border border-green-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 flex items-center gap-2 mt-1"><Clock className="w-3 h-3"/> {game.date} @ {game.time} • {game.location}</p><div className="mt-3 flex gap-2 items-center flex-wrap"><span className="text-[10px] font-black text-slate-400 uppercase">{t.coUmpires}</span>{groupedAssignments[game.id].filter(a => a.userId !== umpireId).length > 0 ? groupedAssignments[game.id].filter(a => a.userId !== umpireId).map(a => <span key={a.userId} className="text-[10px] bg-slate-50 border border-slate-200 text-slate-700 px-2 py-1 rounded-lg font-bold">{a.userName}</span>) : <span className="text-[10px] text-slate-400 italic">{t.noCoUmpires}</span>}</div></div><div className="flex flex-col sm:items-end gap-2 pt-3 sm:pt-0"><span className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase text-center text-white">{t.confirmed}</span>{game.date >= today && features.marketplace && <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(groupedAssignments[game.id].find(a => a.userId === umpireId).id, !groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade); }} className="text-[10px] font-black uppercase px-4 py-2 rounded-xl bg-slate-100 text-slate-600">{groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade ? t.cancelTrade : t.tradeGame}</button>}</div></div>
+                    <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border border-green-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer hover:border-green-400 transition-colors"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 flex items-center gap-2 mt-1"><Clock className="w-3 h-3"/> {game.date} @ {game.time} • {game.location}</p><div className="mt-3 flex gap-2 items-center flex-wrap"><span className="text-[10px] font-black text-slate-400 uppercase">{t.coUmpires}</span>{groupedAssignments[game.id].filter(a => a.userId !== umpireId).length > 0 ? groupedAssignments[game.id].filter(a => a.userId !== umpireId).map(a => <span key={a.userId} className="text-[10px] bg-slate-50 border text-slate-700 px-2 py-1 rounded-lg font-bold">{a.userName}</span>) : <span className="text-[10px] text-slate-400 italic">{t.noCoUmpires}</span>}</div></div><div className="flex flex-col sm:items-end gap-2 pt-3 sm:pt-0"><span className="bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase text-center">{t.confirmed}</span>{game.date >= today && features.marketplace && <button onClick={(e) => { e.stopPropagation(); toggleTradeStatus(groupedAssignments[game.id].find(a => a.userId === umpireId).id, !groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade); }} className="text-[10px] font-black uppercase px-4 py-2 rounded-xl bg-slate-100 text-slate-600">{groupedAssignments[game.id].find(a => a.userId === umpireId).forTrade ? t.cancelTrade : t.tradeGame}</button>}</div></div>
               ))}
             </div>
             {!showHistory && (
-              <div className="space-y-4 pt-4"><div className="border-b border-slate-200 pb-2"><h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.interestedGames}</h2></div>{myInterestedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200">{t.noPendingInterest}</div>}{myInterestedGames.map(game => <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 mt-1">{game.date} @ {game.time} • {game.location}</p></div><button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase border border-red-100">Dra tillbaka</button></div>)}</div>
+              <div className="space-y-4 pt-4"><div className="border-b pb-2"><h2 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.interestedGames}</h2></div>{myInterestedGames.length === 0 && <div className="text-center text-slate-400 p-8 bg-white rounded-3xl border">{t.noPendingInterest}</div>}{myInterestedGames.map(game => <div key={game.id} onClick={() => setSelectedGameDetails(game)} className="bg-white p-5 rounded-2xl border shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 cursor-pointer hover:border-blue-300"><div><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg mt-1">{game.away} @ {game.home}</h3><p className="text-sm text-slate-500 mt-1">{game.date} @ {game.time} • {game.location}</p></div><button onClick={(e) => { e.stopPropagation(); toggleApplication(game.id); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase border border-red-100">Dra tillbaka</button></div>)}</div>
             )}
           </div>
         )}
@@ -858,11 +1122,11 @@ function MainApp() {
         {view === 'stats' && isAdmin && (
           <div className="space-y-6 animate-in fade-in">
              <h2 className="text-xl font-black uppercase">{t.analytics}</h2>
-             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
+             <div className="bg-white rounded-3xl border overflow-hidden shadow-sm overflow-x-auto">
                <table className="w-full text-left min-w-[600px]">
                  <thead className="bg-slate-50 border-b"><tr><th onClick={() => handleSort('name')} className="px-6 py-4 text-[10px] font-black uppercase cursor-pointer">{t.umpire}</th><th onClick={() => handleSort('interest')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.interests}</th><th onClick={() => handleSort('games')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.gamesAssigned}</th><th onClick={() => handleSort('rate')} className="px-6 py-4 text-center text-[10px] font-black uppercase cursor-pointer">{t.assignmentRate}</th></tr></thead>
                  <tbody>{sortedStatistics.map(stat => (
-                     <tr key={stat.userId} className="border-b border-slate-50 hover:bg-slate-50"><td className="px-6 py-4 font-bold text-slate-800"><button onClick={() => setSelectedProfileId(stat.userId)} className="hover:underline">{stat.name}</button></td><td className="px-6 py-4 text-center text-slate-600">{stat.interest}</td><td className="px-6 py-4 text-center text-blue-600 font-black">{stat.games}</td><td className="px-6 py-4 text-center font-bold"><span className={`px-3 py-1 rounded-lg text-[10px] ${stat.rate >= 80 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{stat.rate}%</span></td></tr>
+                     <tr key={stat.userId} className="border-b hover:bg-slate-50"><td className="px-6 py-4 font-bold text-slate-800"><button onClick={() => setSelectedProfileId(stat.userId)} className="hover:underline">{stat.name}</button></td><td className="px-6 py-4 text-center text-slate-600">{stat.interest}</td><td className="px-6 py-4 text-center text-blue-600 font-black">{stat.games}</td><td className="px-6 py-4 text-center font-bold"><span className={`px-3 py-1 rounded-lg text-[10px] ${stat.rate >= 80 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{stat.rate}%</span></td></tr>
                    ))}</tbody>
                </table>
             </div>
@@ -873,16 +1137,16 @@ function MainApp() {
           <div className="space-y-6 animate-in fade-in">
              <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4"><div><h2 className="text-xl font-black text-slate-800">{t.staffingControl}</h2><p className="text-xs text-slate-500">{selectedYear} Season</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={handleDownloadBackup} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2"><Download className="w-4 h-4" /> Backup</button><button onClick={() => setShowImportTool(!showImportTool)} className="bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-bold text-xs uppercase flex items-center gap-2"><Plus className="w-4 h-4" /> {t.bulkImport}</button></div></div>
              {showImportTool && (
-               <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200"><h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3><textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder={t.pasteSchedulePlaceholder} className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" /><div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs text-white">Lägg till matcher</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">Avbryt</button></div></div>
+               <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200"><h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> {t.pasteSheet}</h3><textarea value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} placeholder={t.pasteSchedulePlaceholder} className="w-full h-40 p-4 bg-white border border-blue-200 rounded-xl font-mono text-xs mb-4 outline-none" /><div className="flex gap-3"><button onClick={handleBulkImport} className="flex-1 bg-blue-700 text-white py-3 rounded-xl font-black uppercase text-xs">Lägg till matcher</button><button onClick={() => setShowImportTool(false)} className="px-6 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-black uppercase text-xs">Avbryt</button></div></div>
              )}
-             <div className="bg-white p-6 rounded-3xl border border-slate-200"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Megaphone className="w-4 h-4" /> {t.globalAnnouncement}</h3><textarea value={editNoteText} onChange={(e) => setEditNoteText(e.target.value)} placeholder={t.announcementPlaceholder} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm min-h-[80px] outline-none" /><div className="flex gap-2 mt-3"><button onClick={saveGlobalNote} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black text-[10px] text-white uppercase">{t.saveAnnouncement}</button><button onClick={clearGlobalNote} className="bg-slate-100 text-slate-600 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase">Rensa</button></div></div>
-             <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200"><h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-600" /> Bemanningsöversikt</h3><div className="flex gap-2"><button onClick={() => setShowHistory(!showHistory)} className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl flex items-center gap-2 ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button><button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button></div></div>
+             <div className="bg-white p-6 rounded-3xl border"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Megaphone className="w-4 h-4" /> {t.globalAnnouncement}</h3><textarea value={editNoteText} onChange={(e) => setEditNoteText(e.target.value)} placeholder={t.announcementPlaceholder} className="w-full p-3 bg-slate-50 border rounded-xl text-sm min-h-[80px] outline-none" /><div className="flex gap-2 mt-3"><button onClick={saveGlobalNote} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase">{t.saveAnnouncement}</button><button onClick={clearGlobalNote} className="bg-slate-100 text-slate-600 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase">Rensa</button></div></div>
+             <div className="flex justify-between items-center bg-white p-4 rounded-3xl border"><h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-600" /> Bemanningsöversikt</h3><div className="flex gap-2"><button onClick={() => setShowHistory(!showHistory)} className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl flex items-center gap-2 ${showHistory ? 'bg-blue-100 text-blue-700' : 'bg-slate-100'}`}><HistoryIcon className="w-3.5 h-3.5" />{showHistory ? t.upcoming : t.history}</button><button onClick={() => setShowStaffed(!showStaffed)} className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2 ${showStaffed ? 'bg-slate-800 text-white' : 'bg-blue-50 text-blue-700'}`}><CheckCircle className="w-3.5 h-3.5" />{showStaffed ? t.hideStaffed : t.showAll}</button></div></div>
              
              {filteredGames.filter(g => showStaffed ? true : (groupedAssignments[g.id]?.length || 0) < (g.requiredUmpires || 2)).map(game => {
                const gameAssignments = groupedAssignments[game.id] || []; const gameApplications = applications.filter(a => a.gameId === game.id);
                return (
-                 <div key={game.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-4 p-5">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-100 pb-3 mb-4 gap-3">
+                 <div key={game.id} className="bg-white rounded-2xl shadow-sm border mb-4 p-5">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b pb-3 mb-4 gap-3">
                        <div className="flex items-center gap-3 flex-wrap cursor-pointer" onClick={() => setSelectedGameDetails(game)}><span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${getLeagueStyles(game.league)}`}>{game.league}</span><h3 className="font-bold text-lg">{game.away} @ {game.home}</h3><span className="text-xs font-bold text-slate-500">| {game.date} @ {game.time}</span></div>
                        <div className="flex items-center gap-4 justify-between"><span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase ${getAssignmentStatusStyles(gameAssignments.length, game.requiredUmpires || 2)}`}>{gameAssignments.length} / {game.requiredUmpires || 2} {t.assigned}</span><button onClick={() => handleDeleteGame(game.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4"/></button></div>
                     </div>
@@ -903,7 +1167,7 @@ function MainApp() {
                                 ))}</div>
                           ) : <p className="text-xs text-slate-400 italic mb-3">{t.noUmpiresAssigned}</p>}
                           {gameAssignments.length < (game.requiredUmpires || 2) && (
-                             <div className="pt-2 border-t border-slate-100"><select value="" onChange={(e) => { if(e.target.value) assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || t.unknown)); }} className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold"><option value="">{t.manualAssign}</option>{masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name} ({u.level})</option>)}</select></div>
+                             <div className="pt-2 border-t"><select value="" onChange={(e) => { if(e.target.value) assignUmpire(game.id, e.target.value, (masterUmpires.find(u=>u.id===e.target.value)?.name || t.unknown)); }} className="w-full text-xs p-3 bg-slate-50 border rounded-xl font-bold"><option value="">{t.manualAssign}</option>{masterUmpires.map(u => <option key={u.id} value={u.id}>{u.name} ({u.level})</option>)}</select></div>
                           )}
                        </div>
                     </div>
@@ -950,10 +1214,10 @@ function MainApp() {
                         <div className="grid gap-3">{gameAssignments.map(asg => {
                             const m = masterUmpires.find(mu => mu.id === asg.userId); const existingEval = evaluations.find(e => e.gameId === game.id && e.umpireId === asg.userId);
                             return (
-                              <div key={asg.userId} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
+                              <div key={asg.userId} className="p-4 bg-slate-50 rounded-2xl border shadow-sm flex flex-col gap-2">
                                 <div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-white border text-slate-500 rounded-full flex items-center justify-center font-black text-xs overflow-hidden">{m?.avatarUrl ? <img src={m.avatarUrl} className="w-full h-full object-cover" /> : (asg.userName || '?').charAt(0)}</div><div><span className="font-bold text-sm text-slate-800 block hover:text-blue-600 cursor-pointer" onClick={() => setSelectedProfileId(asg.userId)}>{asg.userName}</span>{m?.level && <span className={`text-[8px] font-black inline-block mt-0.5 uppercase px-1.5 py-0.5 rounded border ${getLevelStyles(m.level)}`}>{m.level}</span>}</div></div></div>
                                 {features.evaluations && umpireId && (isAdmin || game.supervisorId === umpireId) && !existingEval && (
-                                  <div className="mt-3 pt-3 border-t"><p className="text-[10px] font-black uppercase text-purple-600 mb-2">{t.evaluate}</p><div className="flex flex-col gap-2"><select onChange={(e) => setEvalGrade(parseInt(e.target.value))} className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none"><option value="0">{t.grade}...</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select><textarea placeholder={t.feedback} onChange={(e) => setEvalComment(e.target.value)} className="p-3 bg-white border border-slate-200 rounded-xl text-xs outline-none min-h-[80px]" /><button onClick={() => { if(evalGrade > 0) submitEvaluation(game.id, asg.userId, evalGrade, evalComment); }} className="bg-purple-600 text-white py-3 rounded-xl text-[10px] font-black uppercase text-white shadow-sm mt-1">Spara</button></div></div>
+                                  <div className="mt-3 pt-3 border-t"><p className="text-[10px] font-black uppercase text-purple-600 mb-2">{t.evaluate}</p><div className="flex flex-col gap-2"><select onChange={(e) => setEvalGrade(parseInt(e.target.value))} className="p-2.5 bg-white border rounded-xl text-xs font-bold outline-none"><option value="0">{t.grade}...</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select><textarea placeholder={t.feedback} onChange={(e) => setEvalComment(e.target.value)} className="p-3 bg-white border rounded-xl text-xs outline-none min-h-[80px]" /><button onClick={() => { if(evalGrade > 0) submitEvaluation(game.id, asg.userId, evalGrade, evalComment); }} className="bg-purple-600 text-white py-3 rounded-xl text-[10px] font-black uppercase text-white shadow-sm mt-1">Spara</button></div></div>
                                 )}
                                 {existingEval && (isAdmin || game.supervisorId === umpireId || asg.userId === umpireId) && (
                                   <div className="mt-3 pt-3 border-t bg-purple-50 p-3 rounded-xl flex flex-col gap-2"><p className="text-[10px] font-black uppercase text-purple-600">{t.yourEval}</p><div className="flex items-start gap-3"><span className="bg-purple-600 text-white w-8 h-8 flex items-center justify-center rounded-full text-sm font-black">{existingEval.grade}</span><span className="text-xs text-purple-900 font-medium italic">"{existingEval.comment}"</span></div></div>
