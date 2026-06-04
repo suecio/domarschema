@@ -1170,6 +1170,31 @@ function MainApp() {
       setEditingGameData(null);
     } catch (e) { } finally { setSyncing(false); }
   };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (u) { 
+        setUser(u); 
+        setLoading(false); 
+      } else {
+        try { 
+          if (typeof window !== 'undefined' && window.__initial_auth_token) {
+            try { 
+              await signInWithCustomToken(auth, window.__initial_auth_token); 
+            } catch (e) { 
+              await signInAnonymously(auth); 
+            }
+          } else { 
+            await signInAnonymously(auth); 
+          }
+        } catch (err) { 
+          console.error("Auth error:", err);
+        } finally {
+          setLoading(false); 
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
   const handleDownloadBackup = () => {
     if (!isAdmin || typeof window === 'undefined') return;
     const backupData = {
