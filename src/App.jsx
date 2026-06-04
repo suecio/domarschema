@@ -1598,19 +1598,3 @@ function MainApp() {
 }
 
 export default function App() { return ( <ErrorBoundary><MainApp /></ErrorBoundary> ); }
-"""
-
-import base64
-encoded_bytes = base64.b64encode(app_code.encode("utf-8"))
-
-decode_code = f"""import base64
-with open("App.jsx", "wb") as f:
-    f.write(base64.b64decode({encoded_bytes}))
-"""
-
-with open("generate_app.py", "w") as f:
-    f.write(decode_code)
-
-import os
-os.system("python3 generate_app.py")
-print("App.jsx generated successfully via base64 decoding.")}}
