@@ -21,8 +21,154 @@ const db = getFirestore(firebaseApp);
 const analytics = typeof window !== 'undefined' ? getAnalytics(firebaseApp) : null;
 
 const translations = {
-  sv: { appTitle: "Domarportalen", season: "Säsong", schedule: "Spelschema", myGames: "Mina Matcher", myProfile: "Min profil", umpireList: "Domarlista", staffing: "Bemanning", analytics: "Statistik", history: "Historik", upcoming: "Kommande", archived: "Arkiverade matcher", activeSchedule: "Aktivt schema", searchPlaceholder: "Sök matcher...", allSeries: "Alla serier", allLocations: "Alla platser", filterStatusAll: "Alla statusar", needsUmpire: "Saknar domare", noInterests: "Inga anmälningar", noGames: "Inga matcher hittades.", syncNow: "Synka förbundsdata nu", applied: "Anmälda", interested: "Intresserad", withdraw: "Dra tillbaka", assignedTo: "Tillsatta", staffed: "Bemannad", partiallyStaffed: "Delvis bemannad", bulkImport: "Massimport", pendingAssignments: "Bemanningsöversikt", staffingControl: "Bemanningskontroll", hideStaffed: "Dölj helt bemannade", showAll: "Visa alla matcher", removeAssignment: "Ta bort", deleteGame: "Ta bort match", deleteAllGames: "Rensa hela säsongen", deleteAllConfirm: "ÄR DU HELT SÄKER?", deleteAllSuccess: "Säsongen har rensats.", downloadBackup: "Ladda ner backup", umpire: "Domare", interests: "Intresseanmälningar", gamesAssigned: "Dömda matcher", assignmentRate: "Tillsättningsgrad", noStats: "Ingen data finns registrerad än.", mySchedule: "Mitt Schema", noAssignedMatches: "Du har inga bekräftade matchuppdrag än.", noPendingInterest: "Du har inte anmält intresse för några matcher.", confirmed: "Bekräftad", settings: "Inställningar", userSettings: "Användarinställningar", profileAccess: "Konfigurera profil & åtkomst", displayName: "Visningsnamn", namePlaceholder: "Sök eller skriv ditt namn...", logout: "Logga ut", close: "Stäng", status: "Status", setProfile: "Välj din profil", pasteSheet: "Klistra in från Google Sheets", addGames: "Lägg till matcher", importSuccess: "Import lyckades", cancel: "Avbryt", date: "Datum", crew: "Domarteam", addToCalendar: "Spara i kalender", downloadFullSchedule: "Ladda ner (.ICS)", confirmedGames: "Bekräftade uppdrag", interestedGames: "Anmält intresse", nameRequiredTitle: "Vem är du?", nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.", saveName: "Välj profil", addNewName: "Hittar du inte ditt namn?", createUmpire: "Skapa ny profil", masterList: "Domarlista", editName: "Ändra namn", save: "Spara", selectFromList: "Välj från listan", changeUser: "Byt användare", editMatch: "Ändra matchdata", home: "Hemma", away: "Borta", time: "Tid", location: "Plats", locations: "Platser", league: "Serie", saveChanges: "Spara ändringar", listView: "Lista", calendarView: "Kalender", days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"], months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"], requiredUmpires: "Antal domare", level: "Nivå", name: "Namn", sortBy: "Sortera", week: "V.", login: "Logga in", register: "Skapa konto", email: "E-postadress", phone: "Telefonnummer", password: "Lösenord", loginToContinue: "Logga in för att fortsätta", noAccount: "Inget konto? Registrera dig här", hasAccount: "Har du redan ett konto? Logga in", adminManagement: "Administratörer", masterAdminInfo: "Du är inloggad som Master Admin.", linkedAccount: "Konto:", notLinked: "Inget konto", umpireProfile: "Domarprofil", back: "Tillbaka", assignedMatches: "Tillsatta matcher", totalAssignments: "Tillsättningar", totalInterests: "Intresseanmälningar", deleteUmpireConfirm: "Är du säker på att du vill ta bort", globalAnnouncement: "Globalt Meddelande", saveAnnouncement: "Publicera", clearAnnouncement: "Ta bort", announcementPlaceholder: "Skriv ett viktigt meddelande...", bookedIn: "Bokad i", coUmpires: "Dömer med:", noCoUmpires: "Inga meddomare", calendarColumn: "Kalender", gameDetails: "Matchinformation", mapDirections: "Öppna Karta", officials: "Domarteam", supervisor: "Supervisor", techComm: "Technical Commissioner", notAssigned: "Ej tillsatt", yourGame: "Din match", marketplace: "Marknad", marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.", tradeGame: "Byt bort", cancelTrade: "Ångra byte", takeGame: "Ta match", expressInterest: "Anmäl intresse", gamesForTrade: "Matcher som bytes bort", missingUmpires: "Matcher som saknar domare", noMarketplaceGames: "Inga matcher på marknaden just nu.", tradeSuccess: "Du har tagit över matchen!", tradeConfirm: "Är du säker på att du vill ta över denna match?", evaluate: "Utvärdera", grade: "Betyg", feedback: "Feedback / Kommentar", saveEval: "Spara utvärdering", evalSaved: "Utvärdering sparad", yourEval: "Utvärdering", selectAdmin: "Välj Admin...", enterTCName: "Ange namn på TC...", umpireShort: "DOMARE", supShort: "SUP", tcShort: "TC", address: "Adress", facilities: "Faciliteter", noFacilities: "Inga faciliteter", addFacility: "Lägg till facilitet...", editLocation: "Redigera plats", matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.", acceptTime: "Acceptera ny tid", declineTime: "Kan inte (Avboka)", timeChangedBadge: "Tid Ändrad", actionRequired: "Kräver åtgärd", superAdminSettings: "Systemarkitektur (Super Admin)", featureMarketplace: "Aktivera Marknadsplats", featureEvaluations: "Aktivera Utvärderingar", featureReminders: "E-postpåminnelser", reminderPreferences: "Mina Notiser", receiveReminders: "Få e-postpåminnelser", runRemindersNow: "Kör Påminnelser Nu", invoiceTitle: "Reseräkning", digitalSubmission: "Digital inlämning", personalInfo: "Personuppgifter", pnr: "Personnummer", streetAddress: "Gatuadress", zipCity: "Postnummer & Ort", bankAccount: "Bank & Kontonummer", tripsAllowance: "Resor (Milersättning & Restid)", assignmentDetails: "Ändamål (Vilka lag spelade?)", travelFrom: "Resa Från", travelTo: "Resa Till", roundTrip: "Tur & Retur", distanceMil: "Antal Mil", calcAuto: "Beräkna avstånd (Auto)", calculating: "Beräknar...", addTrip: "Lägg till ytterligare en resa", expensesAllowance: "Övriga Utlägg & Traktamente", description: "Beskrivning", amount: "Belopp (kr)", addExpense: "Lägg till utlägg", overnightNights: "Övernattningstraktamente (Antal nätter)", advanceDeduction: "Avgår förskott (kr)", summary: "Sammanställning", mileageComp: "Milersättning", travelTimeComp: "Tilläggsarvode (Lång resa)", overnightComp: "Övernattningstraktamente", otherExpenses: "Övriga Utlägg", totalToReceive: "Totalt att erhålla", downloadPDF: "Ladda ner PDF", sendToFed: "Skicka till Förbundet", sendToSelf: "Skicka test till mig", sentSuccess: "Insänt & Klart!", sentSuccessFed: "Din reseräkning har skickats in till Förbundet.", sentSuccessSelf: "En kopia har skickats till din e-post.", newInvoice: "Skapa ny reseräkning", selectGame: "-- Välj en av dina matcher --", homeLocation: "Hem", homeAddressLabel: "Hemadress", foundAssignments: "Hämta från schema:", pastInvoices: "Tidigare reseräkningar", historicalStats: "Historisk Statistik (Tidigare säsonger)", historicalGames: "Totalt dömda matcher", historicalNote: "Datan kan redigeras av administratörer.", streetAddressHidden: "Gatuadress (Dold för andra)", cityPublic: "Ort (Offentlig)", changePicture: "Byt bild", backToUmpireList: "Tillbaka till Domarlistan", contactInfo: "Kontaktuppgifter", notProvided: "Ej angivet", homeAddress1: "Hemadress 1", cityPlaceholder: "Stockholm", saveDetails: "Spara uppgifter", assignedMatchesCount: "tillsatta matcher", updateHistory: "Uppdatera historik", fillFromTo: "Fyll i både 'Från' och 'Till'.", addressMissing: "Gatuadress och postort saknas.", coordsMissing: "Kunde inte hitta exakta koordinater.", routeMissing: "Kunde inte hitta en giltig körrutt.", autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.", errorOccurred: "Ett fel uppstod. Vänligen försök igen.", testInvoiceSentTo: "I test-syfte har reseräkningen skickats till", savedSuccess: "Sparat!", conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.", interestRegistered: "Intresse anmält! Administratörerna ser nu din anmälan.", conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.", sandboxLoaded: "50 test-matcher har laddats in i Sandbox!", downloadICS: "Ladda ner (.ICS)", availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.", availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.", availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.", assigned: "TILLSATTA", takeOverFrom: "Ta över från", spotsAvailable: "plats(er) lediga", noInterestsYet: "Inga intresseanmälningar ännu.", currentCrew: "Aktuellt Domarteam", noUmpiresAssigned: "Inga domare tillsatta.", manualAssign: "+ Manuell tilldelning...", assignBtn: "Tilldela", removeBtn: "Ta bort", pasteSchedulePlaceholder: "Klistra in spelschema...", unknown: "Okänd", sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION", deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?", deleteAvatar: "Ta bort bild", open: "Öppna", droveCar: "Egen bil", carpooling: "Samåker", invoiceCommentLabel: "Övriga kommentarer", invoiceCommentPlaceholder: "T.ex. privat övernattning, samåker med [Namn], eller avvikande rutt...", receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se.", nonUmpire: "Ej domare", economy: "Ekonomi", economyDesc: "Hantera alla inskickade reseräkningar", statusNotPaid: "Ej betald", statusPaid: "Utbetald", statusVoid: "Makulerad", exportSummary: "Exportera (CSV)", fedAdminSettings: "Förbundsadmins (E-postadresser, kommaseparerade)" },
-  en: { appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile", umpireList: "Umpire List", staffing: "Staffing", analytics: "Analytics", history: "History", upcoming: "Upcoming", archived: "Archived Games", activeSchedule: "Active Schedule", searchPlaceholder: "Search...", allSeries: "All Series", allLocations: "All Locations", filterStatusAll: "All Statuses", needsUmpire: "Needs Umpire", noInterests: "No Interests", noGames: "No games found.", syncNow: "Sync Federation Data Now", applied: "Interested", interested: "Interested", withdraw: "Withdraw", assignedTo: "Crew", staffed: "Fully Staffed", partiallyStaffed: "Partially Staffed", bulkImport: "Bulk Import", pendingAssignments: "Staffing Desk", staffingControl: "Staffing Control", hideStaffed: "Hide Fully Staffed", showAll: "Show All Games", removeAssignment: "Remove", deleteGame: "Delete Game", deleteConfirm: "Are you sure you want delete this game?", deleteAllGames: "Clear Entire Season", deleteAllConfirm: "ARE YOU ABSOLUTELY SURE?", deleteAllSuccess: "Season cleared successfully.", downloadBackup: "Download Backup (JSON)", umpire: "Umpire", interests: "Interests", gamesAssigned: "Games Assigned", assignmentRate: "Assignment Rate", noStats: "No engagement data recorded yet.", mySchedule: "My Schedule", noAssignedMatches: "You have no confirmed assignments yet.", noPendingInterest: "You haven't marked interest in any matches.", confirmed: "Confirmed", settings: "Settings", userSettings: "User Settings", profileAccess: "Configure profile & access", displayName: "Display Name", namePlaceholder: "Search or type name...", logout: "Logout", close: "Close", status: "Status", setProfile: "Select Your Profile", pasteSheet: "Paste from Google Sheets", addGames: "Add Games", importSuccess: "Import Successful", cancel: "Cancel", date: "Date", crew: "Umpire Crew", addToCalendar: "Add to Calendar", downloadFullSchedule: "Download (.ics)", confirmedGames: "Confirmed Assignments", interestedGames: "Interested Matches", nameRequiredTitle: "Who are you?", nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.", saveName: "Select Profile", addNewName: "Can't find your name?", createUmpire: "Create new profile", masterList: "Umpire Master List", editName: "Edit Name", save: "Save", selectFromList: "Select from list", changeUser: "Change User", editMatch: "Edit Match Details", home: "Home", away: "Away", time: "Time", location: "Location", locations: "Locations", league: "League", saveChanges: "Save Changes", listView: "List", calendarView: "Calendar", days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], requiredUmpires: "Crew Size", level: "Level", name: "Name", sortBy: "Sort by", week: "W.", login: "Login", register: "Register", email: "Email Address", phone: "Phone Number", password: "Password", forgotPassword: "Forgot Password?", loginToContinue: "Login to continue", createAnAccount: "Create a new account", noAccount: "No account? Register here", hasAccount: "Already have an account? Login", loginRequiredMsg: "You must be logged in to view this.", adminManagement: "Admin Roles", masterAdminInfo: "You are logged in as Master Admin.", linkedAccount: "Account:", notLinked: "No account", umpireProfile: "Umpire Profile", back: "Back", assignedMatches: "Assigned Matches", totalAssignments: "Assignments", totalInterests: "Interests", deleteUmpireConfirm: "Are you sure you want to remove", globalAnnouncement: "Global Announcement", saveAnnouncement: "Publish", clearAnnouncement: "Clear", announcementPlaceholder: "Type an important message...", bookedIn: "Booked in", coUmpires: "Co-umpires:", noCoUmpires: "No co-umpires", calendarColumn: "Calendar", gameDetails: "Game Details", mapDirections: "Open Map", officials: "Officials", supervisor: "Supervisor", techComm: "Technical Commissioner", notAssigned: "Not Assigned", yourGame: "Your Game", marketplace: "Marketplace", marketplaceDesc: "Find games that other umpires are giving away or games missing umpires.", tradeGame: "Give Away", cancelTrade: "Cancel Give Away", takeGame: "Take Game", expressInterest: "Express Interest", gamesForTrade: "Games Up For Trade", missingUmpires: "Games missing umpires", noMarketplaceGames: "No games are up for trade right now.", tradeSuccess: "You have taken over the game!", tradeConfirm: "Are you sure you want to take over this game?", evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment", saveEval: "Save Evaluation", evalSaved: "Evaluation Saved", yourEval: "Evaluation", selectAdmin: "Select Admin...", enterTCName: "Enter TC name...", umpireShort: "UMP", supShort: "SUP", tcShort: "TC", address: "Address", facilities: "Facilities", noFacilities: "No facilities listed", addFacility: "Add facility...", editLocation: "Edit Location", matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.", acceptTime: "Accept New Time", declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required", superAdminSettings: "System Architecture (Super Admin)", featureMarketplace: "Enable Marketplace", featureEvaluations: "Enable Evaluation System", featureReminders: "Automated Email Reminders", reminderPreferences: "My Notifications", receiveReminders: "Receive email reminders for my upcoming games", runRemindersNow: "Run Reminders Cron", invoiceTitle: "Travel Invoice", digitalSubmission: "Digital Submission", personalInfo: "Personal Information", pnr: "Personal ID (PNR)", streetAddress: "Street Address", zipCity: "Zip Code & City", bankAccount: "Bank Account", tripsAllowance: "Trips (Mileage & Travel Time)", assignmentDetails: "Assignment", travelFrom: "Travel From", travelTo: "Travel To", roundTrip: "Round Trip", distanceMil: "Distance (Mil)", calcAuto: "Calculate Distance", calculating: "Calculating...", addTrip: "Add another trip", expensesAllowance: "Other Expenses & Allowance", description: "Description", amount: "Amount", addExpense: "Add Expense", overnightNights: "Overnight Allowance (Nights)", advanceDeduction: "Advance Deduction", summary: "Summary", mileageComp: "Mileage Compensation", travelTimeComp: "Travel Time Compensation", overnightComp: "Overnight Allowance", otherExpenses: "Other Expenses", totalToReceive: "Total to Receive", downloadPDF: "Download PDF", sendToFed: "Send to Federation", sendToSelf: "Send Test to Me", sentSuccess: "Submitted Successfully!", sentSuccessFed: "Your invoice has been submitted.", sentSuccessSelf: "A copy has been sent to your email.", newInvoice: "Create new invoice", selectGame: "-- Select an assigned game --", homeLocation: "Home", homeAddressLabel: "Home Address", foundAssignments: "Load from schedule:", pastInvoices: "Past Invoices", historicalStats: "Historical Stats", historicalGames: "Total officiated games", historicalNote: "Data can be edited by an admin.", streetAddressHidden: "Street Address (Hidden)", cityPublic: "City (Public)", changePicture: "Change Picture", backToUmpireList: "Back to Umpire List", contactInfo: "Contact Information", notProvided: "Not provided", homeAddress1: "Home Address 1", cityPlaceholder: "Stockholm", saveDetails: "Save Details", assignedMatchesCount: "assigned games", updateHistory: "Update History", fillFromTo: "Fill in both 'From' and 'To'.", addressMissing: "Street address and city are missing.", coordsMissing: "Could not find exact coordinates.", routeMissing: "Could not find a valid driving route.", autoCalcFailed: "Automatic calculation failed. Enter distance manually.", errorOccurred: "An error occurred.", testInvoiceSentTo: "For testing purposes, the invoice was sent to", savedSuccess: "Saved!", conflictApply: "Cannot apply! You are already booked in {location}.", interestRegistered: "Interest registered!", conflictAssign: "Cannot assign! {name} is already booked in {location}.", sandboxLoaded: "50 test games loaded into Sandbox!", downloadICS: "Download (.ICS)", availabilityWarningTitle: "Deadline for availability is today.", availabilityWarningDesc1: "If you have not submitted your availability, you will not receive games.", availabilityWarningDesc2: "We assign games until June.", assigned: "ASSIGNED", takeOverFrom: "Take over from", spotsAvailable: "spot(s) available", noInterestsYet: "No interests marked yet.", currentCrew: "Current Crew", noUmpiresAssigned: "No umpires assigned.", manualAssign: "+ Manual Assignment...", assignBtn: "Assign", removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown", sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED", deleteAvatarConfirm: "Are you sure you want to remove your profile picture?", deleteAvatar: "Remove picture", open: "Open", droveCar: "My Car", carpooling: "Carpool", invoiceCommentLabel: "Additional Comments", invoiceCommentPlaceholder: "E.g. private accommodation...", receiptsReminder: "NOTE! If you have additional expenses, email receipts to info@sbslf.se.", nonUmpire: "Non-umpire", economy: "Economy", economyDesc: "Manage all submitted travel invoices", statusNotPaid: "Not paid", statusPaid: "Paid", statusVoid: "Void", exportSummary: "Export (CSV)", fedAdminSettings: "Federation Admins (Emails, comma separated)" }
+  sv: {
+    appTitle: "Domarportalen", season: "Säsong", schedule: "Spelschema", myGames: "Mina Matcher", myProfile: "Min profil",
+    umpireList: "Domarlista", staffing: "Bemanning", analytics: "Statistik", history: "Historik", upcoming: "Kommande",
+    archived: "Arkiverade matcher", activeSchedule: "Aktivt schema", searchPlaceholder: "Sök matcher...", allSeries: "Alla serier",
+    allLocations: "Alla platser", filterStatusAll: "Alla statusar", needsUmpire: "Saknar domare", noInterests: "Inga anmälningar",
+    noGames: "Inga matcher hittades.", syncNow: "Synka förbundsdata nu", applied: "Anmälda", interested: "Intresserad",
+    withdraw: "Dra tillbaka", assignedTo: "Tillsatta", staffed: "Bemannad", partiallyStaffed: "Delvis bemannad",
+    bulkImport: "Massimport", pendingAssignments: "Bemanningsöversikt", staffingControl: "Bemanningskontroll", hideStaffed: "Dölj helt bemannade",
+    showAll: "Visa alla matcher", removeAssignment: "Ta bort", deleteGame: "Ta bort match", deleteAllGames: "Rensa hela säsongen",
+    deleteAllConfirm: "ÄR DU HELT SÄKER?", deleteAllSuccess: "Säsongen har rensats.", downloadBackup: "Ladda ner backup",
+    umpire: "Domare", interests: "Intresseanmälningar", gamesAssigned: "Dömda matcher", assignmentRate: "Tillsättningsgrad",
+    noStats: "Ingen data finns registrerad än.", mySchedule: "Mitt Schema", noAssignedMatches: "Du har inga bekräftade matchuppdrag än.",
+    noPendingInterest: "Du har inte anmält intresse för några matcher.", confirmed: "Bekräftad", settings: "Inställningar",
+    userSettings: "Användarinställningar", profileAccess: "Konfigurera profil & åtkomst", displayName: "Visningsnamn",
+    namePlaceholder: "Sök eller skriv ditt namn...", logout: "Logga ut", close: "Stäng", status: "Status",
+    setProfile: "Välj din profil", pasteSheet: "Klistra in från Google Sheets", addGames: "Lägg till matcher",
+    importSuccess: "Import lyckades", cancel: "Avbryt", date: "Datum", crew: "Domarteam", addToCalendar: "Spara i kalender",
+    downloadFullSchedule: "Ladda ner (.ICS)", confirmedGames: "Bekräftade uppdrag", interestedGames: "Anmält intresse",
+    nameRequiredTitle: "Vem är du?", nameRequiredDesc: "Välj ditt namn från listan nedan för att koppla ditt konto till dina matcher.",
+    saveName: "Välj profil", addNewName: "Hittar du inte ditt namn?", createUmpire: "Skapa ny profil", masterList: "Domarlista",
+    editName: "Ändra namn", save: "Spara", selectFromList: "Välj från listan", changeUser: "Byt användare", editMatch: "Ändra matchdata",
+    home: "Hemma", away: "Borta", time: "Tid", location: "Plats", locations: "Platser", league: "Serie", saveChanges: "Spara ändringar",
+    listView: "Lista", calendarView: "Kalender", days: ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"],
+    months: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"],
+    requiredUmpires: "Antal domare", level: "Nivå", name: "Namn", sortBy: "Sortera", week: "V.", login: "Logga in", register: "Skapa konto",
+    email: "E-postadress", phone: "Telefonnummer", password: "Lösenord", loginToContinue: "Logga in för att fortsätta",
+    noAccount: "Inget konto? Registrera dig här", hasAccount: "Har du redan ett konto? Logga in", adminManagement: "Administratörer",
+    masterAdminInfo: "Du är inloggad som Master Admin.", linkedAccount: "Konto:", notLinked: "Inget konto", umpireProfile: "Domarprofil",
+    back: "Tillbaka", assignedMatches: "Tillsatta matcher", totalAssignments: "Tillsättningar", totalInterests: "Intresseanmälningar",
+    deleteUmpireConfirm: "Är du säker på att du vill ta bort", globalAnnouncement: "Globalt Meddelande", saveAnnouncement: "Publicera",
+    clearAnnouncement: "Ta bort", announcementPlaceholder: "Skriv ett viktigt meddelande...", bookedIn: "Bokad i",
+    coUmpires: "Dömer med:", noCoUmpires: "Inga meddomare", calendarColumn: "Kalender", gameDetails: "Matchinformation",
+    mapDirections: "Öppna Karta", officials: "Domarteam", supervisor: "Supervisor", techComm: "Technical Commissioner",
+    notAssigned: "Ej tillsatt", yourGame: "Din match", marketplace: "Marknad", marketplaceDesc: "Här visas matcher som andra vill byta bort och matcher som saknar domare.",
+    tradeGame: "Byt bort", cancelTrade: "Ångra byte", takeGame: "Ta match", expressInterest: "Anmäl intresse", gamesForTrade: "Matcher som bytes bort",
+    missingUmpires: "Matcher som saknar domare", noMarketplaceGames: "Inga matcher på marknaden just nu.", tradeSuccess: "Du har tagit över matchen!",
+    tradeConfirm: "Är du säker på att du vill ta över denna match?", evaluate: "Utvärdera", grade: "Betyg", feedback: "Feedback / Kommentar",
+    saveEval: "Spara utvärdering", evalSaved: "Utvärdering sparad", yourEval: "Utvärdering", selectAdmin: "Välj Admin...",
+    enterTCName: "Ange namn på TC...", umpireShort: "DOMARE", supShort: "SUP", tcShort: "TC", address: "Adress", facilities: "Faciliteter",
+    noFacilities: "Inga faciliteter", addFacility: "Lägg till facilitet...", editLocation: "Redigera plats",
+    matchMovedWarning: "Match flyttad! Bekräfta om du kan den nya tiden.", acceptTime: "Acceptera ny tid", declineTime: "Kan inte (Avboka)",
+    timeChangedBadge: "Tid Ändrad", actionRequired: "Kräver åtgärd", superAdminSettings: "Systemarkitektur (Super Admin)",
+    featureMarketplace: "Aktivera Marknadsplats", featureEvaluations: "Aktivera Utvärderingar", featureReminders: "E-postpåminnelser",
+    reminderPreferences: "Mina Notiser", receiveReminders: "Få e-postpåminnelser", runRemindersNow: "Kör Påminnelser Nu",
+    invoiceTitle: "Reseräkning", digitalSubmission: "Digital inlämning", personalInfo: "Personuppgifter", pnr: "Personnummer",
+    streetAddress: "Gatuadress", zipCity: "Postnummer & Ort", bankAccount: "Bank & Kontonummer", tripsAllowance: "Resor (Milersättning & Restid)",
+    assignmentDetails: "Ändamål (Vilka lag spelade?)", travelFrom: "Resa Från", travelTo: "Resa Till", roundTrip: "Tur & Retur",
+    distanceMil: "Antal Mil", calcAuto: "Beräkna avstånd (Auto)", calculating: "Beräknar...", addTrip: "Lägg till ytterligare en resa",
+    expensesAllowance: "Övriga Utlägg & Traktamente", description: "Beskrivning", amount: "Belopp (kr)", addExpense: "Lägg till utlägg",
+    overnightNights: "Övernattningstraktamente (Antal nätter)", advanceDeduction: "Avgår förskott (kr)", summary: "Sammanställning",
+    mileageComp: "Milersättning", travelTimeComp: "Tilläggsarvode (Lång resa)", overnightComp: "Övernattningstraktamente",
+    otherExpenses: "Övriga Utlägg", totalToReceive: "Totalt att erhålla", downloadPDF: "Ladda ner PDF", sendToFed: "Skicka till Förbundet",
+    sendToSelf: "Skicka test till mig", sentSuccess: "Insänt & Klart!", sentSuccessFed: "Din reseräkning har skickats in till Förbundet.",
+    sentSuccessSelf: "En kopia har skickats till din e-post.", newInvoice: "Skapa ny reseräkning", selectGame: "-- Välj en av dina matcher --",
+    homeLocation: "Hem", homeAddressLabel: "Hemadress", foundAssignments: "Hämta från schema:", pastInvoices: "Tidigare reseräkningar",
+    historicalStats: "Historisk Statistik (Tidigare säsonger)", historicalGames: "Totalt dömda matcher", historicalNote: "Datan kan redigeras av administratörer.",
+    streetAddressHidden: "Gatuadress (Dold för andra)", cityPublic: "Ort (Offentlig)", changePicture: "Byt bild", backToUmpireList: "Tillbaka till Domarlistan",
+    contactInfo: "Kontaktuppgifter", notProvided: "Ej angivet", homeAddress1: "Hemadress 1", cityPlaceholder: "Stockholm", saveDetails: "Spara uppgifter",
+    assignedMatchesCount: "tillsatta matcher", updateHistory: "Uppdatera historik", fillFromTo: "Fyll i både 'Från' och 'Till'.",
+    addressMissing: "Gatuadress och postort saknas.", coordsMissing: "Kunde inte hitta exakta koordinater.", routeMissing: "Kunde inte hitta en giltig körrutt.",
+    autoCalcFailed: "Automatisk beräkning misslyckades. Skriv in avståndet manuellt.", errorOccurred: "Ett fel uppstod. Vänligen försök igen.",
+    testInvoiceSentTo: "I test-syfte har reseräkningen skickats till", savedSuccess: "Sparat!", conflictApply: "Kan inte anmäla! Du är redan bokad i {location} den här dagen.",
+    interestRegistered: "Intresse anmält! Administratörerna ser nu din anmälan.", conflictAssign: "Kan inte tillsätta! {name} är redan bokad i {location} den här dagen.",
+    sandboxLoaded: "50 test-matcher har laddats in i Sandbox!", downloadICS: "Ladda ner (.ICS)", availabilityWarningTitle: "Sista datum för att anmäla tillgänglighet är idag.",
+    availabilityWarningDesc1: "Har man inte lämnat in sin tillgänglighet så får man inga matcher den kommande säsongen.", availabilityWarningDesc2: "Vi tillsätter fram tills sista Juni.",
+    assigned: "TILLSATTA", takeOverFrom: "Ta över från", spotsAvailable: "plats(er) lediga", noInterestsYet: "Inga intresseanmälningar ännu.",
+    currentCrew: "Aktuellt Domarteam", noUmpiresAssigned: "Inga domare tillsatta.", manualAssign: "+ Manuell tilldelning...", assignBtn: "Tilldela",
+    removeBtn: "Ta bort", pasteSchedulePlaceholder: "Klistra in spelschema...", unknown: "Okänd", sandboxWarning: "SANDBOX-MILJÖ - INGEN DATA SPARAS TILL PRODUKTION",
+    deleteAvatarConfirm: "Vill du verkligen ta bort din profilbild?", deleteAvatar: "Ta bort bild", open: "Öppna", droveCar: "Egen bil",
+    carpooling: "Samåker", invoiceCommentLabel: "Övriga kommentarer", invoiceCommentPlaceholder: "T.ex. privat övernattning, samåker med [Namn], eller avvikande rutt...",
+    receiptsReminder: "OBS! Om du har övriga utlägg, glöm inte att maila kvittona separat till info@sbslf.se.", nonUmpire: "Ej domare",
+    economy: "Ekonomi", economyDesc: "Hantera alla inskickade reseräkningar", statusNotPaid: "Ej betald", statusPaid: "Utbetald",
+    statusVoid: "Makulerad", exportSummary: "Exportera (CSV)", fedAdminSettings: "Förbundsadmins (E-postadresser, kommaseparerade)",
+    emailMatchMovedSubject: "Domarportalen: Uppdateringar i ditt spelschema ({count} ändringar)",
+    emailMatchMovedBody: "Hej {name},\n\nFöljande av dina matcher har nyligen ändrats i spelschemat:\n\n{changesListSv}\n\nLogga in på Domarportalen (https://schema.domarweb.se) för att bekräfta att du kan döma den nya tiden, eller avboka dig om du inte kan.\n\nMed vänliga hälsningar,\nDomarportalen"
+  },
+  en: {
+    appTitle: "Umpire Portal", season: "Season", schedule: "Schedule", myGames: "My Games", myProfile: "My Profile",
+    umpireList: "Umpire List", staffing: "Staffing", analytics: "Analytics", history: "History", upcoming: "Upcoming",
+    archived: "Archived Games", activeSchedule: "Active Schedule", searchPlaceholder: "Search...", allSeries: "All Series",
+    allLocations: "All Locations", filterStatusAll: "All Statuses", needsUmpire: "Needs Umpire", noInterests: "No Interests",
+    noGames: "No games found.", syncNow: "Sync Federation Data Now", applied: "Interested", interested: "Interested",
+    withdraw: "Withdraw", assignedTo: "Crew", staffed: "Fully Staffed", partiallyStaffed: "Partially Staffed",
+    bulkImport: "Bulk Import", pendingAssignments: "Staffing Desk", staffingControl: "Staffing Control", hideStaffed: "Hide Fully Staffed",
+    showAll: "Show All Games", removeAssignment: "Remove", deleteGame: "Delete Game", deleteConfirm: "Are you sure you want delete this game?",
+    deleteAllGames: "Clear Entire Season", deleteAllConfirm: "ARE YOU ABSOLUTELY SURE?", deleteAllSuccess: "Season cleared successfully.",
+    downloadBackup: "Download Backup (JSON)", umpire: "Umpire", interests: "Interests", gamesAssigned: "Games Assigned",
+    assignmentRate: "Assignment Rate", noStats: "No engagement data recorded yet.", mySchedule: "My Schedule", noAssignedMatches: "You have no confirmed assignments yet.",
+    noPendingInterest: "You haven't marked interest in any matches.", confirmed: "Confirmed", settings: "Settings",
+    userSettings: "User Settings", profileAccess: "Configure profile & access", displayName: "Display Name", namePlaceholder: "Search or type name...",
+    logout: "Logout", close: "Close", status: "Status", setProfile: "Select Your Profile", pasteSheet: "Paste from Google Sheets",
+    addGames: "Add Games", importSuccess: "Import Successful", cancel: "Cancel", date: "Date", crew: "Umpire Crew", addToCalendar: "Add to Calendar",
+    downloadFullSchedule: "Download (.ics)", confirmedGames: "Confirmed Assignments", interestedGames: "Interested Matches",
+    nameRequiredTitle: "Who are you?", nameRequiredDesc: "Select your name from the list below to sync your schedule across devices.",
+    saveName: "Select Profile", addNewName: "Can't find your name?", createUmpire: "Create new profile", masterList: "Umpire Master List",
+    editName: "Edit Name", save: "Save", selectFromList: "Select from list", changeUser: "Change User", editMatch: "Edit Match Details",
+    home: "Home", away: "Away", time: "Time", location: "Location", locations: "Locations", league: "League", saveChanges: "Save Changes",
+    listView: "List", calendarView: "Calendar", days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], requiredUmpires: "Crew Size",
+    level: "Level", name: "Name", sortBy: "Sort by", week: "W.", login: "Login", register: "Register", email: "Email Address", phone: "Phone Number",
+    password: "Password", forgotPassword: "Forgot Password?", loginToContinue: "Login to continue", createAnAccount: "Create a new account",
+    noAccount: "No account? Register here", hasAccount: "Already have an account? Login", loginRequiredMsg: "You must be logged in to view this.",
+    adminManagement: "Admin Roles", masterAdminInfo: "You are logged in as Master Admin.", linkedAccount: "Account:", notLinked: "No account",
+    umpireProfile: "Umpire Profile", back: "Back", assignedMatches: "Assigned Matches", totalAssignments: "Assignments",
+    totalInterests: "Interests", deleteUmpireConfirm: "Are you sure you want to remove", globalAnnouncement: "Global Announcement",
+    saveAnnouncement: "Publish", clearAnnouncement: "Clear", announcementPlaceholder: "Type an important message...", bookedIn: "Booked in",
+    coUmpires: "Co-umpires:", noCoUmpires: "No co-umpires", calendarColumn: "Calendar", gameDetails: "Game Details", mapDirections: "Open Map",
+    officials: "Officials", supervisor: "Supervisor", techComm: "Technical Commissioner", notAssigned: "Not Assigned", yourGame: "Your Game",
+    marketplace: "Marketplace", marketplaceDesc: "Find games that other umpires are giving away or games missing umpires.", tradeGame: "Give Away",
+    cancelTrade: "Cancel Give Away", takeGame: "Take Game", expressInterest: "Express Interest", gamesForTrade: "Games Up For Trade",
+    missingUmpires: "Games missing umpires", noMarketplaceGames: "No games are up for trade right now.", tradeSuccess: "You have taken over the game!",
+    tradeConfirm: "Are you sure you want to take over this game?", evaluate: "Evaluate", grade: "Grade", feedback: "Feedback / Comment",
+    saveEval: "Save Evaluation", evalSaved: "Evaluation Saved", yourEval: "Evaluation", selectAdmin: "Select Admin...", enterTCName: "Enter TC name...",
+    umpireShort: "UMP", supShort: "SUP", tcShort: "TC", address: "Address", facilities: "Facilities", noFacilities: "No facilities listed",
+    addFacility: "Add facility...", editLocation: "Edit Location", matchMovedWarning: "Game Rescheduled! Please confirm if you can make the new time.",
+    acceptTime: "Accept New Time", declineTime: "Cannot Make It", timeChangedBadge: "Time Changed", actionRequired: "Action Required",
+    superAdminSettings: "System Architecture (Super Admin)", featureMarketplace: "Enable Marketplace", featureEvaluations: "Enable Evaluation System",
+    featureReminders: "Automated Email Reminders", reminderPreferences: "My Notifications", receiveReminders: "Receive email reminders for my upcoming games",
+    runRemindersNow: "Run Reminders Cron", invoiceTitle: "Travel Invoice", digitalSubmission: "Digital Submission", personalInfo: "Personal Information",
+    pnr: "Personal ID (PNR)", streetAddress: "Street Address", zipCity: "Zip Code & City", bankAccount: "Bank Account", tripsAllowance: "Trips (Mileage & Travel Time)",
+    assignmentDetails: "Assignment", travelFrom: "Travel From", travelTo: "Travel To", roundTrip: "Round Trip", distanceMil: "Distance (Mil)",
+    calcAuto: "Calculate Distance", calculating: "Calculating...", addTrip: "Add another trip", expensesAllowance: "Other Expenses & Allowance",
+    description: "Description", amount: "Amount", addExpense: "Add Expense", overnightNights: "Overnight Allowance (Nights)",
+    advanceDeduction: "Advance Deduction", summary: "Summary", mileageComp: "Mileage Compensation", travelTimeComp: "Travel Time Compensation",
+    overnightComp: "Overnight Allowance", otherExpenses: "Other Expenses", totalToReceive: "Total to Receive", downloadPDF: "Download PDF",
+    sendToFed: "Send to Federation", sendToSelf: "Send Test to Me", sentSuccess: "Submitted Successfully!", sentSuccessFed: "Your invoice has been submitted.",
+    sentSuccessSelf: "A copy has been sent to your email.", newInvoice: "Create new invoice", selectGame: "-- Select an assigned game --",
+    homeLocation: "Home", homeAddressLabel: "Home Address", foundAssignments: "Load from schedule:", pastInvoices: "Past Invoices",
+    historicalStats: "Historical Stats", historicalGames: "Total officiated games", historicalNote: "Data can be edited by an admin.",
+    streetAddressHidden: "Street Address (Hidden)", cityPublic: "City (Public)", changePicture: "Change Picture", backToUmpireList: "Back to Umpire List",
+    contactInfo: "Contact Information", notProvided: "Not provided", homeAddress1: "Home Address 1", cityPlaceholder: "Stockholm",
+    saveDetails: "Save Details", assignedMatchesCount: "assigned games", updateHistory: "Update History", fillFromTo: "Fill in both 'From' and 'To'.",
+    addressMissing: "Street address and city are missing.", coordsMissing: "Could not find exact coordinates.", routeMissing: "Could not find a valid driving route.",
+    autoCalcFailed: "Automatic calculation failed. Enter distance manually.", errorOccurred: "An error occurred.", testInvoiceSentTo: "For testing purposes, the invoice was sent to",
+    savedSuccess: "Saved!", conflictApply: "Cannot apply! You are already booked in {location}.", interestRegistered: "Interest registered!",
+    conflictAssign: "Cannot assign! {name} is already booked in {location}.", sandboxLoaded: "50 test games loaded into Sandbox!", downloadICS: "Download (.ICS)",
+    availabilityWarningTitle: "Deadline for availability is today.", availabilityWarningDesc1: "If you have not submitted your availability, you will not receive games.",
+    availabilityWarningDesc2: "We assign games until June.", assigned: "ASSIGNED", takeOverFrom: "Take over from", spotsAvailable: "spot(s) available",
+    noInterestsYet: "No interests marked yet.", currentCrew: "Current Crew", noUmpiresAssigned: "No umpires assigned.", manualAssign: "+ Manual Assignment...",
+    assignBtn: "Assign", removeBtn: "Remove", pasteSchedulePlaceholder: "Paste schedule here...", unknown: "Unknown",
+    sandboxWarning: "SANDBOX ENVIRONMENT - NO DATA SAVED", deleteAvatarConfirm: "Are you sure you want to remove your profile picture?",
+    deleteAvatar: "Remove picture", open: "Open", droveCar: "My Car", carpooling: "Carpool", invoiceCommentLabel: "Additional Comments",
+    invoiceCommentPlaceholder: "E.g. private accommodation...", receiptsReminder: "NOTE! If you have additional expenses, email receipts to info@sbslf.se.",
+    nonUmpire: "Non-umpire", economy: "Economy", economyDesc: "Manage all submitted travel invoices", statusNotPaid: "Not paid", statusPaid: "Paid",
+    statusVoid: "Void", exportSummary: "Export (CSV)", fedAdminSettings: "Federation Admins (Emails, comma separated)",
+    emailMatchMovedSubject: "Umpire Portal: Updates to your schedule ({count} changes)",
+    emailMatchMovedBody: "Hi {name},\n\nThe following games in your schedule have recently been updated:\n\n{changesListEn}\n\nPlease log in to the Umpire Portal (https://schema.domarweb.se) to confirm you can still make the new time, or decline the assignment if you cannot.\n\nBest regards,\nUmpire Portal"
+  }
 };
 
 const getISOWeekNumber = (date) => {
@@ -42,7 +188,6 @@ const generateCSV = (gamesToExport, selectedYear) => {
     const endTime = `${endHours}:${mins || '00'}`;
     return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${endTime},"${game.league}","${game.location}"`;
   }).join('\n');
-  
   const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -94,7 +239,7 @@ function PrintableInvoice({ data, t, containerId }) {
             <tr key={idx}>
               <td className="border border-black p-1.5">{trip.date}</td>
               <td className="border border-black p-1.5">{trip.assignment}</td>
-              <td className="border border-black p-1.5">{trip.from} → {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
+              <td className="border border-black p-1.5">{trip.from} &rarr; {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
               <td className="border border-black p-1.5 text-center">{trip.isDriver ? 'Egen bil' : 'Samåker'}</td>
               <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
             </tr>
@@ -179,20 +324,16 @@ function PrintableInvoice({ data, t, containerId }) {
 
 function InvoiceReviewModal({ invoice, setInvoice, t }) {
   const [isDownloading, setIsDownloading] = useState(false);
-
   const handleDownloadPDF = () => {
     setIsDownloading(true);
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload = () => {
       const element = document.getElementById('admin-print-invoice-view');
-      element.classList.remove('hidden');
-      element.classList.remove('print:block');
+      element.classList.remove('hidden'); element.classList.remove('print:block');
       const opt = { margin: 10, filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
       window.html2pdf().set(opt).from(element).save().then(() => {
-        element.classList.add('hidden');
-        element.classList.add('print:block');
-        setIsDownloading(false);
+        element.classList.add('hidden'); element.classList.add('print:block'); setIsDownloading(false);
       });
     };
     document.body.appendChild(script);
@@ -613,7 +754,7 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
                    </div>
                    <div className="text-right mr-3">
                      <span className="text-sm font-black text-blue-600">{inv.total} kr</span>
-                     <p className="text-[9px] font-black uppercase text-green-600 mt-0.5">{inv.status}</p>
+                     <p className="text-[9px] font-black uppercase text-slate-500 mt-0.5">{inv.status}</p>
                    </div>
                    <div className="flex items-center gap-1">
                      <button onClick={() => handleReopenInvoice(inv)} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black uppercase hover:bg-blue-200">{t.open}</button>
@@ -1156,6 +1297,81 @@ function MainApp() {
   };
 
   const logoutUmpire = async () => { await signOut(auth); try { await signInAnonymously(auth); } catch (e) { } setShowAdminModal(false); setView('schedule'); };
+
+  const getLeagueStyles = (league) => {
+    const l = (league || '').toLowerCase();
+    if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
+    if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  const getLevelStyles = (level) => {
+    const l = (level || '').toLowerCase();
+    if (l.includes('internationell')) return 'bg-[#204d99] text-white border-[#1a3d7a]';
+    if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]';
+    if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]';
+    if (l.includes('region')) return 'bg-[#cfe2f3] text-[#3d85c6] border-[#a2c4c9]';
+    if (l.includes('förening')) return 'bg-[#efefef] text-[#666666] border-[#cccccc]';
+    return 'bg-slate-200 text-slate-500 border-slate-300';
+  };
+
+  const getAssignmentStatusStyles = (count, required) => {
+    const req = required || 2;
+    if (count === 0) return 'bg-red-100 text-red-700 border-red-200';
+    if (count < req) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-green-100 text-green-700 border-green-200';
+  };
+
+  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
+    const hasOfficials = gameAssignments.length > 0 || game.supervisorName || game.tcName;
+    if (!hasOfficials) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-3 items-center">
+        {gameAssignments.map(asg => {
+            const m = masterUmpires.find(mu => mu.id === asg.userId);
+            return (
+              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
+                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} {t.umpireShort}: {asg.userName} {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+              </div>
+            );
+        })}
+        {game.supervisorName && <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1"><Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}</div>}
+        {game.tcName && <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1"><FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}</div>}
+      </div>
+    );
+  };
+
+  const renderCalendar = (gamesToRender) => (
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 overflow-hidden animate-in fade-in">
+      <div className="flex justify-between items-center mb-4 px-2">
+         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
+         <h3 className="font-black text-lg text-slate-800 uppercase">{t.months && t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight className="w-5 h-5"/></button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center mb-2">
+         {uiDays.map(d => <div key={d} className="text-[10px] font-black uppercase text-slate-400">{d}</div>)}
+      </div>
+      <div className="flex flex-col gap-1 bg-slate-100 border border-slate-100 rounded-xl overflow-hidden p-1">
+        {calendarWeeks.map((week, i) => (
+           <div key={i} className="grid grid-cols-7 gap-1">
+              {week.days.map((day, j) => {
+                 if (!day) return <div key={j} className="p-2" />;
+                 const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+                 const gamesOnDay = gamesToRender.filter(g => g.date === dateStr);
+                 const isToday = dateStr === today;
+                 return (
+                    <div key={j} className={`bg-white rounded-lg p-1.5 min-h-[80px] flex flex-col ${isToday ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
+                       <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>{day.getDate()}</span>
+                       <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">{gamesOnDay.map(g => <div key={g.id} onClick={() => setSelectedGameDetails(g)} className="text-[8px] sm:text-[9px] font-bold bg-blue-50 text-blue-800 rounded px-1.5 py-1 truncate cursor-pointer hover:bg-blue-100 transition-colors">{g.away}</div>)}</div>
+                    </div>
+                 )
+              })}
+           </div>
+        ))}
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
