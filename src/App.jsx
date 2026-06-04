@@ -943,6 +943,8 @@ function MainApp() {
   const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
   const isFederationAdmin = user?.email && fedAdminEmails.includes(user.email.toLowerCase());
 
+  const myUmpireData = masterUmpires.find(u => u.id === umpireId);
+
   useEffect(() => {
      if (typeof window !== 'undefined') {
         const host = window.location.hostname;
