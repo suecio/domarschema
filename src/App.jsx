@@ -943,6 +943,33 @@ function MainApp() {
   const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
   const isFederationAdmin = user?.email && fedAdminEmails.includes(user.email.toLowerCase());
 
+ const handleDownloadBackup = () => {
+    if (!isAdmin || typeof window === 'undefined') return;
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      year: selectedYear,
+      appId: appId,
+      collections: {
+        games,
+        applications,
+        assignments,
+        umpires: masterUmpires,
+        adminUmpireIds,
+        evaluations,
+        locations: locationsData
+      }
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `umpire-backup-${selectedYear}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  
   const myUmpireData = masterUmpires.find(u => u.id === umpireId);
 
   useEffect(() => {
