@@ -42,7 +42,6 @@ const generateCSV = (gamesToExport, selectedYear) => {
     const endTime = `${endHours}:${mins || '00'}`;
     return `"${game.away} @ ${game.home} (${game.league})",${game.date},${game.time},${game.date},${endTime},"${game.league}","${game.location}"`;
   }).join('\n');
-  
   const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -67,29 +66,17 @@ function PrintableInvoice({ data, t, containerId }) {
               <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
               <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
             </td>
-            <td className="align-bottom text-right text-[10px]">
-              <p>{t.date}: {dateStr}</p>
-            </td>
+            <td className="align-bottom text-right text-[10px]"><p>{t.date}: {dateStr}</p></td>
           </tr>
         </tbody>
       </table>
-
       <table className="w-full mb-6 text-[12px]">
         <tbody>
-          <tr>
-            <td className="py-1.5 w-1/2"><span className="font-bold">{t.name}:</span> {personalInfo?.name}</td>
-            <td className="py-1.5 w-1/2"><span className="font-bold">{t.pnr}:</span> {personalInfo?.pnr}</td>
-          </tr>
-          <tr>
-            <td className="py-1.5"><span className="font-bold">{t.streetAddress}:</span> {personalInfo?.address}</td>
-            <td className="py-1.5"><span className="font-bold">{t.zipCity}:</span> {personalInfo?.zipCity}</td>
-          </tr>
-          <tr>
-            <td className="py-1.5" colSpan="2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo?.bank}</td>
-          </tr>
+          <tr><td className="py-1.5 w-1/2"><span className="font-bold">{t.name}:</span> {personalInfo?.name}</td><td className="py-1.5 w-1/2"><span className="font-bold">{t.pnr}:</span> {personalInfo?.pnr}</td></tr>
+          <tr><td className="py-1.5"><span className="font-bold">{t.streetAddress}:</span> {personalInfo?.address}</td><td className="py-1.5"><span className="font-bold">{t.zipCity}:</span> {personalInfo?.zipCity}</td></tr>
+          <tr><td className="py-1.5" colSpan="2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo?.bank}</td></tr>
         </tbody>
       </table>
-
       <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Uppdrag & Resor</h3>
       <table className="w-full border-collapse border border-black mb-6 text-[11px]">
         <thead>
@@ -106,14 +93,13 @@ function PrintableInvoice({ data, t, containerId }) {
             <tr key={idx}>
               <td className="border border-black p-1.5">{trip.date}</td>
               <td className="border border-black p-1.5">{trip.assignment}</td>
-              <td className="border border-black p-1.5">{trip.from} &rarr; {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
+              <td className="border border-black p-1.5">{trip.from} → {trip.to}<br/>{trip.roundTrip ? '(T&R)' : '(Enkel)'}</td>
               <td className="border border-black p-1.5 text-center">{trip.isDriver ? 'Egen bil' : 'Samåker'}</td>
               <td className="border border-black p-1.5 text-right font-bold">{trip.distance}</td>
             </tr>
           ))}
         </tbody>
       </table>
-
       {(expenses || []).some(e => e.description && e.amount) && (
         <>
           <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Utlägg</h3>
@@ -126,16 +112,12 @@ function PrintableInvoice({ data, t, containerId }) {
             </thead>
             <tbody>
               {expenses.filter(e => e.description && e.amount).map((exp, idx) => (
-                <tr key={idx}>
-                  <td className="border border-black p-1.5">{exp.description}</td>
-                  <td className="border border-black p-1.5 text-right">{exp.amount}</td>
-                </tr>
+                <tr key={idx}><td className="border border-black p-1.5">{exp.description}</td><td className="border border-black p-1.5 text-right">{exp.amount}</td></tr>
               ))}
             </tbody>
           </table>
         </>
       )}
-
       <table className="w-full mb-8">
         <tbody>
           <tr>
@@ -150,39 +132,20 @@ function PrintableInvoice({ data, t, containerId }) {
             <td className="w-1/2 align-top">
               <table className="w-full border-collapse border border-black text-[11px]">
                 <tbody>
-                  <tr>
-                    <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
-                    <td className="border border-black p-1.5 text-right">{calculated?.milageCost} kr</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-1.5">Tilläggsarvode</td>
-                    <td className="border border-black p-1.5 text-right">{calculated?.travelBonus} kr</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 300kr)</td>
-                    <td className="border border-black p-1.5 text-right">{calculated?.overnightCost} kr</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-1.5">Övriga Utlägg</td>
-                    <td className="border border-black p-1.5 text-right">{calculated?.totalExpenses} kr</td>
-                  </tr>
+                  <tr><td className="border border-black p-1.5">Milersättning (25 kr/mil)</td><td className="border border-black p-1.5 text-right">{calculated?.milageCost} kr</td></tr>
+                  <tr><td className="border border-black p-1.5">Tilläggsarvode</td><td className="border border-black p-1.5 text-right">{calculated?.travelBonus} kr</td></tr>
+                  <tr><td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 300kr)</td><td className="border border-black p-1.5 text-right">{calculated?.overnightCost} kr</td></tr>
+                  <tr><td className="border border-black p-1.5">Övriga Utlägg</td><td className="border border-black p-1.5 text-right">{calculated?.totalExpenses} kr</td></tr>
                   {calculated?.advance > 0 && (
-                    <tr>
-                      <td className="border border-black p-1.5">Avgår förskott</td>
-                      <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
-                    </tr>
+                    <tr><td className="border border-black p-1.5">Avgår förskott</td><td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td></tr>
                   )}
-                  <tr className="bg-gray-100 font-bold text-sm">
-                    <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
-                    <td className="border border-black p-1.5 text-right">{calculated?.total} kr</td>
-                  </tr>
+                  <tr className="bg-gray-100 font-bold text-sm"><td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td><td className="border border-black p-1.5 text-right">{calculated?.total} kr</td></tr>
                 </tbody>
               </table>
             </td>
           </tr>
         </tbody>
       </table>
-
       <table className="w-full mt-8 page-break-inside-avoid">
         <tbody>
           <tr>
@@ -196,21 +159,12 @@ function PrintableInvoice({ data, t, containerId }) {
                 <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
                 <table className="w-full text-xs h-16">
                   <tbody>
-                    <tr>
-                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Konto</td>
-                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">K-ställe</td>
-                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Projekt</td>
-                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Fritt</td>
-                    </tr>
+                    <tr><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Konto</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">K-ställe</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Projekt</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Fritt</td></tr>
                   </tbody>
                 </table>
                 <table className="w-full text-xs mt-6 h-16">
                   <tbody>
-                    <tr>
-                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Belopp (kr)</td>
-                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Attest (Sign)</td>
-                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Beslut (Sign)</td>
-                    </tr>
+                    <tr><td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Belopp (kr)</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Attest (Sign)</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Beslut (Sign)</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -233,13 +187,7 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
       const element = document.getElementById('admin-print-invoice-view');
       element.classList.remove('hidden');
       element.classList.remove('print:block');
-      const opt = {
-        margin: 10,
-        filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+      const opt = { margin: 10, filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
       window.html2pdf().set(opt).from(element).save().then(() => {
         element.classList.add('hidden');
         element.classList.add('print:block');
@@ -261,10 +209,7 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
               <PrintableInvoice data={invoice} t={t} containerId="admin-print-invoice-view" />
               <div className="p-6">
-                 <div className="flex justify-between items-center mb-6">
-                   <h3 className="font-bold text-lg">Sammanställning</h3>
-                   <span className="text-2xl font-black text-green-600">{invoice.total} kr</span>
-                 </div>
+                 <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Sammanställning</h3><span className="text-2xl font-black text-green-600">{invoice.total} kr</span></div>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Domare</h4>
@@ -272,10 +217,7 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
                      <p className="text-xs text-slate-600">{invoice.personalInfo?.pnr}</p>
                      <p className="text-xs text-slate-600">{invoice.personalInfo?.email}</p>
                    </div>
-                   <div>
-                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4>
-                     <p className="font-bold text-sm">{invoice.personalInfo?.bank}</p>
-                   </div>
+                   <div><h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4><p className="font-bold text-sm">{invoice.personalInfo?.bank}</p></div>
                  </div>
                  <div className="mt-6 border-t border-slate-100 pt-6">
                    <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Resor</h4>
@@ -288,9 +230,7 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
         </div>
         <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-3">
            <button onClick={() => setInvoice(null)} className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-black uppercase text-xs hover:bg-slate-200">Stäng</button>
-           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs shadow-sm hover:bg-blue-700 flex items-center gap-2">
-              {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Ladda ner som PDF
-           </button>
+           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs flex items-center gap-2">{isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} PDF</button>
         </div>
       </div>
     </div>
@@ -327,9 +267,7 @@ function UmpireProfileModal({ selectedProfileId, setSelectedProfileId, masterUmp
            historicGames: parseInt(editData.historicGames) || 0, level: editData.level.trim()
         }, { merge: true });
         if (typeof window !== 'undefined') alert(t.savedSuccess);
-     } catch(e) { 
-        if (typeof window !== 'undefined') alert(t.errorOccurred); 
-     }
+     } catch(e) { if (typeof window !== 'undefined') alert(t.errorOccurred); }
      setIsSaving(false);
   };
 
@@ -806,7 +744,6 @@ function MainApp() {
   const [selectedYear, setSelectedYear] = useState('2026');
   const [isDemoEnv, setIsDemoEnv] = useState(true);
   const [federation, setFederation] = useState('swe');
-  const federations = [{ id: 'swe', name: '🇸🇪 Sweden', defaultLang: 'sv' }, { id: 'int', name: '🇬🇧 English', defaultLang: 'en' }];
   const [lang, setLang] = useState('sv');
   
   const getTranslation = (languageCode) => translations[languageCode] || translations['sv'];
@@ -931,12 +868,6 @@ function MainApp() {
   const allLocationNames = useMemo(() => [...new Set([...games.map(g => g.location), ...locationsData.map(l => l.id)])].filter(Boolean).sort(), [games, locationsData]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))].sort(), [games]);
   
-  const uiDays = useMemo(() => {
-    const arr = [...(t.days || [])];
-    if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
-    return arr;
-  }, [t.days]);
-
   const sortedUmpireList = useMemo(() => {
     const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
     let umps = masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
@@ -1170,6 +1101,61 @@ function MainApp() {
       setEditingGameData(null);
     } catch (e) { } finally { setSyncing(false); }
   };
+
+  const updateInvoiceStatus = async (id, newStatus) => { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'all_invoices', id), { status: newStatus }); } catch(e) {} };
+
+  const exportEconomyCSV = (invoicesToExport) => {
+    if (invoicesToExport.length === 0 || typeof window === 'undefined') return;
+    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning\n";
+    invoicesToExport.forEach(inv => {
+      const date = new Date(inv.createdAt).toLocaleDateString('sv-SE');
+      const tripsStr = (inv.trips || []).map(t => `${t.from}-${t.to} (${t.distance} mil)`).join(' | ');
+      const expensesStr = (inv.expenses || []).map(e => `${e.description} (${e.amount}kr)`).join(' | ');
+      csv += `"${date}","${inv.personalInfo?.name || ''}","${inv.personalInfo?.pnr || ''}","${inv.personalInfo?.email || ''}",${inv.total || 0},"${inv.status || ''}","${tripsStr}","${expensesStr}","${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)","${inv.overnightCount || 0} nätter"\n`;
+    });
+    const link = document.createElement('a'); link.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.setAttribute('download', `reserakningar-${selectedYear}.csv`); link.click();
+  };
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault(); setAuthError('');
+    try {
+      if (isLoginMode) await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      else await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      setShowAuthModal(false);
+    } catch (err) { setAuthError(err.message); }
+  };
+
+  const handleSort = (key) => { setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' })); };
+
+  const updateProfile = async (name, id) => {
+    if (!user || !user.email) return;
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
+  };
+
+  const logoutUmpire = async () => { await signOut(auth); try { await signInAnonymously(auth); } catch (e) { } setShowAdminModal(false); setView('schedule'); };
+
+  const safeDateMonth = (dateString) => {
+    if (!dateString) return ''; const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString; return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { month: 'short' });
+  };
+
+  const safeDateDay = (dateString) => {
+    if (!dateString) return '-'; const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-'; return (t.days && t.days[d.getDay()]) ? t.days[d.getDay()] : '-';
+  };
+
+  const safeDateNum = (dateString) => {
+    if (!dateString) return '-'; const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-'; return d.getDate();
+  };
+
+  const uiDays = useMemo(() => {
+    const arr = [...(t.days || [])];
+    if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
+    return arr;
+  }, [t.days]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) { 
@@ -1178,39 +1164,19 @@ function MainApp() {
       } else {
         try { 
           if (typeof window !== 'undefined' && window.__initial_auth_token) {
-            try { 
-              await signInWithCustomToken(auth, window.__initial_auth_token); 
-            } catch (e) { 
-              await signInAnonymously(auth); 
-            }
-          } else { 
-            await signInAnonymously(auth); 
-          }
-        } catch (err) { 
-          console.error("Auth error:", err);
-        } finally {
-          setLoading(false); 
-        }
+            try { await signInWithCustomToken(auth, window.__initial_auth_token); } 
+            catch (e) { await signInAnonymously(auth); }
+          } else { await signInAnonymously(auth); }
+        } catch (err) { console.error("Auth error:", err); } 
+        finally { setLoading(false); }
       }
     });
     return () => unsubscribe();
   }, []);
+
   const handleDownloadBackup = () => {
     if (!isAdmin || typeof window === 'undefined') return;
-    const backupData = {
-      timestamp: new Date().toISOString(),
-      year: selectedYear,
-      appId: appId,
-      collections: {
-        games,
-        applications,
-        assignments,
-        umpires: masterUmpires,
-        adminUmpireIds,
-        evaluations,
-        locations: locationsData
-      }
-    };
+    const backupData = { timestamp: new Date().toISOString(), year: selectedYear, appId, collections: { games, applications, assignments, umpires: masterUmpires, adminUmpireIds, evaluations, locations: locationsData } };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -1220,6 +1186,81 @@ function MainApp() {
     link.click();
     document.body.removeChild(link);
   };
+
+  const getLeagueStyles = (league) => {
+    const l = (league || '').toLowerCase();
+    if (l.includes('elit')) return 'bg-green-100 text-green-700 border-green-200';
+    if (l.includes('region')) return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (l.includes('junior')) return 'bg-purple-100 text-purple-700 border-purple-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  const getLevelStyles = (level) => {
+    const l = (level || '').toLowerCase();
+    if (l.includes('internationell')) return 'bg-[#204d99] text-white border-[#1a3d7a]';
+    if (l.includes('elit')) return 'bg-[#38761d] text-white border-[#2d5f17]';
+    if (l.includes('nationell')) return 'bg-[#990000] text-white border-[#7a0000]';
+    if (l.includes('region')) return 'bg-[#cfe2f3] text-[#3d85c6] border-[#a2c4c9]';
+    if (l.includes('förening')) return 'bg-[#efefef] text-[#666666] border-[#cccccc]';
+    return 'bg-slate-200 text-slate-500 border-slate-300';
+  };
+
+  const getAssignmentStatusStyles = (count, required) => {
+    const req = required || 2;
+    if (count === 0) return 'bg-red-100 text-red-700 border-red-200';
+    if (count < req) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-green-100 text-green-700 border-green-200';
+  };
+
+  const renderOfficialsRow = (game, gameAssignments, masterUmpires) => {
+    const hasOfficials = gameAssignments.length > 0 || game.supervisorName || game.tcName;
+    if (!hasOfficials) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-3 items-center">
+        {gameAssignments.map(asg => {
+            const m = masterUmpires.find(mu => mu.id === asg.userId);
+            return (
+              <div key={asg.userId} className={`${asg.pendingChange ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-green-50 text-green-700 border-green-100'} text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1`}>
+                  {asg.pendingChange ? <AlertTriangle className="w-3 h-3 text-yellow-600" /> : <CheckCircle className="w-3 h-3" />} {t.umpireShort}: {asg.userName} {m?.level && <span className={`ml-1 px-1 rounded text-[8px] font-black border uppercase ${getLevelStyles(m.level)}`}>{m.level}</span>}
+              </div>
+            );
+        })}
+        {game.supervisorName && <div className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-purple-100 flex items-center gap-1"><Star className="w-3 h-3" /> {t.supShort}: {game.supervisorName}</div>}
+        {game.tcName && <div className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-orange-100 flex items-center gap-1"><FileText className="w-3 h-3" /> {t.tcShort}: {game.tcName}</div>}
+      </div>
+    );
+  };
+
+  const renderCalendar = (gamesToRender) => (
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 overflow-hidden animate-in fade-in">
+      <div className="flex justify-between items-center mb-4 px-2">
+         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
+         <h3 className="font-black text-lg text-slate-800 uppercase">{t.months && t.months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight className="w-5 h-5"/></button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center mb-2">
+         {uiDays.map(d => <div key={d} className="text-[10px] font-black uppercase text-slate-400">{d}</div>)}
+      </div>
+      <div className="flex flex-col gap-1 bg-slate-100 border border-slate-100 rounded-xl overflow-hidden p-1">
+        {calendarWeeks.map((week, i) => (
+           <div key={i} className="grid grid-cols-7 gap-1">
+              {week.days.map((day, j) => {
+                 if (!day) return <div key={j} className="p-2" />;
+                 const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+                 const gamesOnDay = gamesToRender.filter(g => g.date === dateStr);
+                 const isToday = dateStr === today;
+                 return (
+                    <div key={j} className={`bg-white rounded-lg p-1.5 min-h-[80px] flex flex-col ${isToday ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
+                       <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>{day.getDate()}</span>
+                       <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">{gamesOnDay.map(g => <div key={g.id} onClick={() => setSelectedGameDetails(g)} className="text-[8px] sm:text-[9px] font-bold bg-blue-50 text-blue-800 rounded px-1.5 py-1 truncate cursor-pointer hover:bg-blue-100 transition-colors">{g.away}</div>)}</div>
+                    </div>
+                 )
+              })}
+           </div>
+        ))}
+      </div>
+    </div>
+  );
 
   const myUmpireData = masterUmpires.find(u => u.id === umpireId);
 
