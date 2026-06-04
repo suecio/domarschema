@@ -931,6 +931,12 @@ function MainApp() {
   const allLocationNames = useMemo(() => [...new Set([...games.map(g => g.location), ...locationsData.map(l => l.id)])].filter(Boolean).sort(), [games, locationsData]);
   const locations = useMemo(() => [...new Set(games.map(g => g.location || 'Unknown'))].sort(), [games]);
   
+  const uiDays = useMemo(() => {
+    const arr = [...(t.days || [])];
+    if (arr.length > 0) { const sunday = arr.shift(); arr.push(sunday); }
+    return arr;
+  }, [t.days]);
+
   const sortedUmpireList = useMemo(() => {
     const levelOrder = { 'internationell': 1, 'elit': 2, 'nationell': 3, 'region': 4, 'förening': 5 };
     let umps = masterUmpires.filter(u => (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
@@ -1164,33 +1170,33 @@ function MainApp() {
       setEditingGameData(null);
     } catch (e) { } finally { setSyncing(false); }
   };
-
-  const updateInvoiceStatus = async (id, newStatus) => { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'all_invoices', id), { status: newStatus }); } catch(e) {} };
-
-  const exportEconomyCSV = (invoicesToExport) => {
-    if (invoicesToExport.length === 0 || typeof window === 'undefined') return;
-    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning\n";
-    invoicesToExport.forEach(inv => {
-      const date = new Date(inv.createdAt).toLocaleDateString('sv-SE');
-      const tripsStr = (inv.trips || []).map(t => `${t.from}-${t.to} (${t.distance} mil)`).join(' | ');
-      const expensesStr = (inv.expenses || []).map(e => `${e.description} (${e.amount}kr)`).join(' | ');
-      csv += `"${date}","${inv.personalInfo?.name || ''}","${inv.personalInfo?.pnr || ''}","${inv.personalInfo?.email || ''}",${inv.total || 0},"${inv.status || ''}","${tripsStr}","${expensesStr}","${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)","${inv.overnightCount || 0} nätter"\n`;
-    });
-    const link = document.createElement('a'); link.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.setAttribute('download', `reserakningar-${selectedYear}.csv`); link.click();
+  const handleDownloadBackup = () => {
+    if (!isAdmin || typeof window === 'undefined') return;
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      year: selectedYear,
+      appId: appId,
+      collections: {
+        games,
+        applications,
+        assignments,
+        umpires: masterUmpires,
+        adminUmpireIds,
+        evaluations,
+        locations: locationsData
+      }
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `umpire-backup-${selectedYear}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (u) { setUser(u); setLoading(false); } else {
-        try { 
-          if (typeof window !== 'undefined' && window.__initial_auth_token) {
-            try { await signInWithCustomToken(auth, window.__initial_auth_token); } catch (e) { await signInAnonymously(auth); }
-          } else { await signInAnonymously(auth); }
-        } catch (err) { setLoading(false); }
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  const myUmpireData = masterUmpires.find(u => u.id === umpireId);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
