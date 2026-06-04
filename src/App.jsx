@@ -67,17 +67,29 @@ function PrintableInvoice({ data, t, containerId }) {
               <h1 className="text-2xl font-black tracking-widest uppercase">Reseräkning</h1>
               <p className="font-bold text-sm">Svenska Baseboll och Softboll Förbundet</p>
             </td>
-            <td className="align-bottom text-right text-[10px]"><p>{t.date}: {dateStr}</p></td>
+            <td className="align-bottom text-right text-[10px]">
+              <p>{t.date}: {dateStr}</p>
+            </td>
           </tr>
         </tbody>
       </table>
+
       <table className="w-full mb-6 text-[12px]">
         <tbody>
-          <tr><td className="py-1.5 w-1/2"><span className="font-bold">{t.name}:</span> {personalInfo?.name}</td><td className="py-1.5 w-1/2"><span className="font-bold">{t.pnr}:</span> {personalInfo?.pnr}</td></tr>
-          <tr><td className="py-1.5"><span className="font-bold">{t.streetAddress}:</span> {personalInfo?.address}</td><td className="py-1.5"><span className="font-bold">{t.zipCity}:</span> {personalInfo?.zipCity}</td></tr>
-          <tr><td className="py-1.5" colSpan="2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo?.bank}</td></tr>
+          <tr>
+            <td className="py-1.5 w-1/2"><span className="font-bold">{t.name}:</span> {personalInfo?.name}</td>
+            <td className="py-1.5 w-1/2"><span className="font-bold">{t.pnr}:</span> {personalInfo?.pnr}</td>
+          </tr>
+          <tr>
+            <td className="py-1.5"><span className="font-bold">{t.streetAddress}:</span> {personalInfo?.address}</td>
+            <td className="py-1.5"><span className="font-bold">{t.zipCity}:</span> {personalInfo?.zipCity}</td>
+          </tr>
+          <tr>
+            <td className="py-1.5" colSpan="2"><span className="font-bold">{t.bankAccount}:</span> {personalInfo?.bank}</td>
+          </tr>
         </tbody>
       </table>
+
       <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Uppdrag & Resor</h3>
       <table className="w-full border-collapse border border-black mb-6 text-[11px]">
         <thead>
@@ -101,6 +113,7 @@ function PrintableInvoice({ data, t, containerId }) {
           ))}
         </tbody>
       </table>
+
       {(expenses || []).some(e => e.description && e.amount) && (
         <>
           <h3 className="font-bold mb-1 uppercase text-[10px] tracking-wider">Utlägg</h3>
@@ -113,12 +126,16 @@ function PrintableInvoice({ data, t, containerId }) {
             </thead>
             <tbody>
               {expenses.filter(e => e.description && e.amount).map((exp, idx) => (
-                <tr key={idx}><td className="border border-black p-1.5">{exp.description}</td><td className="border border-black p-1.5 text-right">{exp.amount}</td></tr>
+                <tr key={idx}>
+                  <td className="border border-black p-1.5">{exp.description}</td>
+                  <td className="border border-black p-1.5 text-right">{exp.amount}</td>
+                </tr>
               ))}
             </tbody>
           </table>
         </>
       )}
+
       <table className="w-full mb-8">
         <tbody>
           <tr>
@@ -133,20 +150,39 @@ function PrintableInvoice({ data, t, containerId }) {
             <td className="w-1/2 align-top">
               <table className="w-full border-collapse border border-black text-[11px]">
                 <tbody>
-                  <tr><td className="border border-black p-1.5">Milersättning (25 kr/mil)</td><td className="border border-black p-1.5 text-right">{calculated?.milageCost} kr</td></tr>
-                  <tr><td className="border border-black p-1.5">Tilläggsarvode</td><td className="border border-black p-1.5 text-right">{calculated?.travelBonus} kr</td></tr>
-                  <tr><td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 300kr)</td><td className="border border-black p-1.5 text-right">{calculated?.overnightCost} kr</td></tr>
-                  <tr><td className="border border-black p-1.5">Övriga Utlägg</td><td className="border border-black p-1.5 text-right">{calculated?.totalExpenses} kr</td></tr>
+                  <tr>
+                    <td className="border border-black p-1.5">Milersättning (25 kr/mil)</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.milageCost} kr</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1.5">Tilläggsarvode</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.travelBonus} kr</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1.5">Övernattning ({overnightCount || 0} st á 300kr)</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.overnightCost} kr</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1.5">Övriga Utlägg</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.totalExpenses} kr</td>
+                  </tr>
                   {calculated?.advance > 0 && (
-                    <tr><td className="border border-black p-1.5">Avgår förskott</td><td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td></tr>
+                    <tr>
+                      <td className="border border-black p-1.5">Avgår förskott</td>
+                      <td className="border border-black p-1.5 text-right">-{calculated.advance} kr</td>
+                    </tr>
                   )}
-                  <tr className="bg-gray-100 font-bold text-sm"><td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td><td className="border border-black p-1.5 text-right">{calculated?.total} kr</td></tr>
+                  <tr className="bg-gray-100 font-bold text-sm">
+                    <td className="border border-black p-1.5">TOTALT ATT ERHÅLLA</td>
+                    <td className="border border-black p-1.5 text-right">{calculated?.total} kr</td>
+                  </tr>
                 </tbody>
               </table>
             </td>
           </tr>
         </tbody>
       </table>
+
       <table className="w-full mt-8 page-break-inside-avoid">
         <tbody>
           <tr>
@@ -160,12 +196,21 @@ function PrintableInvoice({ data, t, containerId }) {
                 <h3 className="font-black text-sm uppercase mb-4 border-b border-black pb-1">Fylls i av Förbundet</h3>
                 <table className="w-full text-xs h-16">
                   <tbody>
-                    <tr><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Konto</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">K-ställe</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Projekt</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Fritt</td></tr>
+                    <tr>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Konto</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">K-ställe</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Projekt</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/4">Fritt</td>
+                    </tr>
                   </tbody>
                 </table>
                 <table className="w-full text-xs mt-6 h-16">
                   <tbody>
-                    <tr><td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Belopp (kr)</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Attest (Sign)</td><td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Beslut (Sign)</td></tr>
+                    <tr>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Belopp (kr)</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Attest (Sign)</td>
+                      <td className="border-b border-black align-bottom pb-1 font-bold w-1/3">Beslut (Sign)</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -186,10 +231,19 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload = () => {
       const element = document.getElementById('admin-print-invoice-view');
-      element.classList.remove('hidden'); element.classList.remove('print:block');
-      const opt = { margin: 10, filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+      element.classList.remove('hidden');
+      element.classList.remove('print:block');
+      const opt = {
+        margin: 10,
+        filename: `Reserakning_${invoice.userName.replace(/\s+/g, '_')}_${new Date(invoice.createdAt).toLocaleDateString('sv-SE')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
       window.html2pdf().set(opt).from(element).save().then(() => {
-        element.classList.add('hidden'); element.classList.add('print:block'); setIsDownloading(false);
+        element.classList.add('hidden');
+        element.classList.add('print:block');
+        setIsDownloading(false);
       });
     };
     document.body.appendChild(script);
@@ -207,7 +261,10 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
               <PrintableInvoice data={invoice} t={t} containerId="admin-print-invoice-view" />
               <div className="p-6">
-                 <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Sammanställning</h3><span className="text-2xl font-black text-green-600">{invoice.total} kr</span></div>
+                 <div className="flex justify-between items-center mb-6">
+                   <h3 className="font-bold text-lg">Sammanställning</h3>
+                   <span className="text-2xl font-black text-green-600">{invoice.total} kr</span>
+                 </div>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Domare</h4>
@@ -215,7 +272,10 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
                      <p className="text-xs text-slate-600">{invoice.personalInfo?.pnr}</p>
                      <p className="text-xs text-slate-600">{invoice.personalInfo?.email}</p>
                    </div>
-                   <div><h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4><p className="font-bold text-sm">{invoice.personalInfo?.bank}</p></div>
+                   <div>
+                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Utbetalning</h4>
+                     <p className="font-bold text-sm">{invoice.personalInfo?.bank}</p>
+                   </div>
                  </div>
                  <div className="mt-6 border-t border-slate-100 pt-6">
                    <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Resor</h4>
@@ -228,7 +288,9 @@ function InvoiceReviewModal({ invoice, setInvoice, t }) {
         </div>
         <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-3">
            <button onClick={() => setInvoice(null)} className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-black uppercase text-xs hover:bg-slate-200">Stäng</button>
-           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs flex items-center gap-2">{isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} PDF</button>
+           <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs shadow-sm hover:bg-blue-700 flex items-center gap-2">
+              {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Ladda ner som PDF
+           </button>
         </div>
       </div>
     </div>
@@ -265,7 +327,9 @@ function UmpireProfileModal({ selectedProfileId, setSelectedProfileId, masterUmp
            historicGames: parseInt(editData.historicGames) || 0, level: editData.level.trim()
         }, { merge: true });
         if (typeof window !== 'undefined') alert(t.savedSuccess);
-     } catch(e) { if (typeof window !== 'undefined') alert(t.errorOccurred); }
+     } catch(e) { 
+        if (typeof window !== 'undefined') alert(t.errorOccurred); 
+     }
      setIsSaving(false);
   };
 
@@ -392,8 +456,7 @@ class ErrorBoundary extends Component {
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-black text-slate-800 mb-2">Ett fel uppstod</h2>
             <pre className="text-red-700 text-xs font-mono whitespace-pre-wrap bg-red-50 p-4 rounded-xl text-left overflow-auto max-h-60 border border-red-200">
-              {this.state.error?.toString()}{'
-'}{this.state.errorInfo?.componentStack}
+              {this.state.error?.toString()}{'\n'}{this.state.errorInfo?.componentStack}
             </pre>
             <button onClick={() => window.location.reload()} className="mt-8 bg-slate-800 text-white px-8 py-4 rounded-xl font-black uppercase text-xs hover:bg-black">Ladda om</button>
           </div>
@@ -547,10 +610,8 @@ function TravelInvoiceView({ db, appId, locationsData, user, userName, t, myAssi
     try {
       if (user && user.uid) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'invoiceData'), personalInfo, { merge: true }).catch(()=>{});
 
-      const tripsText = trips.map(t => `- ${t.date}: ${t.from} till ${t.to} (${t.roundTrip ? 'T&R' : 'Enkel'}), ${t.distance} mil. Ändamål: ${t.assignment}`).join('
-');
-      const expensesText = expenses.filter(e => e.description && e.amount).map(e => `- ${e.description}: ${e.amount} kr`).join('
-') || 'Inga övriga utlägg';
+      const tripsText = trips.map(t => `- ${t.date}: ${t.from} till ${t.to} (${t.roundTrip ? 'T&R' : 'Enkel'}), ${t.distance} mil. Ändamål: ${t.assignment}`).join('\n');
+      const expensesText = expenses.filter(e => e.description && e.amount).map(e => `- ${e.description}: ${e.amount} kr`).join('\n') || 'Inga övriga utlägg';
       const emailHtml = `
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
           <h2 style="color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px;">Reseräkning - ${personalInfo.name}</h2>
@@ -811,7 +872,7 @@ function MainApp() {
   }, []);
 
   const appId = useMemo(() => {
-    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\/]/g, '-') : 'baseball-umpire-scheduler';
+    const base = typeof window !== 'undefined' && window.__app_id ? String(window.__app_id).replace(/[\\/]/g, '-') : 'baseball-umpire-scheduler';
     return isDemoEnv ? `${base}-sandbox-${selectedYear}` : `${base}-${selectedYear}`;
   }, [selectedYear, isDemoEnv]);
 
@@ -944,10 +1005,8 @@ function MainApp() {
        const readyToProcess = mailQueue.filter(q => q.processAfter <= now);
        if (readyToProcess.length > 0) {
            readyToProcess.forEach(async (queueItem) => {
-              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('
-');
-              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('
-');
+              const changesTextEn = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Moved from ${c.oldDate} ${c.oldTime} to ${c.newDate} ${c.newTime}`).join('\n');
+              const changesTextSv = queueItem.changes.map(c => `- ${c.away} @ ${c.home}: Flyttad från ${c.oldDate} ${c.oldTime} till ${c.newDate} ${c.newTime}`).join('\n');
               const emailBody = t.emailMatchMovedBody ? t.emailMatchMovedBody.replace(/\{name\}/g, queueItem.userName).replace(/\{changesListSv\}/g, changesTextSv).replace(/\{changesListEn\}/g, changesTextEn) : changesTextSv;
               try {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mail'), {
@@ -1062,10 +1121,9 @@ function MainApp() {
     if (!isAdmin || !bulkInput.trim()) return;
     setSyncing(true);
     try {
-      const batch = writeBatch(db); const rows = bulkInput.trim().split('
-');
+      const batch = writeBatch(db); const rows = bulkInput.trim().split('\n');
       rows.forEach((row) => {
-        const columns = row.split(/	|,/);
+        const columns = row.split(/\t|,/);
         if (columns.length >= 5) {
           const gameData = { date: columns[0].trim(), time: columns[1].trim(), league: columns[2].trim(), away: columns[3].trim(), home: columns[4].trim(), location: (columns[5] || 'Unknown').trim(), requiredUmpires: 2 };
           const gameId = `m-${gameData.date}-${gameData.time}-${gameData.away}-${gameData.home}`.replace(/\s+/g, '').replace(/:/g, '').toLowerCase();
@@ -1111,17 +1169,28 @@ function MainApp() {
 
   const exportEconomyCSV = (invoicesToExport) => {
     if (invoicesToExport.length === 0 || typeof window === 'undefined') return;
-    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning
-";
+    let csv = "Datum,Domare,Personnummer,E-post,Belopp (kr),Status,Resor,Ovriga Utlagg,Milersattning,Övernattning\n";
     invoicesToExport.forEach(inv => {
       const date = new Date(inv.createdAt).toLocaleDateString('sv-SE');
       const tripsStr = (inv.trips || []).map(t => `${t.from}-${t.to} (${t.distance} mil)`).join(' | ');
       const expensesStr = (inv.expenses || []).map(e => `${e.description} (${e.amount}kr)`).join(' | ');
-      csv += `"${date}","${inv.personalInfo?.name || ''}","${inv.personalInfo?.pnr || ''}","${inv.personalInfo?.email || ''}",${inv.total || 0},"${inv.status || ''}","${tripsStr}","${expensesStr}","${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)","${inv.overnightCount || 0} nätter"
-`;
+      csv += `"${date}","${inv.personalInfo?.name || ''}","${inv.personalInfo?.pnr || ''}","${inv.personalInfo?.email || ''}",${inv.total || 0},"${inv.status || ''}","${tripsStr}","${expensesStr}","${inv.calculated?.totalMilage || 0} mil (${inv.calculated?.milageCost || 0} kr)","${inv.overnightCount || 0} nätter"\n`;
     });
     const link = document.createElement('a'); link.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.setAttribute('download', `reserakningar-${selectedYear}.csv`); link.click();
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (u) { setUser(u); setLoading(false); } else {
+        try { 
+          if (typeof window !== 'undefined' && window.__initial_auth_token) {
+            try { await signInWithCustomToken(auth, window.__initial_auth_token); } catch (e) { await signInAnonymously(auth); }
+          } else { await signInAnonymously(auth); }
+        } catch (err) { setLoading(false); }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin w-8 h-8 text-blue-600" /></div>;
 
@@ -1523,3 +1592,19 @@ function MainApp() {
 }
 
 export default function App() { return ( <ErrorBoundary><MainApp /></ErrorBoundary> ); }
+"""
+
+import base64
+encoded_bytes = base64.b64encode(app_code.encode("utf-8"))
+
+decode_code = f"""import base64
+with open("App.jsx", "wb") as f:
+    f.write(base64.b64decode({encoded_bytes}))
+"""
+
+with open("generate_app.py", "w") as f:
+    f.write(decode_code)
+
+import os
+os.system("python3 generate_app.py")
+print("App.jsx generated successfully via base64 decoding.")}}
