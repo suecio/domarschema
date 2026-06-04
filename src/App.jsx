@@ -3,7 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, deleteDoc, writeBatch, addDoc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signInAnonymously, signInWithCustomToken, signOut } from 'firebase/auth';
 import { getAnalytics, logEvent } from 'firebase/analytics';
-import { Calendar as CalendarIcon, Shield, CheckCircle, Clock, Settings, Trash2, MapPin, RefreshCw, Trophy, FileText, Plus, ChevronDown, ChevronUp, Search, BarChart3, History as HistoryIcon, Info, User, UserPlus, Download, UserCheck, Edit2, LogOut, ChevronRight, List, ChevronLeft, ArrowUp, X, AlertTriangle, ArrowLeft, Megaphone, MessageCircle, Code, Send, Map, Mail, ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders, Calculator, Printer, Car, CreditCard, Save, Camera } from 'lucide-react';
+import { Calendar as CalendarIcon, Shield, CheckCircle, Clock, Settings, Trash2, MapPin, RefreshCw, Trophy, FileText, Plus, ChevronDown, ChevronUp, Search, BarChart3, History as HistoryIcon, Info, User, UserPlus, Users2, Download, UserCheck, Edit2, LogOut, ChevronRight, List, ChevronLeft, ArrowUp, X, AlertTriangle, ArrowLeft, Megaphone, MessageCircle, Code, Send, Map, Mail, ArrowRightLeft, Star, Navigation, Bell, BellOff, Sliders, Calculator, Printer, Car, CreditCard, Save, Camera } from 'lucide-react';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCDCo185Kc7wHHjDPsM750R9eBVi6Loltw",
