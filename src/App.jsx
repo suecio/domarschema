@@ -1778,11 +1778,21 @@ function MainApp() {
           <div className="bg-white rounded-[2.5rem] p-8 space-y-6 max-w-sm w-full shadow-2xl relative">
             <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-full"><X className="w-5 h-5"/></button>
             <div className="text-center"><Shield className="w-12 h-12 text-blue-600 mx-auto mb-4"/><h3 className="text-2xl font-black">{t.login}</h3><p className="text-xs text-slate-400 mt-1">{t.loginToContinue}</p></div>
+            
             <form onSubmit={handleAuthSubmit} className="space-y-4">
+              
+              {/* --- KLISTRA IN DETTA NYA FELMEDDELANDE-BLOCKET --- */}
+              {authError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold border border-red-200 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{authError.includes('credential') || authError.includes('password') || authError.includes('user-not-found') ? 'Fel e-post eller lösenord.' : 'Ett fel uppstod. Försök igen.'}</span>
+                </div>
+              )}
+              {/* -------------------------------------------------- */}
+
               <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm" placeholder={t.email}/>
               <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm" placeholder={t.password}/>
               
-              {/* --- KLISTRA IN DETTA NYA BLOCK --- */}
               {isLoginMode && (
                 <div className="text-right !mt-2">
                   <button type="button" onClick={handleResetPassword} className="text-[10px] font-bold text-blue-600 hover:underline">
@@ -1790,7 +1800,6 @@ function MainApp() {
                   </button>
                 </div>
               )}
-              {/* --------------------------------- */}
 
               <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] shadow-lg text-white">{isLoginMode ? t.login : t.register}</button>
             </form>
