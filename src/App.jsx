@@ -1781,6 +1781,17 @@ function MainApp() {
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm" placeholder={t.email}/>
               <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm" placeholder={t.password}/>
+              
+              {/* --- KLISTRA IN DETTA NYA BLOCK --- */}
+              {isLoginMode && (
+                <div className="text-right !mt-2">
+                  <button type="button" onClick={handleResetPassword} className="text-[10px] font-bold text-blue-600 hover:underline">
+                    {t.forgotPassword || "Glömt lösenordet?"}
+                  </button>
+                </div>
+              )}
+              {/* --------------------------------- */}
+
               <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] shadow-lg text-white">{isLoginMode ? t.login : t.register}</button>
             </form>
             <button onClick={() => setIsLoginMode(!isLoginMode)} className="w-full text-xs font-bold text-slate-500">{isLoginMode ? t.noAccount : t.hasAccount}</button>
