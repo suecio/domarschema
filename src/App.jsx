@@ -1317,6 +1317,19 @@ function MainApp() {
     } catch (err) { setAuthError(err.message); }
   };
 
+  const handleResetPassword = async () => {
+    if (!authEmail) {
+      alert("Vänligen skriv in din e-postadress i fältet ovan först.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, authEmail);
+      alert("En återställningslänk har skickats till din e-post!");
+    } catch (err) {
+      alert("Ett fel uppstod: " + err.message);
+    }
+  };
+  
   const handleSort = (key) => { setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' })); };
 
   const updateProfile = async (name, id) => {
@@ -1324,6 +1337,7 @@ function MainApp() {
     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { name, umpireId: id }, { merge: true });
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'umpires', id), { linkedUserId: user.uid, linkedEmail: user.email }, { merge: true });
   };
+  
 
   const logoutUmpire = async () => { await signOut(auth); try { await signInAnonymously(auth); } catch (e) { } setShowAdminModal(false); setView('schedule'); };
 
